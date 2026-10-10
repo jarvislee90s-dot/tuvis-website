@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>兔维斯 Tuvis —— 你的桌面多 Agent 指挥台</title>
+  <meta name="description" content="兔维斯（Tuvis）：一块看板看清并掌控所有 AI Agent——会话状态、远程消息注入、Skill/MCP/预设管理、用量账本，从桌面到手机。" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <style>
+    /* ===== 设计令牌 ===== */
+    :root {
+      --bg: #0b1220;          /* 页面底 */
+      --bg-card: #131e30;     /* 卡片底 */
+      --bg-card-2: #182639;   /* 卡片底-亮 */
+      --line: #22304a;        /* 分隔线 */
+      --text: #e7eef7;        /* 主文字（银白） */
+      --text-dim: #94a6bd;    /* 次文字 */
+      --accent: #34d399;      /* 状态绿（运行） */
+      --accent-amber: #fbbf24;
+      --accent-red: #f87171;
+      --copper: #d29a5b;      /* 暖铜（吉祥物饰线同源） */
+      --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      line-height: 1.6;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    /* ===== 导航 ===== */
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(11, 18, 32, 0.85); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .brand img { width: 30px; height: 30px; }
+    .nav-links { display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--text-dim); }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-block; padding: 9px 18px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; border: 1px solid var(--line);
+      transition: all .15s ease;
+    }
+    .btn-primary { background: var(--accent); color: #06281c; border: none; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ===== Hero ===== */
+    .hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; padding: 84px 0 64px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--copper);
+      border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; margin-bottom: 18px;
+    }
+    h1 { font-size: 46px; line-height: 1.2; letter-spacing: -0.5px; }
+    h1 .en { color: var(--text-dim); font-weight: 600; }
+    .tagline { font-size: 20px; color: var(--accent); margin: 14px 0 10px; font-weight: 600; }
+    .hero p.sub { color: var(--text-dim); font-size: 16px; max-width: 480px; }
+    .cta { display: flex; gap: 14px; margin-top: 28px; }
+    .hero-img {
+      border: 1px solid var(--line); border-radius: 24px; background:
+        radial-gradient(120% 120% at 50% 0%, #1b2a42 0%, var(--bg-card) 60%);
+      padding: 18px; box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    .hero-img img { border-radius: 16px; }
+
+    /* ===== 状态灯 ===== */
+    .section { padding: 64px 0; }
+    .section-title { font-size: 28px; text-align: center; margin-bottom: 8px; }
+    .section-sub { text-align: center; color: var(--text-dim); margin-bottom: 36px; }
+    .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .state-card { background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; text-align: center; }
+    .state-card img { width: 100%; }
+    .state-card .cap { padding: 14px; font-size: 15px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+    .dot.g { background: var(--accent); } .dot.y { background: var(--accent-amber); } .dot.r { background: var(--accent-red); }
+
+    /* ===== 功能 ===== */
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feature {
+      background: var(--bg-card); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 22px;
+    }
+    .feature:hover { background: var(--bg-card-2); }
+    .feature .ico { font-size: 26px; margin-bottom: 10px; }
+    .feature h3 { font-size: 17px; margin-bottom: 8px; }
+    .feature p { font-size: 14px; color: var(--text-dim); }
+
+    /* ===== 视频 ===== */
+    .video-box {
+      aspect-ratio: 16 / 9; border: 1px dashed var(--line); border-radius: var(--radius);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--text-dim); background: var(--bg-card);
+    }
+    .video-box .play { font-size: 44px; margin-bottom: 10px; }
+
+    /* ===== 开源 ===== */
+    .oss {
+      background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    }
+    .oss h3 { font-size: 20px; margin-bottom: 6px; }
+    .oss p { color: var(--text-dim); font-size: 14px; }
+
+    /* ===== Footer ===== */
+    footer { border-top: 1px solid var(--line); padding: 28px 0; color: var(--text-dim); font-size: 13px; }
+    .foot-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; padding-top: 48px; }
+      h1 { font-size: 34px; }
+      .states, .features { grid-template-columns: 1fr; }
+      .nav-links a:not(.btn) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 导航（结构参考 ccswitch：首页/文档/更新日志/下载） -->
+  <nav>
+    <div class="wrap nav-inner">
+      <a class="brand" href="#"><img src="assets/favicon.svg" alt="兔维斯 logo" />兔维斯 Tuvis</a>
+      <div class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#mascot">形象</a>
+        <a href="#video">视频</a>
+        <a href="https://github.com/jarvislee90s/MultiAgents-Manager" target="_blank" rel="noopener">GitHub</a>
+        <a class="btn btn-primary" href="#download">免费下载</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="wrap hero">
+    <div>
+      <span class="hero-badge">🥕 开源 · 桌面端 · 移动端远程</span>
+      <h1>兔维斯 <span class="en">Tuvis</span></h1>
+      <div class="tagline">你的桌面多 Agent 指挥台</div>
+      <p class="sub">一块看板看清并掌控所有 AI Agent——会话状态、远程消息注入、Skill/MCP/预设管理、用量账本，从桌面到手机。</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#download">免费下载</a>
+        <a class="btn btn-ghost" href="https://github.com/jarvislee90s/MultiAgents-Manager" target="_blank" rel="noopener">GitHub 仓库</a>
+      </div>
+    </div>
+    <div class="hero-img"><img src="assets/tuvis-hero.png" alt="兔维斯吉祥物：穿银白机甲战衣的兔子，胸口胡萝卜状态灯为绿色运行态" /></div>
+  </header>
+
+  <!-- 状态灯（对应卡面状态） -->
+  <section class="wrap section" id="mascot">
+    <h2 class="section-title">它的灯，就是 Agent 的状态</h2>
+    <p class="section-sub">胸口的胡萝卜灯跟着会话卡面实时变色，隔着一米也能看清全局。</p>
+    <div class="states">
+      <div class="state-card"><img src="assets/tuvis-hero.png" alt="绿色运行态" /><div class="cap"><span class="dot g"></span>运行中——任务正常推进</div></div>
+      <div class="state-card"><img src="assets/tuvis-state-yellow.png" alt="黄色等待批准态" /><div class="cap"><span class="dot y"></span>等待批准——需要你拍板</div></div>
+      <div class="state-card"><img src="assets/tuvis-state-red.png" alt="红色中断态" /><div class="cap"><span class="dot r"></span>已中断——值得过去看一眼</div></div>
+    </div>
+  </section>
+
+  <!-- 功能 -->
+  <section class="wrap section" id="features">
+    <h2 class="section-title">指挥台的六块仪表</h2>
+    <p class="section-sub">为"同时指挥多个 AI Agent"而生的桌面与移动端体验。</p>
+    <div class="features">
+      <div class="feature"><div class="ico">📋</div><h3>多 Agent 会话监控</h3><p>运行、等待批准、已中断——所有会话卡面实时刷新，状态一目了然，支持 Claude、Codex、Kimi、OpenCode 等主流 CLI。</p></div>
+      <div class="feature"><div class="ico">📱</div><h3>远程消息注入</h3><p>在手机上点选项、打字、切题，注入后自动屏读核对，卡面永远以终端真实状态为准。</p></div>
+      <div class="feature"><div class="ico">🧩</div><h3>Skill 三层映射</h3><p>全局仓库 → 工具级 → 子 Agent 的符号链接管理，一键启停，自动贯通。</p></div>
+      <div class="feature"><div class="ico">🔌</div><h3>MCP · 预设 · 插件</h3><p>统一管理各家工具的 MCP 配置、预设组与插件，格式差异全部抹平。</p></div>
+      <div class="feature"><div class="ico">📊</div><h3>用量账本</h3><p>本地 SQLite 账本忠实记录每个会话的流量与耗时，账目可回溯。</p></div>
+      <div class="feature"><div class="ico">🛰️</div><h3>移动端远程接入</h3><p>出门在外，手机就是指挥台：看状态、发指令、批任务。</p></div>
+    </div>
+  </section>
+
+  <!-- 视频（介绍视频制作中，占位） -->
+  <section class="wrap section" id="video">
+    <h2 class="section-title">60 秒看懂兔维斯</h2>
+    <p class="section-sub">介绍视频制作中，上线后在这里首发。</p>
+    <div class="video-box" style="position: relative; padding: 0; overflow: hidden;">
+      <img src="assets/tuvis-explain.png" alt="兔维斯讲解姿态（美漫卡通风）" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff;" />
+      <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 22px;">
+        <div style="background: rgba(11,18,32,.72); color: var(--text); font-size: 13px; padding: 6px 14px; border-radius: 999px;">▶ 视频制作中 · 敬请期待</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 下载（占位：发布渠道待定） -->
+  <section class="wrap section" id="download">
+    <h2 class="section-title">免费下载</h2>
+    <p class="section-sub">当前版本请前往 GitHub Releases 获取，安装包与更新会随版本发布。</p>
+    <div class="oss">
+      <div>
+        <h3>开源 · MIT License</h3>
+        <p>兔维斯是开源软件，欢迎 Issue 与 PR。仓库现名 MultiAgents-Manager，品牌更名过渡期保留双名。</p>
+      </div>
+      <a class="btn btn-primary" href="https://github.com/jarvislee90s/MultiAgents-Manager/releases" target="_blank" rel="noopener">前往 Releases</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap foot-inner">
+      <span>🥕 兔维斯 Tuvis —— 你的桌面多 Agent 指挥台 · © 2026</span>
+      <span><a href="https://github.com/jarvislee90s/MultiAgents-Manager" target="_blank" rel="noopener">GitHub</a> · MIT License · 简体中文 / English（占位）</span>
+    </div>
+  </footer>
+</body>
+</html>

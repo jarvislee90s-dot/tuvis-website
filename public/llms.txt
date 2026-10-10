@@ -1,0 +1,10 @@
+# Tuvis (兔维斯)
+
+Desktop multi-agent command deck: monitor, notify, and remotely control 8 AI coding
+tools (Claude Code, Codex, OpenCode, OpenClaw, Kimi Code, WorkBuddy, ZCode, dsh)
+from one board, with a Foxbell desktop pet and a token usage ledger.
+MIT licensed, local-first, no telemetry. Windows 10+ / macOS 14+.
+
+- GitHub: https://github.com/jarvislee90s-dot/tuvis
+- Docs: https://jarvislee90s-dot.github.io/tuvis-website/zh/docs
+- Changelog: https://jarvislee90s-dot.github.io/tuvis-website/zh/changelog

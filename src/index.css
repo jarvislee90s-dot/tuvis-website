@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-inkdim: var(--ink-dim);
+  --color-ok: var(--status-ok);
+  --color-warn: var(--status-warn);
+  --color-bad: var(--status-bad);
+  --color-hud: var(--hud);
+  --color-navy: #2c3347;
+  --color-btnp: var(--btnp);
+  --color-btnpt: var(--btnpt);
+  --color-bub: var(--bub);
+  --color-bdg-r: #FEE9E5;
+  --color-bdg-r-t: #B3261E;
+  --color-bdg-y: #FBF3D9;
+  --color-bdg-y-t: #7A5E00;   /* 台账 #8A6D00 在淡黄底 4.43:1 差临门，加深达 4.5:1（同族琥珀深字） */
+  --color-bdg-g: #E3F2E7;
+  --color-bdg-g-t: #1E7B34;
+  --color-app-bg: var(--app-bg);
+  --color-app-card: var(--app-card);
+  --color-app-line: var(--app-line);
+  --color-app-ink: var(--app-ink);
+  --color-app-mut: var(--app-mut);
+  --color-app-btnp: var(--app-btnp);
+  --color-app-btnpt: #ffffff;
+  --color-app-accent: var(--app-accent);
+  --color-app-track: var(--app-track);
+  --color-app-chart-a: var(--app-chart-a);
+  --color-app-chart-b: var(--app-chart-b);
+  --font-ui: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+}
+
+/* 皮肤：主仓 remote-ui 定稿默认对 —— lpaper 暖白纸感 / npaper 暖黑纸感（01/04 号定稿 HTML） */
+:root {
+  --surface: #F8F3E9;
+  --card: #FFFDF8;
+  --line: #EAE2CF;
+  --ink: #2B2417;
+  --ink-dim: #6B6557;   /* 原 remote-ui mut #97907E 在 lpaper 上仅 2.87:1，加深保 WCAG 4.5:1（暖橄榄灰，同族） */
+  --status-ok: #1E7B34;
+  --status-warn: #8A6D00;
+  --status-bad: #B3261E;
+  --hud: #1787A8;   /* 青蓝品牌点缀保留（用户裁决，权衡 A2）；亮底加深保对比 */
+  --btnp: #1A1915;
+  --btnpt: #FFFFFF;
+  --bub: #EFE8D8;
+  --sh-soft: 0 1px 2px rgba(80, 60, 20, 0.06), 0 3px 10px rgba(80, 60, 20, 0.05);
+  --sh-pop: 0 2px 10px rgba(80, 60, 20, 0.08), 0 8px 30px rgba(80, 60, 20, 0.08);
+}
+
+@utility shadow-soft { box-shadow: var(--sh-soft); }
+@utility shadow-pop { box-shadow: var(--sh-pop); }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-surface text-ink;
+  font-family: var(--font-ui);
+}
+
+@keyframes fall { to { transform: translateY(320px) rotate(240deg); opacity: 0; } }
+
+/* 真应用白系令牌（P8 决策 7）：仅在 demo 窗壳内使用，与站点暖纸互不引用 */
+:root {
+  --app-bg: #ffffff;
+  --app-card: #ffffff;
+  --app-line: #e5e5e5;
+  --app-ink: #252525;
+  --app-mut: #737373;
+  --app-btnp: #171717;
+  --app-accent: #f5f5f5;
+  --app-track: #e5e5e5;
+  --app-chart-a: #3b82f6;
+  --app-chart-b: #8b5cf6;
+}
+
+/* 8 工具识别檐色（tool-color-ledger；黑系夜间提亮，CSS 变量实现零 JS 换肤） */
+:root {
+  --edge-claude: #D97757; --edge-codex: #10A37F; --edge-opencode: #6B6B6B;
+  --edge-openclaw: #D2453C; --edge-kimi: #0B0E1A; --edge-workbuddy: #4AD06A;
+  --edge-zcode: #141413; --edge-dsh: #4D6BFE;
+  --stage-dot: rgba(80, 60, 20, 0.1);
+}
+
+.stage-dots {
+  background-color: var(--surface);
+  background-image: radial-gradient(var(--stage-dot) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ===== 用户手册正文（DocsArticlePage .manual-doc；react-markdown 渲染，GFM 扩展） ===== */
+/* 排版贴站点 token（surface 纸感/ink/hud），不引 @tailwindcss/typography —— 自管避免插件依赖 */
+.manual-doc {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.manual-doc h2 { font-size: 1.25rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+.manual-doc h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+.manual-doc p { margin: 0.75rem 0; }
+/* P18：文档配图——竖版（手机截图）限高居中，不整屏铺开；横版截图维持全宽 */
+.manual-doc img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
+.manual-doc img.portrait { display: block; width: auto; max-height: 560px; margin-inline: auto; }
+
+.manual-doc ul, .manual-doc ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+.manual-doc ul { list-style: disc; }
+.manual-doc ol { list-style: decimal; }
+.manual-doc li { margin: 0.25rem 0; }
+.manual-doc img { max-width: 100%; border: 1px solid var(--line); border-radius: 12px; margin: 1rem 0; background: #fff; }
+.manual-doc img[alt$="[TODO]"] { outline: 2px dashed var(--status-warn); outline-offset: 4px; opacity: 0.85; }
+.manual-doc code { font-family: var(--font-mono); font-size: 0.85em; background: var(--bub); border-radius: 6px; padding: 0.15em 0.45em; }
+.manual-doc pre { background: var(--btnp); color: var(--btnpt); border-radius: 12px; padding: 1rem; overflow-x: auto; margin: 1rem 0; }
+.manual-doc pre code { background: transparent; padding: 0; }
+.manual-doc table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9em; }
+.manual-doc th, .manual-doc td { border: 1px solid var(--line); padding: 0.5rem 0.75rem; text-align: left; }
+.manual-doc th { background: var(--bub); font-weight: 600; }
+.manual-doc blockquote { border-left: 3px solid var(--hud); background: var(--bub); border-radius: 0 10px 10px 0; padding: 0.5rem 1rem; margin: 1rem 0; color: var(--ink-dim); }
+.manual-doc hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
+.manual-doc a { color: var(--hud); text-decoration: underline; text-underline-offset: 2px; }

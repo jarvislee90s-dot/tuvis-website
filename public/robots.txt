@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jarvislee90s-dot.github.io/tuvis-website/sitemap.xml

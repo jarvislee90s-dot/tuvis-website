@@ -1,0 +1,84 @@
+# 网站仓部署（P15 裁决：主线随便推，发版才上线）。
+#
+# 部署触发（三条线，部署的「代码」都钉在最新 v* tag；「文档」构建时从 tuvis 主仓实时拉取）：
+#   1. push tag（v*）        —— 正式发版：打完 tag 推上去即部署该版本
+#   2. schedule 每 6 小时    —— 兜底：用「最新 tag 的代码 + 主仓最新文档」重建，文档保持新鲜
+#   3. repository_dispatch   —— tuvis 主仓 docs 变更实时触发（同上，代码仍钉最新 tag）
+#   4. workflow_dispatch     —— 手动按钮：可选输入 ref，留空 = 最新 v* tag
+# push main 只存档、不部署（WIP 随便推）。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    tags: ["v*"]
+  schedule:
+    - cron: "0 */6 * * *"
+  repository_dispatch:
+    types: [tuvis-docs-update]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "要部署的 tag 或分支（留空 = 最新 v* tag）"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 解析部署目标：tag push 用该 tag；schedule/dispatch/手动 → 最新 v* tag（无 tag 兜底 main）
+      - name: Resolve deploy ref
+        id: resolve
+        run: |
+          EVENT="${{ github.event_name }}"
+          INPUT_REF="${{ github.event.inputs.ref }}"
+          if [ "$EVENT" = "push" ]; then
+            REF="${{ github.ref_name }}"
+          elif [ -n "$INPUT_REF" ]; then
+            REF="$INPUT_REF"
+          else
+            TAG=$(curl -sf "https://api.github.com/repos/${{ github.repository }}/tags" | jq -r '.[0].name // empty')
+            if [ -z "$TAG" ]; then
+              echo "::error::no v* tag found"
+              exit 1
+            fi
+            REF="$TAG"
+          fi
+          echo "deploying ref: $REF"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.ref }}
+      - uses: pnpm/action-setup@v4   # 版本取自 package.json 的 packageManager 字段
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # GITHUB_TOKEN 传给同步脚本：提升 api.github.com 速率上限（公开仓拉取本可匿名，兜底更稳）
+      - run: pnpm build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

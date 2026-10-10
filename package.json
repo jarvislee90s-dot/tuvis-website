@@ -1,0 +1,43 @@
+{
+  "name": "tuvis-website",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "dev": "vite",
+    "dev:sync": "node --use-system-ca scripts/sync-user-manual.mjs --budget 15000 && node --use-system-ca scripts/split-changelog.mjs && vite",
+    "sync": "node --use-system-ca scripts/sync-user-manual.mjs && node --use-system-ca scripts/split-changelog.mjs",
+    "build": "node --use-system-ca scripts/split-changelog.mjs && node --use-system-ca scripts/sync-user-manual.mjs && tsc --noEmit && vite build && node scripts/make-404.mjs",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync:changelog": "node --use-system-ca scripts/split-changelog.mjs",
+    "sync:manual": "node --use-system-ca scripts/sync-user-manual.mjs"
+  },
+  "dependencies": {
+    "framer-motion": "^12.0.0",
+    "i18next": "^24.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router": "^7.1.1",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.6",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.0.6",
+    "typescript": "~5.7.3",
+    "vite": "^6.1.0",
+    "vitest": "^3.0.5"
+  }
+}
