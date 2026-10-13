@@ -22,7 +22,9 @@ jobs:
     steps:
       - name: Send repository_dispatch to tuvis-website
         continue-on-error: true # PAT 未配置时不让主仓 Actions 挂红
-        uses: actions/repository-dispatch@v3
+        # 注意：官方 actions 组织没有 repository-dispatch 这个 action（2026-10-13 核实）——
+        # 社区标准实现是 peter-evans/repository-dispatch，入参 token/repository/event-type 同义
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.SITE_DISPATCH_PAT }}
           repository: jarvislee90s-dot/tuvis-website
