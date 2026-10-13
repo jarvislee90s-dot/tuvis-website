@@ -12,3 +12,6 @@ local-dev.bat
 vite-dev.log
 mobile-board-demo*.png
 d2-viewport.png
+
+# 本会话工具状态目录
+.zcode/
