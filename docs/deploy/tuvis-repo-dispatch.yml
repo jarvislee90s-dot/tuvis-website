@@ -1,12 +1,14 @@
 # 复制到 jarvislee90s-dot/tuvis 主仓：.github/workflows/notify-website.yml
-# 作用：主仓 main 的手册/更新日志/能力矩阵有变更 → 通知网站仓立即重建部署（真·全自动线）。
+# 作用（P20 扩展）：主仓发 release、或手册/日志/矩阵文档变更 → 通知网站仓自动重建部署。
 # 前置：在 tuvis 仓配一个 fine-grained PAT secret（名为 SITE_DISPATCH_PAT）：
 #   - 仓库权限只勾 jarvislee90s-dot/tuvis-website
 #   - Permissions → Actions → Read and write
-# 未配置时本 workflow 会失败，但不影响网站仓的 push + 定时兜底两条触发线。
-name: Notify website on docs change
+# 未配置 secret 时本 workflow 会红叉，但不影响网站仓的 24h 定时兜底——配置后即实时。
+name: Notify website on release / docs change
 
 on:
+  release:
+    types: [published]
   push:
     branches: [main]
     paths:
@@ -18,7 +20,9 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/repository-dispatch@v3
+      - name: Send repository_dispatch to tuvis-website
+        continue-on-error: true # PAT 未配置时不让主仓 Actions 挂红
+        uses: actions/repository-dispatch@v3
         with:
           token: ${{ secrets.SITE_DISPATCH_PAT }}
           repository: jarvislee90s-dot/tuvis-website

@@ -1,50 +1,107 @@
-# tuvis-website
+# 兔维斯官网（tuvis-website）
 
-兔维斯（Tuvis）官网与品牌资产仓库。
+> 你的桌面多 Agent 指挥台——官网与交互演示。
 
-## 结构
+**线上**：<https://jarvislee90s-dot.github.io/tuvis-website/zh>
+
+技术栈：Vite 6 · React 19 · TypeScript strict · Tailwind CSS v4 · GitHub Pages（子路径部署）· 中英双语 · 全站零追踪。
+
+## 本地开发
+
+```bash
+pnpm install
+pnpm dev          # 零网络、秒开（内容用仓内副本）——或直接双击 local-dev.bat
+```
+
+| 命令 | 网络 | 用途 |
+|---|---|---|
+| `pnpm dev` | 零网络 | 日常起服务 |
+| `pnpm dev:sync` | 先同步（15s 预算）再起 | 带主仓最新内容起服务 |
+| `pnpm sync` | 手动同步 | 立刻拉主仓最新文档/日志/矩阵，失败自动用副本 |
+| `pnpm build` | 同步 + 构建 | 与 CI 同一条命令，本地仅预览验证 |
+| `pnpm test` | — | 30 条 vitest（i18n parity / tokens / player / ledger / 下载 / 同步闸门） |
+| `pnpm sync:changelog` / `pnpm sync:manual` | 手动 | 单独同步某一类内容 |
+
+## 更新机制
+
+站点内容（更新日志 / 兼容矩阵 / 用户手册）的唯一真值在 **tuvis 主仓**（`jarvislee90s-dot/tuvis`）。构建时经 GitHub API 同步，失败自动回退仓内副本（副本入 git，页面永不空窗）。
+
+```mermaid
+flowchart LR
+    subgraph SRC["tuvis 主仓（唯一真值）"]
+        A["CHANGELOG.md"]
+        B["docs/capabilities.json"]
+        C["docs/user-manual/（zh/en/img）"]
+    end
+    subgraph TRIG["部署触发（deploy.yml）"]
+        T1["push v* tag<br>——发版，唯一升版本方式"]
+        T2["schedule 每日 03:53 北京<br>——文档保鲜兜底"]
+        T3["主仓 release / 文档变更<br>——repository_dispatch 实时"]
+        T4["Actions 手动 Run<br>——应急"]
+    end
+    SRC -->|"构建时 GitHub API 拉取<br>失败回退仓内副本"| BUILD
+    TRIG --> BUILD["build：同步脚本 → 校验闸门<br>→ tsc → vite build → 404"]
+    BUILD --> PAGES["GitHub Pages CDN"]
+    PAGES --> SITE["线上站点<br>jarvislee90s-dot.github.io/tuvis-website"]
+```
+
+> 注意：**push main 只存档、永不部署**。部署仅由 `v*` tag 触发（tag 模型详见 [docs/deploy/README.md](docs/deploy/README.md)）。
+
+### 三源 → 前端消费位置
+
+| 同步源（tuvis 主仓） | 构建产物 | 前端消费位置 |
+|---|---|---|
+| `CHANGELOG.md` | `src/content/changelog.json` | ① 首页 Hero 徽章 `vX.Y.Z · 开源` ② /changelog 页 ③ 演示手机看板品牌行 ④ 首页「关于」窗版本号 |
+| `docs/capabilities.json` | `src/content/capabilities.json` | 首页八工具兼容矩阵（经键名/覆盖/取值域三重闸门校验） |
+| `docs/user-manual/`（45 文件） | `public/manual/` | /docs 全部 13 篇手册（中英）与配图 |
+
+另有**运行时动态**一处：免费下载按钮点击时实时查 Releases API，安装包永远指向最新 release（不经构建）。
+
+## 发版
+
+```bash
+git push origin main                              # 平时：存档 WIP，不上线
+git tag vX.Y.Z && git push origin vX.Y.Z          # 发版：上线这一版
+```
+
+- 首次上线或排障：见 [docs/deploy/README.md](docs/deploy/README.md)
+- 项目目录里说「**发版**」即可触发 `tuvis-release` 技能代跑全流程（提交收尾 → 推 main → 问版本号 → 打 tag → 盯构建 → 验证线上）
+
+## 结构速览
 
 ```
 tuvis-website/
-├── SPEC.md           # 建站规格（v1.3：需求/决策记录/配色/实施 plan）
-├── legacy/           # 旧草稿归档（index.html 单页草稿 + assets，candidate-34 时期产物）
-└── brand/
-    ├── BRAND.md      # 品牌决策记录（命名/四关/域名；§3 candidate-34 章节为历史稿）
-    ├── final/        # ★ 最终视觉唯一依据：角色设定图 / 品牌系统 v1.0 / 赛博兔侠立绘
-    │   ├── extracted/  # 工作素材 + **定稿应用图标 13（深）/14（浅）**
-    │   └── logo/       # 图标定稿说明 + 配色规格 COLOR-SPEC + versions/ 全迭代归档（01~06）
-    └── archive/      # 旧方案素材归档（mascot-gen 全量、旧 logo/线稿、生成提示词录 + zip）
+├── SPEC.md                  # 建站规格（v1.3，需求与决策记录）
+├── docs/deploy/             # 部署 workflow 说明 + tuvis 仓侧触发器 + 上线检查单
+├── docs/design/             # 演示/文档参考稿（remote-ui 定稿、p9~p13 参考图）
+├── docs/superpowers/plans/  # P0~P13 各轮计划与 progress.md 全程记录
+├── scripts/                 # 同步脚本（split-changelog / sync-user-manual）等
+├── src/
+│   ├── home/                # 首页区块（Hero / 产品形态 / 矩阵 / 对比 / 关于+下载）
+│   ├── demo/                # 交互演示引擎（四场景 + 剧本 player + 手机/终端仿真窗）
+│   ├── pages/               # Home / Demo / Docs / Changelog
+│   ├── content/             # 同步产物（changelog / capabilities / 手册索引）
+│   └── i18n/                # 中英双语（331 键 parity 测试覆盖）
+├── public/manual/           # 用户手册同步副本（离线兜底，入 git）
+├── brand/                   # 品牌资产（红线：不可改）
+└── legacy/                  # 旧草稿归档（红线：不可改）
 ```
 
-## 内容同步
+## 琐碎备忘
 
-官网两份内容数据在 dev / build 启动时由 `scripts/split-changelog.mjs` 自动同步（也可手动 `pnpm sync:changelog`）：
+- **生成物勿手改**：`src/content/*.json` 与 `public/manual/` 是构建同步产物，改动只会发生在 tuvis 主仓对应文件。
+- **部署仅由 `v*` tag 触发**：push main 永不上线（发版模型是刻意的）。
+- **Pages 环境策略**：`github-pages` 环境已配 `v*` tag 部署策略——误删后 Actions 会报 `Tag ... not allowed to deploy`，按 docs/deploy/README.md 第六节恢复。
+- **仓库改名牵一发动全身**：线上地址含仓库名（`.../tuvis-website/`），base 路径散布在 `vite.config.ts`、`src/router.tsx`、`scripts/make-404.mjs`、`DocsArticlePage`——改名前先说一声。
+- **`SITE_DISPATCH_PAT` 过期症状**：tuvis 仓 notify-website 红叉，但每日兜底不受影响；换新 PAT 即可。
+- **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
+- **质量基线**：30 条 vitest（含中英 331 键 i18n parity）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
+- **红线**：`brand/`、`SPEC.md`、`legacy/` 不可改；全站零追踪脚本；下载 API 失败回退 Releases 列表页。
+- **演示数据 tuvis 化**：真实截图里的项目名/域名/会话内容一律不入站，演示语境全部模拟为 tuvis 生态。
+- **首页「关于」窗的当前版本刻意比最新 release 旧一版**（取 changelog 倒数第二条），保持「检测到新版本」的演示语义。
+- **Git 行尾 CRLF warning 无害**：Windows + autocrlf 的常规提示。
 
-| 数据源（tuvis 仓库） | 产物 |
-|---|---|
-| `CHANGELOG.md` | `src/content/changelog.json`（/changelog 页） |
-| `docs/capabilities.json` | `src/content/capabilities.json`（首页兼容矩阵，过结构闸门后落盘） |
-
-- 默认走 `api.github.com` contents 通道拉双源（base64 解码，Windows schannel 偶发失败自动重试 3 次）。
-- `pnpm sync:changelog -- --in <本地 CHANGELOG.md>`：changelog 走本地文件（离线改稿/链路排查），capabilities 仍走网络。
-- `pnpm sync:changelog -- --offline`：全跳网络，保留现有产物（频繁重启 / CI 离线场景）。
-- 失败保底语义：任一源拉取或校验失败 → 仅警告并保留上次同步产物，退出码 0，dev / build 不被打断（产物均入 git 作离线兜底）。
-- 限流提示：api.github.com 未认证限额 60 次/小时，每次 dev / build 消耗 2 次；高频重启请用 `--offline`。
-
-## 预览旧草稿（可选）
-
-```bash
-cd tuvis-website/legacy
-python -m http.server 8080
-# 打开 http://localhost:8080
-```
-
-## 上线计划
-
-- 渠道：GitHub Pages 先行（`jarvislee90s-dot.github.io/tuvis-website`），tuvis.app 购买后绑自定义域
-- 详细规格与分期：见 `SPEC.md`（v1.2）
-
-## 主形象速览（2026-10-10 定稿：生图路线 v3，无框整块渐变玻璃目镜）
+## 品牌资产速览（2026-10-10 定稿：生图路线 v3，无框整块渐变玻璃目镜）
 
 | 形态 | 文件 |
 |---|---|
@@ -55,3 +112,9 @@ python -m http.server 8080
 | 托盘胡萝卜三态 | `brand/final/extracted/15~17-tray-*.png` |
 | 品牌系统规范 | `brand/final/Tuvis Mascot & Brand System v1.0.txt` |
 | 图标配色规格 | `brand/final/logo/versions/05-aigen/COLOR-SPEC.md` |
+
+## 预览旧草稿（可选）
+
+```bash
+cd legacy && python -m http.server 8080   # http://localhost:8080
+```

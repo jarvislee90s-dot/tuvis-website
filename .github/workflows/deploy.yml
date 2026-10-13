@@ -12,7 +12,7 @@ on:
   push:
     tags: ["v*"]
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "53 19 * * *" # 每日一次（北京 03:53）：最新 tag 代码 + 主仓最新文档重建
   repository_dispatch:
     types: [tuvis-docs-update]
   workflow_dispatch:
