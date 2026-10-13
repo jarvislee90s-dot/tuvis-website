@@ -1,0 +1,37 @@
+# 半月检查点（用户裁决 2026-10-13）：每半个月把「最新 release 对应的文档/日志/矩阵快照」
+# 作为一条 chore(sync) 提交存进仓库历史，方便回溯「哪段时间线上是哪个版本的文档」。
+# 有变化才提交（无 diff 静默跳过）；本提交走 main 但永不触发部署（部署仅由 v* tag 驱动）。
+name: Sync checkpoint
+
+on:
+  schedule:
+    - cron: "0 3 1,15 * *" # 每月 1 日与 15 日 03:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # 允许推送 checkpoint 提交
+
+jobs:
+  checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # 同步脚本零依赖，直接 node 执行（无需 pnpm install）
+      - run: node --use-system-ca scripts/split-changelog.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: node --use-system-ca scripts/sync-user-manual.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit checkpoint when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          LATEST=$(git ls-remote --tags --refs --sort="-v:refname" "https://github.com/${{ github.repository }}.git" "v*" | head -n1 | sed "s|.*refs/tags/||")
+          git add public/manual src/content
+          if git diff --cached --quiet; then
+            echo "::notice::no changes since last checkpoint"
+          else
+            git commit -m "chore(sync): checkpoint ${LATEST:-no-tag} @ $(date +%F)"
+            git push
+          fi

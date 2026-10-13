@@ -28,6 +28,7 @@
 | 主仓 repository_dispatch | 最新 v\* tag | 主仓文档一提交就重建（需第三节 PAT） |
 | Actions 页手动 Run | 可填 ref，默认最新 v\* tag | 想立刻重发/重拉时的手动按钮 |
 | ~~push main~~ | **不部署** | 主线随便推 WIP，只存档 |
+| 每半月 checkpoint（1 日/15 日） | 不部署 | 同步脚本产物有变化时，往 main 提交一条 `chore(sync): checkpoint vX.Y.Z` 存档——专为仓库历史留档「哪段时间线上是哪个版本的文档」 |
 
 **发布 = 两条命令**：
 ```bash
