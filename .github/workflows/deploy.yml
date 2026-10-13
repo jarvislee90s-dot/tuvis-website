@@ -46,7 +46,8 @@ jobs:
           elif [ -n "$INPUT_REF" ]; then
             REF="$INPUT_REF"
           else
-            TAG=$(curl -sf "https://api.github.com/repos/${{ github.repository }}/tags" | jq -r '.[0].name // empty')
+            # 注意：tags REST API 按字母序返回，v0.5.10 会排在 v0.5.7 前——用 git ls-remote 的版本序取真最新
+            TAG=$(git ls-remote --tags --refs --sort="-v:refname" "https://github.com/${{ github.repository }}.git" "v*" | head -n1 | sed "s|.*refs/tags/||")
             if [ -z "$TAG" ]; then
               echo "::error::no v* tag found"
               exit 1
