@@ -9,6 +9,8 @@ import changelog from "@/content/changelog.json";
 const REPO = "https://github.com/jarvislee90s-dot/tuvis";
 const LATEST_URL = `${REPO}/releases/latest`;
 const LATEST = `v${changelog[0]?.version ?? "0.0.0"}`;
+/** 演示用的「当前版本」= 最新 release 的前一个版本号（仅一条历史时与最新相同） */
+const PREV = `v${changelog[1]?.version ?? changelog[0]?.version ?? "0.0.0"}`;
 
 const linkBtn =
   "flex items-center gap-1.5 rounded-lg border border-app-line bg-app-bg px-3 py-1.5 text-xs font-medium text-app-ink transition hover:bg-app-accent/50";
@@ -24,7 +26,7 @@ export function AboutWindow({ className = "" }: { className?: string }) {
           <img src={`${import.meta.env.BASE_URL}img/appicon-dark.png`} alt="" className="h-9 w-9 rounded-xl" />
           <div className="min-w-0">
             <div className="text-sm font-bold text-app-ink">兔维斯 Tuvis</div>
-            <div className="font-mono text-[11px] text-app-mut">版本 v0.5.5</div>
+            <div className="font-mono text-[11px] text-app-mut">版本 {PREV}</div>
           </div>
           <a href={LATEST_URL} target="_blank" rel="noopener noreferrer"
             className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg bg-app-btnp px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90">
