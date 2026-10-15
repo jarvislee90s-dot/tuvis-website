@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,9 @@ const __dir = dirname(fileURLToPath(import.meta.url));
 const md = readFileSync(resolve(__dir, "../tests/fixtures/CHANGELOG-sample.md"), "utf8");
 
 describe("parseChangelog", () => {
+  afterEach(() => {
+    vi.restoreAllMocks(); // 近失用例 spyOn(console, "warn")——断言失败也要还原，不污染其它用例的 console
+  });
   it("解析版本、日期、分区（out 序 = 文件中出现序，0.5.5 为最后一个版本）", () => {
     const out = parseChangelog(md);
     expect(out).toHaveLength(3);
@@ -78,6 +81,37 @@ describe("parseChangelog", () => {
   it("边界：- EN: … 写成列表项不识别为英文，按中文条目原文解析", () => {
     const out = parseChangelog("## [x] - 2026-01-01\n### Added\n- EN: written as a bullet\n");
     expect(out[0].sections.Added).toEqual([{ zh: "EN: written as a bullet" }]);
+  });
+  it("近失「EN：」全角冒号：按中文续行并入 zh、无 en 键，且构建日志告警", () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const out = parseChangelog("## [x] - 2026-01-01\n### Added\n- 条目\n  EN：全角\n续行\n");
+    expect(out[0].sections.Added).toEqual([{ zh: "条目 EN：全角 续行" }]);
+    expect("en" in out[0].sections.Added[0]).toBe(false);
+    const msgs = warnSpy.mock.calls.map((c) => String(c[0]));
+    expect(msgs.some((m) => m.includes("近失") && m.includes("EN：全角"))).toBe(true);
+  });
+  it("近失「EN :」冒号前有空格：按中文续行并入 zh 并告警", () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const out = parseChangelog("## [x] - 2026-01-01\n### Added\n- 条目\n  EN : 空格\n");
+    expect(out[0].sections.Added).toEqual([{ zh: "条目 EN : 空格" }]);
+    expect("en" in out[0].sections.Added[0]).toBe(false);
+    const msgs = warnSpy.mock.calls.map((c) => String(c[0]));
+    expect(msgs.some((m) => m.includes("近失") && m.includes("EN : 空格"))).toBe(true);
+  });
+  it("近失「En:」/「en:」大小写不符契约：按中文续行并入 zh 并告警", () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const out = parseChangelog("## [x] - 2026-01-01\n### Added\n- 条目\n  En: 首字母小写\n- 另一条\n  en: 全小写\n");
+    expect(out[0].sections.Added).toEqual([{ zh: "条目 En: 首字母小写" }, { zh: "另一条 en: 全小写" }]);
+    for (const e of out[0].sections.Added) expect("en" in e).toBe(false);
+    const msgs = warnSpy.mock.calls.map((c) => String(c[0]));
+    expect(msgs.some((m) => m.includes("En: 首字母小写"))).toBe(true);
+    expect(msgs.some((m) => m.includes("en: 全小写"))).toBe(true);
+  });
+  it("合法「EN:」不触发近失告警（加宽正则的误伤守卫）", () => {
+    const warnSpy = vi.spyOn(console, "warn");
+    const out = parseChangelog("## [x] - 2026-01-01\n### Added\n- 条目\n  EN: exact\n");
+    expect(out[0].sections.Added).toEqual([{ zh: "条目", en: "exact" }]);
+    expect(warnSpy.mock.calls.some((c) => String(c[0]).includes("近失"))).toBe(false);
   });
   it("CRLF 行尾输入解析正确（\\r 不残留于版本号与 zh/en）", () => {
     const out = parseChangelog("## [x] - 2026-01-01\r\n### Added\r\n- 条目\r\n  EN: entry\r\n");

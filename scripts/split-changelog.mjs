@@ -15,8 +15,8 @@
 //     EN: Sub-agent run chips and an observatory
 //   - 纯中文条目照旧，不写 EN 行（站点英文页对它逐条标注 English in progress）
 //
-// 规则：① `EN:` 半角冒号，行首允许缩进（与列表项文字对齐最自然；全角「EN：」不符合契约，
-// 构建日志会告警且该行按中文续行解析）；② EN 行必须紧跟
+// 规则：① `EN:` 半角冒号、冒号前无空格，行首允许缩进（与列表项文字对齐最自然；全角
+// 「EN：」、「EN :」、「En:」等近失形态不符合契约，构建日志会告警且该行按中文续行解析）；② EN 行必须紧跟
 // 某条中文条目——节首孤儿 EN 行按旧行为丢弃；③ EN 行之后的缩进续行并入英文，直到
 // 下一个条目 / 分区标题 / 版本标题；④ `- EN: …`（写成列表项）不识别为英文，会按中文
 // 条目原文解析——这是格式错误，GitHub 上它会渲染成一颗子弹，肉眼可见。
@@ -51,8 +51,8 @@ export function parseChangelog(md) {
       }
       continue;
     }
-    // 近失兜底：全角「EN：」不匹配契约（半角），会静默并入中文续行——构建日志点破
-    if (/^\s*EN：/.test(line)) console.warn("[sync] changelog 条目出现全角「EN：」——契约要求半角「EN:」，该行已按中文续行解析");
+    // 近失兜底：全角「EN：」、「EN :」、「En:」等不匹配契约（严格 EN:），会静默并入中文续行——构建日志点破
+    if (/^\s*EN\s*[:：]/i.test(line)) console.warn(`[sync] changelog 条目出现近失「${line.trim()}」——契约要求严格「EN:」，该行已按中文续行解析`);
     if (/^- /.test(line)) { cur.sections[sec].push({ zh: line.replace(/^- /, "").trim() }); enMode = false; }
     else if (line.trim() && cur.sections[sec].length) {
       const last = cur.sections[sec][cur.sections[sec].length - 1];
