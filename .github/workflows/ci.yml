@@ -1,0 +1,26 @@
+# PR / push main 把门：测试 + 类型检查（复审落地——此前测试不进任何 CI 门）。
+# 不跑 pnpm build：构建链含主仓网络拉取（split-changelog / sync-user-manual），
+# 留给 deploy.yml（部署时自带 GITHUB_TOKEN 与重试/兜底语义），CI 保持离线确定性。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4   # 版本取自 package.json 的 packageManager 字段
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm exec tsc --noEmit

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import data from "@/content/changelog.json";
@@ -18,11 +19,14 @@ const ITEM_MD: Components = {
 };
 
 export default function ChangelogPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { lang } = useParams();
+  // 语言权威源 = URL（与 DocsArticlePage 同口径），不用 i18n.language（切语首帧滞后一拍）
+  const en = lang?.startsWith("en") ?? false;
   return (
     <main className="mx-auto max-w-3xl px-5 py-14">
       <h1 className="text-3xl font-bold">{t("log.title")}</h1>
-      {i18n.language !== "zh" && <p className="mt-2 text-sm text-inkdim">{t("log.enNote")}</p>}
+      {en && <p className="mt-2 text-sm text-inkdim">{t("log.enNote")}</p>}
       <div className="mt-8 space-y-10">
         {data.map((rel) => (
           <section key={rel.version}>
@@ -36,7 +40,16 @@ export default function ChangelogPage() {
                 <ul className="mt-1 list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
                   {items.map((it, i) => (
                     <li key={i}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={ITEM_MD}>{it}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={ITEM_MD}>
+                        {en && it.en ? it.en : it.zh}
+                      </ReactMarkdown>
+                      {/* 诚实降级：英文页遇未译条目回落中文原文，并逐条标注（不静默冒充英文）。
+                          徽章独占一行（条目正文经 ITEM_MD 渲染为 block），mt-0.5 给呼吸感 */}
+                      {en && !it.en && (
+                        <span className="mt-0.5 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-inkdim">
+                          {t("log.enProgress")}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>

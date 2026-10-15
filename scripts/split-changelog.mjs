@@ -5,6 +5,23 @@
 //   node scripts/split-changelog.mjs --in <本地md>     # changelog 走本地文件（capabilities 仍走网络）
 //   node scripts/split-changelog.mjs --offline         # 全离线：跳过网络，保留现有产物
 // 失败语义：任一源失败 → 警告并保留上次同步产物，退出码 0（dev / build 不被打断）。
+//
+// ── 双语条目格式约定（主仓 CHANGELOG.md 的写法契约，tuvis#157 定案）──────────
+// 条目默认中文；需要英文翻译的条目，在中文行（含其缩进续行）写完后，紧跟一行 `EN: …`：
+//
+//   ### Added
+//
+//   - 子 Agent 运行 chip 与观察台
+//     EN: Sub-agent run chips and an observatory
+//   - 纯中文条目照旧，不写 EN 行（站点英文页对它逐条标注 English in progress）
+//
+// 规则：① `EN:` 半角冒号、冒号前无空格，行首允许缩进（与列表项文字对齐最自然；全角
+// 「EN：」、「EN :」、「En:」等近失形态不符合契约，构建日志会告警且该行按中文续行解析）；② EN 行必须紧跟
+// 某条中文条目——节首孤儿 EN 行按旧行为丢弃；③ EN 行之后的缩进续行并入英文，直到
+// 下一个条目 / 分区标题 / 版本标题；④ `- EN: …`（写成列表项）不识别为英文，会按中文
+// 条目原文解析——这是格式错误，GitHub 上它会渲染成一颗子弹，肉眼可见。
+// 解析产物：每条目 { zh, en? }——en 键仅在写过 EN 行时存在（缺省即「未翻译」信号，
+// 不用空串表达）。
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -13,16 +30,34 @@ export function parseChangelog(md) {
   const out = [];
   let cur = null;
   let sec = null;
+  let enMode = false; // EN 行之后的续行归英文（直到下一个条目/标题）
   for (const line of md.split(/\r?\n/)) {
     const v = line.match(/^## \[([^\]]+)\]\s*-\s*(\d{4}-\d{2}-\d{2})/);
-    if (v) { cur = { version: v[1], date: v[2], sections: {} }; out.push(cur); sec = null; continue; }
+    if (v) { cur = { version: v[1], date: v[2], sections: {} }; out.push(cur); sec = null; enMode = false; continue; }
     if (!cur) continue;
     const h = line.match(/^###\s+(.+)/);
-    if (h) { sec = h[1].trim(); cur.sections[sec] = cur.sections[sec] ?? []; continue; }
+    if (h) { sec = h[1].trim(); cur.sections[sec] = cur.sections[sec] ?? []; enMode = false; continue; }
     if (!sec) continue;
-    if (/^- /.test(line)) cur.sections[sec].push(line.replace(/^- /, "").trim());
+    const en = line.match(/^\s*EN:\s*(.*)$/);
+    if (en) {
+      const text = en[1].trim();
+      if (text) {
+        const items = cur.sections[sec];
+        const last = items[items.length - 1];
+        if (last) {
+          last.en = last.en ? `${last.en} ${text}` : text;
+          enMode = true;
+        }
+      }
+      continue;
+    }
+    // 近失兜底：全角「EN：」、「EN :」、「En:」等不匹配契约（严格 EN:），会静默并入中文续行——构建日志点破
+    if (/^\s*EN\s*[:：]/i.test(line)) console.warn(`[sync] changelog 条目出现近失「${line.trim()}」——契约要求严格「EN:」，该行已按中文续行解析`);
+    if (/^- /.test(line)) { cur.sections[sec].push({ zh: line.replace(/^- /, "").trim() }); enMode = false; }
     else if (line.trim() && cur.sections[sec].length) {
-      cur.sections[sec][cur.sections[sec].length - 1] += " " + line.trim();
+      const last = cur.sections[sec][cur.sections[sec].length - 1];
+      if (enMode) last.en += " " + line.trim();
+      else last.zh += " " + line.trim();
     }
   }
   return out;
