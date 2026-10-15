@@ -65,6 +65,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 测试先行把门：构建会从主仓实时拉 CHANGELOG 重新解析进产物，解析器回归必须挡在上线前
+      - run: pnpm test
       # GITHUB_TOKEN 传给同步脚本：提升 api.github.com 速率上限（公开仓拉取本可匿名，兜底更稳）
       - run: pnpm build
         env:
