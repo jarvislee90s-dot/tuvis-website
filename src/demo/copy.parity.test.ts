@@ -4,9 +4,10 @@ import { COPY as CODEX_COPY } from "./CodexAppWindow";
 import { COPY as KIMI_COPY } from "./KimiShellTui";
 import { COPY as OPENCODE_COPY } from "./OpenCodeTui";
 import { COPY as WORKBUDDY_COPY } from "./WorkBuddyAppWindow";
+import { COPY as ZCODE_COPY } from "./ZCodeTaskWindow";
 
 /**
- * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/T3.8 后续 11 个文件照此办理）
+ * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/T3.8 后续 9 个文件照此办理）
  * =====================================================================
  * 模式（每个窗体/文案组件文件一份，示例见 ClaudeTui.tsx）：
  *   1. 文件内 `const ZH = {...}; const EN: typeof ZH = {...}; export const COPY = { zh: ZH, en: EN } as const;`
@@ -46,13 +47,14 @@ function leaves(node: unknown, path: string, out: Map<string, string> = new Map(
   throw new Error(`${path} 不是 string 叶子（COPY 只允许 string / 数组 / 对象）`);
 }
 
-/** 五窗 COPY 登记表（后续文件的 COPY 导出加进来即纳入门禁） */
+/** 六窗 COPY 登记表（后续文件的 COPY 导出加进来即纳入门禁） */
 const SECTIONS = {
   ClaudeTui: CLAUDE_COPY,
   CodexAppWindow: CODEX_COPY,
   KimiShellTui: KIMI_COPY,
   OpenCodeTui: OPENCODE_COPY,
   WorkBuddyAppWindow: WORKBUDDY_COPY,
+  ZCodeTaskWindow: ZCODE_COPY,
 } as const;
 
 describe("COPY parity：批次 3 窗 zh/en 形状与语言门禁", () => {
