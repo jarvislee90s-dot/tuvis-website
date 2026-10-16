@@ -93,14 +93,14 @@ describe("品牌触点 /en 零「兔维斯」", () => {
 
   it("ClaudeTui 默认回复句内品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <ClaudeTui />);
-    // TODO(B3 COPY)：锚点收窄为品牌 token（批次 3 整句 COPY 化后需重锚整句）
+    // TODO(B3 COPY)：锚点 = 品牌 token + 待 COPY 尾词（整句 COPY 化后须重锚）
     expect(container.textContent).toContain("Tuvis桌面端");
     expect(container.textContent).not.toContain("兔维斯");
   });
 
   it("CodexAppWindow 说明区品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <CodexAppWindow />);
-    // TODO(B3 COPY)：锚点收窄为品牌 token（批次 3 整句 COPY 化后需重锚整句）
+    // TODO(B3 COPY)：锚点 = 品牌 token + 待 COPY 尾词（整句 COPY 化后须重锚）
     expect(container.textContent).toContain("Tuvis官网");
     expect(container.textContent).not.toContain("兔维斯");
   });

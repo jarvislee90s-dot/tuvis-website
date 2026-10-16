@@ -16,7 +16,7 @@ const BASE = import.meta.env.BASE_URL; // "/tuvis-website/"
 export default function DocsArticlePage() {
   const { t } = useTranslation();
   const params = useParams();
-  // /:lang 归一统一走 useLang（en* → en，缺失/非法 → zh；与替换前的 params.lang?.startsWith 等价）
+  // 语言走 useLang（en* → en，其余 → zh）：URL 权威
   const lang = useLang();
   const slug = params.slug ?? "01-overview";
 

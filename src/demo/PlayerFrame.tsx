@@ -12,7 +12,8 @@ export function PlayerFrame({ steps, children, id, reset }: {
   const p = useScriptPlayer(steps, reset);
   const [hover, setHover] = useState<number | null>(null);
   const { offsets, total } = timeline(steps);
-  // 步条文案语言走 useLang（URL 权威；原 i18n.language 三元切语首帧滞后一拍——LangLayout effect 才更新实例语言）
+  // 步条文案语言走 useLang（en* → en，其余 → zh；须在 /:lang 路由树内渲染）：URL 权威，切语首帧不滞后
+  // （i18next 实例语言由 LangLayout effect 才更新）
   const lang = useLang();
 
   return (

@@ -21,8 +21,7 @@ const ITEM_MD: Components = {
 
 export default function ChangelogPage() {
   const { t } = useTranslation();
-  // 语言权威源 = URL（与 DocsArticlePage 同口径），不用 i18n.language（切语首帧滞后一拍）；
-  // /:lang 归一统一走 useLang（en* → en，缺失/非法 → zh），与替换前的 startsWith 判定等价
+  // 语言走 useLang（en* → en，其余 → zh）：URL 权威、切语首帧不滞后；判定同 DocsArticlePage
   const en = useLang() === "en";
   usePageMeta({ title: t("meta.changelog.title"), description: t("meta.changelog.desc") });
   return (
