@@ -8,9 +8,13 @@ import { COPY as FILE_PREVIEW_COPY } from "./remote/FilePreview";
 import { COPY as REMOTE_DETAIL_COPY } from "./remote/RemoteDetail";
 import { COPY as WORKBUDDY_COPY } from "./WorkBuddyAppWindow";
 import { COPY as ZCODE_COPY } from "./ZCodeTaskWindow";
+import { COPY as D1_SCENE_COPY } from "./scenes/D1Scene";
+import { COPY as PET_USAGE_COPY } from "./scenes/PetUsageScene";
+import { COPY as REMOTE_SCENE_COPY } from "./scenes/RemoteScene";
+import { COPY as RESOURCES_SCENE_COPY } from "./scenes/ResourcesScene";
 
 /**
- * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/T3.8 后续 9 个文件照此办理）
+ * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/B3-T8 后续 13 个文件照此办理）
  * =====================================================================
  * 模式（每个窗体/文案组件文件一份，示例见 ClaudeTui.tsx）：
  *   1. 文件内 `const ZH = {...}; const EN: typeof ZH = {...}; export const COPY = { zh: ZH, en: EN } as const;`
@@ -61,6 +65,10 @@ const SECTIONS = {
   RemoteDetail: REMOTE_DETAIL_COPY,
   FilePreview: FILE_PREVIEW_COPY,
   AboutWindow: ABOUT_COPY,
+  D1Scene: D1_SCENE_COPY,
+  RemoteScene: REMOTE_SCENE_COPY,
+  ResourcesScene: RESOURCES_SCENE_COPY,
+  PetUsageScene: PET_USAGE_COPY,
 } as const;
 
 describe("COPY parity：批次 3 窗 zh/en 形状与语言门禁", () => {
@@ -90,4 +98,12 @@ describe("COPY parity：批次 3 窗 zh/en 形状与语言门禁", () => {
       for (const [path, v] of en) expect(v.trim(), `${file}.COPY.en.${path}`).not.toBe("");
     });
   }
+});
+
+/** 尾随空格锚点（B3-T8 rider）：COPY 叶子与同行 JSX 元素直连分词时，en 靠尾随空格——
+ *  编译器不报错、格式化易抹掉，故用叶子级定值冻结（AboutWindow 的 DOM 级锚点在 Brand.test /en 用例）。 */
+describe("尾随空格叶子锚点：en 承接同行元素", () => {
+  it("FilePreview /en h1Link 以空格结尾（承 <em> 强调段「a 7-chapter illustrated guide」）", () => {
+    expect(FILE_PREVIEW_COPY.en.h1Link).toBe("becomes ");
+  });
 });
