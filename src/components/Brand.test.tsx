@@ -6,6 +6,7 @@ import "@/i18n"; // 侧效应导入：TopBar 的 useTranslation 需要全局 i18
 import { ClaudeTui } from "@/demo/ClaudeTui";
 import { CodexAppWindow } from "@/demo/CodexAppWindow";
 import { RemoteBoard } from "@/demo/remote/RemoteBoard";
+import { AboutWindow } from "@/home/AboutWindow";
 import { Brand, brandName, brandWord } from "./Brand";
 import { TopBar } from "./layout/TopBar";
 
@@ -80,8 +81,8 @@ describe("TopBar 品牌位：Link 内嵌 Brand", () => {
   });
 });
 
-/** Minor-2 红线锁：品牌触点 /en 渲染零「兔维斯」（AboutWindow 不加——求 Star 横幅整句中文按
- *  批次 3 COPY 任务处理，笼统断言必挂；其品牌位走 brandName 已由纯函数单测覆盖）。 */
+/** Minor-2 红线锁：品牌触点 /en 渲染零「兔维斯」；AboutWindow 整窗 COPY 化（B3-T7）后已可纳入，
+ *  见下方独立 describe（品牌位元素级双向断言 + 整窗零 CJK）。 */
 describe("品牌触点 /en 零「兔维斯」", () => {
   afterEach(cleanup);
 
@@ -103,6 +104,30 @@ describe("品牌触点 /en 零「兔维斯」", () => {
     // B3-T5 重锚：说明区整句 COPY 化后 en 为英文——锚 = 品牌 token + 英文尾词（原「Tuvis官网」已废）
     expect(container.textContent).toContain("the Tuvis website");
     expect(container.textContent).not.toContain("兔维斯");
+  });
+});
+
+/** B3-T7 M1（B3-T1 质量审查遗留）：AboutWindow 整窗 COPY 化后纳入品牌红线——
+ *  品牌位加 data-testid="about-brand" 做元素级双向锁（/en 恰「Tuvis」、/zh 恰「兔维斯 Tuvis」），
+ *  /en 再断言整窗零 CJK（innerHTML 连 aria-label/title 等属性一起扫，防「关闭提醒」类漏网）。 */
+describe("AboutWindow 品牌红线（B3-T7 M1）", () => {
+  afterEach(cleanup);
+
+  it("/en：品牌位元素恰为「Tuvis」", () => {
+    mountAt("/en", <AboutWindow />);
+    expect(screen.getByTestId("about-brand").textContent).toBe("Tuvis");
+  });
+
+  it("/zh：品牌位元素恰为「兔维斯 Tuvis」，求 Star 横幅逐字不变", () => {
+    const { container } = mountAt("/zh", <AboutWindow />);
+    expect(screen.getByTestId("about-brand").textContent).toBe("兔维斯 Tuvis");
+    expect(container.textContent).toContain("如果兔维斯帮到了你，请在 GitHub 点个 Star，这对我们意义重大");
+  });
+
+  it("/en：整窗零 CJK（含属性），且求 Star 横幅品牌词为裸词", () => {
+    const { container } = mountAt("/en", <AboutWindow />);
+    expect(container.innerHTML).not.toMatch(/[\u4e00-\u9fff]/);
+    expect(container.textContent).toContain("If Tuvis has helped you");
   });
 });
 
