@@ -3,6 +3,7 @@ import type { Lang } from "@/i18n";
 import { useLang } from "@/i18n/useLang";
 import { useDemo, QUEUED_MSG, msgDisplayText, type QuestionState, type RemoteMsg } from "../store";
 import { setStateOf } from "../store";
+import type { Bilingual } from "../types";
 import { PlayerFrame } from "../PlayerFrame";
 import { DesktopStage } from "../DesktopStage";
 import { PhoneFrame } from "../PhoneFrame";
@@ -41,6 +42,23 @@ function sceneOf(remote: { approval: "none" | "pending" | "approved"; planMode: 
 
 const triggerBtn = "rounded-lg border border-app-line px-3 py-1 text-xs text-app-ink hover:bg-app-accent/50";
 
+/** 批次 3 COPY 模式（B3-T8；模板说明见 copy.parity.test.ts 头注释）：
+ *  场景内随语言变化的文案收进 COPY.{zh,en}，渲染处按语言取；en 以 `: typeof ZH` 标注互校；
+ *  zh 逐字保留现状（红线），en 为产品英文版 UI 口径。
+ *  语言无关项刻意不入 COPY：触发排五钮走既有 i18n 键 demo.remote.t.*；tuiLines 联动行与 plan mode
+ *  底行是终端输出 / 产品英文 UI（「硬编码英文，真实感优先」既有裁决，见上方注释）。 */
+const ZH = {
+  /** ClaudeTui toast 正文（契约 = Bilingual，见 ClaudeTui） */
+  toastBody: "远程审批 · 空闲",
+};
+const EN: typeof ZH = {
+  toastBody: "Remote approval · idle",
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** toast 契约（Bilingual，B3-T8）：zh/en 双支同源 COPY，ClaudeTui 侧按 lang 取 */
+const TOAST_BODY: Bilingual = { zh: ZH.toastBody, en: EN.toastBody };
+
 export function RemoteScene() {
   const { t } = useTranslation();
   const lang = useLang();
@@ -68,9 +86,11 @@ export function RemoteScene() {
     files: () => setRemote({ files: !useDemo.getState().remote.files }),
   };
 
-  /* 末条用户消息 → TUI 用户行（select 场景透传）；用户输入 {raw} 与双语种子都按 lang 取显示文本（D10） */
+  /* 末条用户消息 → TUI 用户行（select 场景透传）；用户输入 {raw} 与双语种子都按 lang 取显示文本（D10）。
+     无用户消息时不传：ClaudeTui 侧 userMsgDefault 按语言兜底（zh「你好」/ en「Hello」）——
+     原 "HI" 硬编码兜底已删（B3-T8：/zh 显示英文 HI 的既有怪状）。 */
   const lastUser = [...remote.messages].reverse().find((m) => m.role === "user");
-  const lastUserMsg = lastUser ? msgDisplayText(lastUser, lang) : "HI";
+  const lastUserMsg = lastUser ? msgDisplayText(lastUser, lang) : undefined;
 
   /* P19 可选联动：TUI 选项行 ↔ 手机问答卡共享同一份 picked（D9：存选项 id；双向：点终端行回写手机卡） */
   const q = remote.question;
@@ -112,7 +132,7 @@ export function RemoteScene() {
               extraLines={tuiLines(remote.approval, remote.messages, lang)}
               waiting={remote.approval === "pending"}
               modeLine={remote.planMode ? "» plan mode on (shift+tab to cycle) · < for agents" : undefined}
-              toast={claude.state === "idle" ? { title: "Claude", body: { zh: "远程审批 · 空闲", en: "Remote approval · idle" } } : null} />
+              toast={claude.state === "idle" ? { title: "Claude", body: TOAST_BODY } : null} />
           </div>
         </div>
       </DesktopStage>
