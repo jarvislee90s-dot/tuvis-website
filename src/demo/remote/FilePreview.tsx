@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
+import { useLang } from "@/i18n/useLang";
 import { useDemo } from "../store";
 
 /** 文件预览整屏页（P18 对照用户四帧真机截图：① 总列表 ② 代码源码 ③ 文字渲染 ④ 图片）：
  *  顶栏「文件」紫 pill + 分屏/全屏/×；总列表 = 追溯范围/文件来源/文件类型下拉 + 按文件名搜索 +
  *  行（文件名 + 来源徽标 + 路径 + 时间）+ 可预览说明；点行进详情——md/html 双视图（源码|渲染）、
- *  图片直显。数据 tuvis 语境硬编码（真实感优先，不入 i18n）。 */
+ *  图片直显。文件名/路径为语言无关常量（tuvis 语境）；文件内文取本文件 COPY（zh/en，B3-T7）。 */
 
 type FileKind = "code" | "md" | "image";
 type FileSource = "write" | "read" | "mine";
@@ -21,8 +22,54 @@ const FILES: FileMeta[] = [
   { name: "tuvis-icon.png", kind: "image", source: "write", path: "E:/LLMproject/Github/tuvis-app/public/img/tuvis-icon.png", minutes: 39 },
 ];
 
-/** 代码帧内容（remote-card.html 头部，手工着色 JSX——真实感优先） */
-function CodeLines(): ReactNode {
+/** 批次 3 COPY 模式（B3-T7；模板说明见 copy.parity.test.ts 头注释）：
+ *  窗体 chrome（筛选/徽标/说明/视图切换）走既有 i18n 键（demo.fp.*，双语已在册），
+ *  本 COPY 收仿真文件内文——源码帧 / 渲染帧 / md 渲染态三段；
+ *  en 以 `: typeof ZH` 标注互校；zh 逐字保留现状（红线），en 为产品英文版 UI 口径。 */
+const ZH = {
+  /** 源码帧 chip（remote-card.html 的 span.chip） */
+  codeChip: "VideoToDoc-skills · 三个协同 Skill",
+  /** 渲染帧 chip（同文件渲染态；与源码帧的差异为现状，不顺手统一） */
+  renderChip: "Tuvis-skills · 三个协同 Skill",
+  /** 大标题三段：h1 起句 / <br> 后承接句（尾随空格接强调段）/ <em> 强调段 */
+  h1Lead: "一段 1 小时视频",
+  h1Link: "变成 ",
+  h1Em: "7 章图文讲义",
+  /** 副行（p.sub） */
+  subline: "下载 → 转录 → 截图去重 → 图文对齐",
+  /** 渲染帧脚注（渲染态独有，源码里没有这一行） */
+  footNote: "本地批跑 · 数据不出机 · 全程零付费接口",
+  /** approve-notes.md 渲染态正文（源码视图显示同一份原文） */
+  md: `## 远程审批「有效提问」清单（目标 8 条 · 候选 11 条）
+
+- **审批卡文案**：命令全文 \`mono\` 展示，允许 / 拒绝双钮，全程留痕
+- **排队机制**：未读消息在输入区上方挂 \`⏳ 已排队\` chip，不占对话流
+- **状态灯联动**：批准后看板红转绿，托盘三态同步换图
+- **文件面板**：\`md/html\` 支持渲染切换，图片 ≤5MB 直显
+
+**发布口径**：文案经用户过目后由助手代发（每帖一条，回车发送）`,
+};
+const EN: typeof ZH = {
+  codeChip: "VideoToDoc-skills · three Skills working together",
+  renderChip: "Tuvis-skills · three Skills working together",
+  h1Lead: "A one-hour video",
+  h1Link: "becomes ",
+  h1Em: "a 7-chapter illustrated guide",
+  subline: "Download → Transcribe → Dedupe screenshots → Align text to images",
+  footNote: "Runs locally · your data never leaves the machine · zero paid APIs",
+  md: `## Remote approval checklist for a "good question" (target 8 · candidates 11)
+
+- **Approval card copy**: the full command in \`mono\`, Allow / Deny buttons, every move on the record
+- **Queueing**: unread messages park as a \`⏳ Queued\` chip above the input row, clear of the thread
+- **Status lights**: on approval the board flips red to green and the tray icon follows all three states
+- **File panel**: \`md/html\` toggles between source and rendered, images up to 5MB show inline
+
+**Release rule**: the user reviews the copy first, then the assistant posts it (one message each, press Enter to send)`,
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** 代码帧内容（remote-card.html 头部，手工着色 JSX——真实感优先；内文取 COPY，zh/en 传当前语言表） */
+function CodeLines({ copy: t }: { copy: typeof ZH }): ReactNode {
   const T = ({ c }: { c: string }) => <span className="text-[#0550AE]">{c}</span>;      // 标签名
   const A = ({ c }: { c: string }) => <span className="text-[#953800]">{c}</span>;      // 属性
   const S = ({ c }: { c: string }) => <span className="text-[#0A7C5A]">{c}</span>;      // 字符串
@@ -41,26 +88,14 @@ function CodeLines(): ReactNode {
       <div>{"  "}{"</"}<T c="style" />{">"}</div>
       <div>{"</"}<T c="head" />{">"}</div>
       <div>{"<"}<T c="body" />{">"}</div>
-      <div>{"  "}{"<"}<T c="span" /> <A c="class" />={<S c='"chip"' />}{">"}VideoToDoc-skills · 三个协同 Skill{"</"}<T c="span" />{">"}</div>
-      <div>{"  "}{"<"}<T c="h1" />{">"}一段 1 小时视频{"<"}<T c="br" />{">"}变成 <T c="em" />7 章图文讲义{"</"}<T c="em" />{"</"}<T c="h1" />{">"}</div>
-      <div>{"  "}{"<"}<T c="p" /> <A c="class" />={<S c='"sub"' />}{">"}下载 → 转录 → 截图去重 → 图文对齐{"</"}<T c="p" />{">"}</div>
+      <div>{"  "}{"<"}<T c="span" /> <A c="class" />={<S c='"chip"' />}{">"}{t.codeChip}{"</"}<T c="span" />{">"}</div>
+      <div>{"  "}{"<"}<T c="h1" />{">"}{t.h1Lead}{"<"}<T c="br" />{">"}{t.h1Link}<T c="em" />{t.h1Em}{"</"}<T c="em" />{"</"}<T c="h1" />{">"}</div>
+      <div>{"  "}{"<"}<T c="p" /> <A c="class" />={<S c='"sub"' />}{">"}{t.subline}{"</"}<T c="p" />{">"}</div>
       <div>{"</"}<T c="body" />{">"}</div>
       <div>{"</"}<T c="html" />{">"}</div>
     </div>
   );
 }
-
-/** 文字渲染帧内容（approve-notes.md 渲染态，tuvis 语境） */
-const MD_CONTENT = `## 远程审批「有效提问」清单（目标 8 条 · 候选 11 条）
-
-- **审批卡文案**：命令全文 \`mono\` 展示，允许 / 拒绝双钮，全程留痕
-- **排队机制**：未读消息在输入区上方挂 \`⏳ 已排队\` chip，不占对话流
-- **状态灯联动**：批准后看板红转绿，托盘三态同步换图
-- **文件面板**：\`md/html\` 支持渲染切换，图片 ≤5MB 直显
-
-**发布口径**：文案经用户过目后由助手代发（每帖一条，回车发送）`;
-
-const MD_RAW = MD_CONTENT;
 
 /** 图片帧：用站点真素材（演示语境的封面图） */
 const IMAGE_SRC = `${import.meta.env.BASE_URL}img/hero-poster.png`;
@@ -69,6 +104,9 @@ const badge = "rounded px-1.5 py-px text-[9.5px]";
 
 export function FilePreview() {
   const { t } = useTranslation();
+  const lang = useLang();
+  /* 双机制说明：i18n 的 t 管窗体 chrome（既有多语键），COPY 管仿真文件内文（B3-T7） */
+  const copy = COPY[lang];
   const setRemote = useDemo((s) => s.setRemote);
   const [openName, setOpenName] = useState<string | null>(null);
   const [view, setView] = useState<"src" | "render">("render");
@@ -170,18 +208,18 @@ export function FilePreview() {
               </div>
             )}
             {openFile.kind === "code" && (view === "src"
-              ? <div className="h-full overflow-hidden"><CodeLines /></div>
+              ? <div className="h-full overflow-hidden"><CodeLines copy={copy} /></div>
               : <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg bg-[#f7f8fa] p-4 text-center">
-                  <span className="rounded-full bg-[#e4f8f0] px-3 py-1 text-[10px] font-semibold text-[#0f9b74]">Tuvis-skills · 三个协同 Skill</span>
-                  <span className="text-[15px] font-bold leading-snug">一段 1 小时视频<br />变成 7 章图文讲义</span>
-                  <span className="text-[10.5px] text-app-mut">下载 → 转录 → 截图去重 → 图文对齐</span>
-                  <span className="text-[9.5px] text-app-mut">本地批跑 · 数据不出机 · 全程零付费接口</span>
+                  <span className="rounded-full bg-[#e4f8f0] px-3 py-1 text-[10px] font-semibold text-[#0f9b74]">{copy.renderChip}</span>
+                  <span className="text-[15px] font-bold leading-snug">{copy.h1Lead}<br />{copy.h1Link}{copy.h1Em}</span>
+                  <span className="text-[10.5px] text-app-mut">{copy.subline}</span>
+                  <span className="text-[9.5px] text-app-mut">{copy.footNote}</span>
                 </div>)}
             {openFile.kind === "md" && (view === "render"
               ? <div className="h-full overflow-hidden text-[11px] leading-relaxed [&_h2]:mb-1 [&_h2]:text-[13px] [&_h2]:font-bold [&_li]:my-0.5 [&_p]:my-1 [&_code]:rounded [&_code]:bg-app-accent [&_code]:px-0.5">
-                  <ReactMarkdown>{MD_CONTENT}</ReactMarkdown>
+                  <ReactMarkdown>{copy.md}</ReactMarkdown>
                 </div>
-              : <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-app-ink">{MD_RAW}</pre>)}
+              : <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-app-ink">{copy.md}</pre>)}
           </div>
         </>
       )}

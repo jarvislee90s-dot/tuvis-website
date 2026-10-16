@@ -1,8 +1,9 @@
 import { Fragment, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useLang } from "@/i18n/useLang";
 import { Reveal } from "@/components/Reveal";
 import { Maximize2Icon, CloseIcon } from "@/components/Icons";
-import { LEDGERS, totalTokens, hitRate, formatCN, formatInt, smoothPath, type DistRow, type RangeKey } from "./ledgerData";
+import { LEDGERS, totalTokens, hitRate, formatUnits, formatInt, smoothPath, type DistRow, type RangeKey } from "./ledgerData";
 
 type DimKey = "tool" | "project" | "supplier";
 
@@ -17,6 +18,9 @@ const LIGHTS = ["#FF5F57", "#FEBC2E", "#28C840"];
 
 export function LedgerSection() {
   const { t } = useTranslation();
+  // 语言走 useLang（en* → en，其余 → zh）：用量单位随语言切 万/亿 ↔ K/M/B（D3）；
+  // URL 权威、切语首帧不滞后；须在 /:lang 路由树内渲染
+  const lang = useLang();
   const [range, setRange] = useState<RangeKey>("last7d");
   const [dim, setDim] = useState<DimKey>("tool");
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
@@ -43,10 +47,10 @@ export function LedgerSection() {
   // 概要卡：大数字 + 两列指标网格（行序固定，行主序即图中左右两列）
   const M = data.metrics;
   const metricCells: { label: string; value: string; cmp: string }[] = [
-    { label: t("usage.metric.input"), value: `~${formatCN(M.inputEst)}`, cmp: data.deltas.inputEst },
-    { label: t("usage.metric.output"), value: formatCN(M.output), cmp: data.deltas.output },
-    { label: t("usage.metric.reqInput"), value: formatCN(M.reqInput), cmp: data.deltas.reqInput },
-    { label: t("usage.metric.cacheHit"), value: formatCN(M.cacheHit), cmp: data.deltas.cacheHit },
+    { label: t("usage.metric.input"), value: `~${formatUnits(M.inputEst, lang)}`, cmp: data.deltas.inputEst },
+    { label: t("usage.metric.output"), value: formatUnits(M.output, lang), cmp: data.deltas.output },
+    { label: t("usage.metric.reqInput"), value: formatUnits(M.reqInput, lang), cmp: data.deltas.reqInput },
+    { label: t("usage.metric.cacheHit"), value: formatUnits(M.cacheHit, lang), cmp: data.deltas.cacheHit },
     { label: t("usage.metric.hitRate"), value: `${(hitRate(M) * 100).toFixed(1)}%`, cmp: data.deltas.hitRate },
     { label: t("usage.metric.requests"), value: formatInt(M.requests), cmp: data.deltas.requests },
   ];
@@ -158,7 +162,7 @@ export function LedgerSection() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="text-sm font-semibold text-app-ink">{t("usage.trend")}</h3>
                   <p className="text-[10px] text-app-mut">
-                    {t("usage.peak")} {formatCN(peak)} / {t("usage.rangeTotal")} {formatCN(totalTokens(M))} ({data.deltas.trend})
+                    {t("usage.peak")} {formatUnits(peak, lang)} / {t("usage.rangeTotal")} {formatUnits(totalTokens(M), lang)} ({data.deltas.trend})
                   </p>
                 </div>
                 <div className="relative mt-2" onMouseMove={onTrendMove} onMouseLeave={() => setHoverIdx(null)}>
@@ -189,7 +193,7 @@ export function LedgerSection() {
                   {hoverIdx != null && (
                     <div className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-app-line bg-app-bg px-2 py-1 text-[11px] font-medium text-app-ink shadow-pop"
                       style={{ left: `${Math.min(88, Math.max(12, ((hoverIdx + 0.5) / n) * 100))}%` }}>
-                      {data.trend.labels[hoverIdx]} · {formatCN(data.trend.tokens[hoverIdx])} · {t("usage.metric.hitRate")} {Math.round(data.trend.hit[hoverIdx] * 100)}%
+                      {data.trend.labels[hoverIdx]} · {formatUnits(data.trend.tokens[hoverIdx], lang)} · {t("usage.metric.hitRate")} {Math.round(data.trend.hit[hoverIdx] * 100)}%
                     </div>
                   )}
                 </div>
@@ -230,7 +234,7 @@ export function LedgerSection() {
                 </div>
               </section>
 
-              {/* ⑤ 分布卡：三维切换 + 名称/值（中文单位）/占比条（分母 = totalTokens） */}
+              {/* ⑤ 分布卡：三维切换 + 名称/值（随语言：zh 万/亿 或 en K/M/B）/占比条（分母 = totalTokens） */}
               <section className={card}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-app-ink">{t("usage.dist")}</h3>
@@ -249,7 +253,7 @@ export function LedgerSection() {
                   {rows.map((r) => (
                     <Fragment key={r.name}>
                       <span className="truncate text-app-ink" title={r.name}>{r.name}</span>
-                      <span className="text-right tabular-nums text-app-ink">{formatCN(r.tokens)}</span>
+                      <span className="text-right tabular-nums text-app-ink">{formatUnits(r.tokens, lang)}</span>
                       <span className="h-1.5 rounded-full bg-app-track">
                         <span className="block h-full rounded-full bg-app-chart-a"
                           style={{ width: `${Math.max(4, (r.tokens / totalTokens(M)) * 100)}%` }} />

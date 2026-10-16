@@ -1,6 +1,8 @@
+import { useLang } from "@/i18n/useLang";
 import { TuiShell } from "./TuiShell";
 
-/** 文案常量区（对照 docs/design/p11-ref/kimi-code-full-tui.png，结构 1:1、内容换 tuvis 语境——真实感优先，硬编码不入 i18n） */
+/** 文案常量区（对照 docs/design/p11-ref/kimi-code-full-tui.png，结构 1:1、内容 tuvis 语境——真实感优先）。
+ *  欢迎盒/宣传段/MCP/状态栏为语言无关的真实产品英文 UI——留常量，不进 COPY */
 const WELCOME = {
   title: "Welcome to Kimi CLI!",
   help: "Send /help for help information.",
@@ -17,17 +19,6 @@ const PROMO = {
   tail: " to try the desktop app now.",
 };
 const MCP = ["● filesystem MCP server connected", "● tuvis-remote MCP server connected"];
-const SESSION = {
-  user: "帮我规划看板的远程审批卡",
-  think: "Thinking… 先看现有卡片与审批流，再定文案与状态色",
-  reply: [
-    "好的，远程审批卡这样规划——审批通道已有基础（src/remote/approve.rs）：",
-    "• 红卡 = 待批准，命令全文 mono 展示",
-    "• 「允许」→ ✓ Approved 续跑，全程留痕",
-    "• 结果自动记入用量账本",
-    "要先把卡面草稿写进 docs/remote-card.md 吗？",
-  ],
-};
 /** 回复正文路径高亮（split 带捕获组：奇数段 = 路径，蓝） */
 const PATH_SPLIT = /(src\/remote\/approve\.rs|docs\/remote-card\.md)/;
 const STATUS = {
@@ -37,10 +28,43 @@ const STATUS = {
   context: "context: 4% (33k/977k)",
 };
 
+/** 批次 3 COPY 模式（T3.3；模板说明见 copy.parity.test.ts 头注释）：
+ *  仿真会话三段（用户行/思考行/回复）随语言变化，收进 COPY.{zh,en}；en 以 `: typeof ZH` 互校；
+ *  zh 逐字保留现状（红线）。en 回复行内的路径与 zh 相同（PATH_SPLIT 高亮依赖）。 */
+const ZH = {
+  session: {
+    user: "帮我规划看板的远程审批卡",
+    think: "Thinking… 先看现有卡片与审批流，再定文案与状态色",
+    reply: [
+      "好的，远程审批卡这样规划——审批通道已有基础（src/remote/approve.rs）：",
+      "• 红卡 = 待批准，命令全文 mono 展示",
+      "• 「允许」→ ✓ Approved 续跑，全程留痕",
+      "• 结果自动记入用量账本",
+      "要先把卡面草稿写进 docs/remote-card.md 吗？",
+    ],
+  },
+};
+const EN: typeof ZH = {
+  session: {
+    user: "Help me plan the board's remote approval card",
+    think: "Thinking... first the existing card and approval flow, then the copy and state colors",
+    reply: [
+      "Sure — here's the plan for the remote approval card; the approval channel is already in place (src/remote/approve.rs):",
+      "• Red card = awaiting approval, full command shown in mono",
+      "• \"Allow\" → ✓ Approved resumes the run, fully logged",
+      "• The result is written to the usage ledger automatically",
+      "Want me to draft the card copy into docs/remote-card.md first?",
+    ],
+  },
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
 /** Kimi Code 完整 TUI 窗（T42）：蓝框七行欢迎盒 + Desktop 宣传段 + MCP 绿行 ×2 + ✻ 用户行 +
  *  斜体思考行 + 路径高亮回复 + > █ 输入框 + 底部三段状态栏。
  *  结构 1:1 对照 docs/design/p11-ref/kimi-code-full-tui.png；TuiShell 壳/拖动横滚/右键菜单/灯位全保留 */
 export function KimiShellTui({ className = "", onClose }: { className?: string; onClose?: () => void }) {
+  const t = COPY[useLang()];
+  const SESSION = t.session;
   return (
     <TuiShell bodyClassName="bg-[#2B2B2B] text-[#D7D7DB]" className={className} onClose={onClose}
       footer={

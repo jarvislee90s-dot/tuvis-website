@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Brand } from "@/components/Brand";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLang } from "@/i18n/useLang";
 
 /** 导航项（P13：首页/产品形态/功能/演示/文档/更新日志 + EN；GitHub 入口在 Hero/Footer） */
 export function TopBar() {
   const { t } = useTranslation();
-  const { lang } = useParams();
   const [open, setOpen] = useState(false);
-  const zh = lang ?? "zh";
+  // N2：链接语言段统一走归一产物（原 `lang ?? "zh"` 裸参会把 /fr 等非法值拼进链接；LangLayout 重定向掩盖了它）
+  const lang = useLang();
   const links = [
-    { to: `/${zh}`, key: "nav.home" },
-    { to: `/${zh}#product`, key: "nav.product" },
-    { to: `/${zh}#features`, key: "nav.features" },
+    { to: `/${lang}`, key: "nav.home" },
+    { to: `/${lang}#product`, key: "nav.product" },
+    { to: `/${lang}#features`, key: "nav.features" },
     { to: "demo", key: "nav.demo" },
     { to: "docs", key: "nav.docs" },
     { to: "changelog", key: "nav.changelog" },
@@ -21,9 +23,9 @@ export function TopBar() {
   return (
     <nav className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
-        <Link to={`/${zh}`} className="flex items-center gap-2 font-bold">
+        <Link to={`/${lang}`} className="flex items-center gap-2 font-bold">
           <img src={`${import.meta.env.BASE_URL}img/appicon-dark.png`} alt="Tuvis" className="h-7 w-7 rounded-lg" />
-          兔维斯 <span className="text-inkdim">Tuvis</span>
+          <Brand />
         </Link>
         {/* 桌面导航（P13 字号加大 text-sm → text-base） */}
         <div className="hidden items-center gap-6 text-base text-inkdim md:flex">

@@ -1,8 +1,19 @@
 import { create } from "zustand";
-import type { Session, SessionState } from "./types";
+import type { Lang } from "@/i18n";
+import type { Bilingual, Session, SessionState } from "./types";
 import { seedSessions } from "./seed";
 
-export interface RemoteMsg { role: "user" | "assistant"; text: string; queued?: boolean }
+/** 消息文本（D10）：种子/脚本消息双语 {zh,en}；用户实时输入无法双语 → {raw}（两种语言都显原文） */
+export type MsgText = Bilingual | { raw: string };
+export interface RemoteMsg { role: "user" | "assistant"; text: MsgText; queued?: boolean }
+
+/** 消息显示取值（D10）：双语消息按语言取；{raw} 用户消息两语言同显原文。
+ *  RemoteDetail 气泡/排队 chip 与 RemoteScene 终端回显共用，防两处分支漂移。 */
+export function msgDisplayText(m: Pick<RemoteMsg, "text">, lang: Lang): string {
+  return "zh" in m.text ? m.text[lang] : m.text.raw;
+}
+
+/** D9：picked 存选项 id（语言无关，见 qa.ts 的 QA 选项表），显示时才按 lang 解析文案 */
 export type QuestionState =
   | { kind: "single"; picked: string | null; submitted: boolean }
   | { kind: "multi"; picked: string[]; submitted: boolean }
@@ -19,12 +30,19 @@ interface RemoteState {
   messages: RemoteMsg[];
 }
 
-/** 详情页种子消息 / 排队消息（steps-d2 引用，绝对值幂等，B16）；P13 演示数据 tuvis 化 */
+/** 详情页种子消息 / 排队消息（steps-d2 引用，绝对值幂等，B16）；P13 演示数据 tuvis 化；D10 双语化 */
 export const SEED_MSGS: RemoteMsg[] = [
-  { role: "user", text: "你好" },
-  { role: "assistant", text: "你好——看板在线：3 个会话，1 个等待批准。\n• 桌面端 Claude / Codex / Kimi 并跑中\n• 远程通道已连接（MateBook16s）" },
+  { role: "user", text: { zh: "你好", en: "Hello" } },
+  { role: "assistant", text: {
+    zh: "你好——看板在线：3 个会话，1 个等待批准。\n• 桌面端 Claude / Codex / Kimi 并跑中\n• 远程通道已连接（MateBook16s）",
+    en: "Hi — the board is online: 3 sessions, 1 awaiting approval.\n• Claude / Codex / Kimi running side by side on desktop\n• Remote channel connected (MateBook16s)",
+  } },
 ];
-export const QUEUED_MSG: RemoteMsg = { role: "user", text: "审批通过后把托盘图标缓存也刷新", queued: true };
+export const QUEUED_MSG: RemoteMsg = {
+  role: "user",
+  text: { zh: "审批通过后把托盘图标缓存也刷新", en: "Also refresh the tray icon cache once the approval goes through" },
+  queued: true,
+};
 
 /** remote v2 初始值（看板页；d2Reset / d2 s1 enter 以此为准导出） */
 export const REMOTE_INIT: RemoteState = {

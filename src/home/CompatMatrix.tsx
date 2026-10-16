@@ -9,7 +9,7 @@ import cap from "@/content/capabilities.json";
  *  文字态单元格（决策 8）：✓/✓/🧪/✕ + 文案；行级 note 走单元格 title/aria-label 悬浮，取值规则同 nameEn；
  *  Codex 列头 † 脚注（CLI 支持完整远程 / APP 仅查看）。
  *  *En 命名数据（组名/行名 nameEn、备注 noteEn）同一模式：JSON 数据源自带英译时优先、单向回退原中文；
- *  选择与界面语言无关（zh 页遇英译同样显示英文），语言相关文案一律走 i18n 键。 */
+ *  选择与界面语言无关（zh 页遇英译同样显示英文），语言相关文案一律走 i18n 键（品牌词例外：走 Brand/brandName）。 */
 const LEGEND = ["yes", "partial", "experimental", "no"] as const;
 
 const LEGEND_DOT: Record<string, string> = {

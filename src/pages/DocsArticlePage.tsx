@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePageMeta } from "@/utils/usePageMeta";
 import { Link, useParams } from "react-router";
+import { useLang } from "@/i18n/useLang";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MANUAL_FLAT, MANUAL_GROUPS } from "@/content/manual";
@@ -15,7 +16,8 @@ const BASE = import.meta.env.BASE_URL; // "/tuvis-website/"
 export default function DocsArticlePage() {
   const { t } = useTranslation();
   const params = useParams();
-  const lang = params.lang?.startsWith("en") ? "en" : "zh";
+  // 语言走 useLang（en* → en，其余 → zh）：URL 权威
+  const lang = useLang();
   const slug = params.slug ?? "01-overview";
 
   const [md, setMd] = useState<string | null>(null);

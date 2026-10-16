@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLang } from "@/i18n/useLang";
 import { toolOf } from "../tools";
 import { ToolIcon } from "../ToolIcon";
 import { PlayerFrame } from "../PlayerFrame";
@@ -35,12 +36,13 @@ const MCP_ROWS: ResRow[] = [
   { id: "playwright",          on: { claude: false, codex: false, opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false } },
   { id: "sequential-thinking", on: { claude: false, codex: false, opencode: false, kimi: false, workbuddy: false, zcode: true,  dsh: false } },
 ];
+/** 插件行 id 为语言无关 slug（显示名取 COPY.pluginNames，键 = id；B3-T8）——与 Skill/MCP 行的真名 id 同构 */
 const PLUGIN_ROWS: ResRow[] = [
-  { id: "代码导航",  on: { claude: true,  codex: true,  opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false } },
-  { id: "表格引擎",  on: { claude: true,  codex: false, opencode: false, kimi: true,  workbuddy: false, zcode: false, dsh: false } },
-  { id: "图表渲染",  on: { claude: true,  codex: true,  opencode: true,  kimi: false, workbuddy: false, zcode: false, dsh: false } },
-  { id: "语音批注",  on: { claude: false, codex: false, opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false } },
-  { id: "petdex 桥", on: { claude: false, codex: false, opencode: false, kimi: true,  workbuddy: false, zcode: false, dsh: false } },
+  { id: "code-nav",       on: { claude: true,  codex: true,  opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false } },
+  { id: "sheet-engine",   on: { claude: true,  codex: false, opencode: false, kimi: true,  workbuddy: false, zcode: false, dsh: false } },
+  { id: "chart-render",   on: { claude: true,  codex: true,  opencode: true,  kimi: false, workbuddy: false, zcode: false, dsh: false } },
+  { id: "voice-annotate", on: { claude: false, codex: false, opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false } },
+  { id: "petdex-bridge",  on: { claude: false, codex: false, opencode: false, kimi: true,  workbuddy: false, zcode: false, dsh: false } },
 ];
 
 type ResType = "skill" | "mcp" | "plugin";
@@ -61,16 +63,58 @@ const SKILL_CATALOG = [
   "using-superpowers", "verification-before-completion", "writing-plans",
 ];
 
-/** 预设组卡（presets.png 真实结构）：名称 + 资源数 + 7 工具开关；resources 用于「对特定工具开启」时覆写该工具列 */
-interface PresetCard { id: string; name: string; resources: string[]; tools: Record<string, boolean> }
+/** 预设组卡（presets.png 真实结构）：名称 + 资源数 + 7 工具开关；resources 用于「对特定工具开启」时覆写该工具列。
+ *  内置预设名取 COPY.presetNames（键 = id，B3-T8）；name 仅自定义预设持有（用户输入原文，语言无关，不走 COPY）。 */
+interface PresetCard { id: string; name?: string; resources: string[]; tools: Record<string, boolean> }
 const FRONTEND_PRESET: PresetCard = {
-  id: "frontend", name: "前端设计", resources: ["ui-ux-pro-max", "brainstorming", "executing-plans", "test-driven-development", "requesting-code-review", "verification-before-completion"],
+  id: "frontend", resources: ["ui-ux-pro-max", "brainstorming", "executing-plans", "test-driven-development", "requesting-code-review", "verification-before-completion"],
   tools: { claude: false, codex: false, opencode: false, kimi: true, workbuddy: false, zcode: false, dsh: false },
 };
 const SUPERPOWERS_PRESET: PresetCard = {
-  id: "superpowers", name: "Superpowers 开发组件", resources: SKILL_CATALOG.slice(4),
+  id: "superpowers", resources: SKILL_CATALOG.slice(4),
   tools: { claude: true, codex: false, opencode: false, kimi: false, workbuddy: false, zcode: false, dsh: false },
 };
+
+/** 批次 3 COPY 模式（B3-T8；模板说明见 copy.parity.test.ts 头注释）：
+ *  场景内随语言变化的文案收进 COPY.{zh,en}，渲染处按语言取；en 以 `: typeof ZH` 标注互校；
+ *  zh 逐字保留现状（红线），en 为产品英文版 UI 口径。
+ *  窗体 chrome（体检卡/仓库大卡/预设区/新建弹窗）走既有 i18n 键 res.*；本 COPY 只收两张数据表的显示名——
+ *  插件行与内置预设名，表内 id 保持语言无关（新增行/预设须同时补 zh/en 译名，键集合由 parity 门禁兜底）。 */
+const ZH = {
+  /** 插件行显示名（键 = PLUGIN_ROWS.id；skill/mcp 行的 id 即真名，不经此表） */
+  pluginNames: {
+    "code-nav": "代码导航",
+    "sheet-engine": "表格引擎",
+    "chart-render": "图表渲染",
+    "voice-annotate": "语音批注",
+    "petdex-bridge": "petdex 桥",
+  },
+  /** 内置预设组名（键 = 预设 id；自定义预设用用户输入，见 PresetCard.name） */
+  presetNames: { frontend: "前端设计", superpowers: "Superpowers 开发组件" },
+};
+const EN: typeof ZH = {
+  pluginNames: {
+    "code-nav": "Code navigation",
+    "sheet-engine": "Sheet engine",
+    "chart-render": "Chart rendering",
+    "voice-annotate": "Voice annotation",
+    "petdex-bridge": "petdex bridge",
+  },
+  // 术语对齐 steps-res.ts / demo.detail.d3s4-5 的「the Frontend preset」「the Superpowers kit」
+  // （B3-T8 审查 Minor-2：预设卡名与剧本字幕同一实体须同一叫法）
+  presetNames: { frontend: "Frontend preset", superpowers: "Superpowers kit" },
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** 数据表行的语言无关 id（供 copy.parity 成员门禁核对）：显示层按 id 查译名、未登记静默回落 id 本身——
+ *  新增行/内置预设漏登两语言译名时无任何报错，故 id 集须对测试可见（B3-T8 rider Minor-3）。 */
+export const PLUGIN_ROW_IDS = PLUGIN_ROWS.map((r) => r.id);
+export const BUILTIN_PRESET_IDS = [FRONTEND_PRESET.id, SUPERPOWERS_PRESET.id];
+
+/** 译名表按键查表（Record 视图：id 是运行时字符串，字面量键表无法直索引）；未登记的行返回 undefined，调用方落回 id */
+function nameOf(names: object, id: string): string | undefined {
+  return (names as Record<string, string | undefined>)[id];
+}
 
 /* 手绘补图标（lucide 风格简化版，同 components/Icons.tsx 口径；不引入图标库——红线） */
 function svgProps(size: number, className: string) {
@@ -167,6 +211,8 @@ type D3Action = "reset" | "import" | "toggle" | "preset-frontend" | "preset-supe
 
 export function ResourcesScene() {
   const { t } = useTranslation();
+  /* 双机制说明：i18n 的 t 管窗体 chrome（既有 res.* 键），COPY 管两张数据表的显示名（B3-T8） */
+  const copy = COPY[useLang()];
   const [tables, setTables] = useState<Record<ResType, ResRow[]>>({ skill: SKILL_ROWS, mcp: MCP_ROWS, plugin: PLUGIN_ROWS });
   const [type, setType] = useState<ResType>("skill");
   const [view, setView] = useState<View>("resource");
@@ -187,9 +233,13 @@ export function ResourcesScene() {
 
   const rows = tables[type];
   const q = query.trim().toLowerCase();
+  /* 显示名（B3-T8）：插件行/内置预设取 COPY 译名，其余行 id 即真名、自定义预设用用户输入原名 */
+  const rowLabel = (r: ResRow) => nameOf(copy.pluginNames, r.id) ?? r.id;
+  const presetLabel = (p: PresetCard) => p.name ?? nameOf(copy.presetNames, p.id) ?? p.id;
+  /* 搜索匹配 id 与显示名两路（插件行 id 为 slug：zh 下按「代码导航」这类中文名仍搜得到）；排序同按显示名（zh 序不变） */
   const visible = rows
-    .filter((r) => q === "" || r.id.toLowerCase().includes(q))
-    .sort((a, b) => (sort === "asc" ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id)));
+    .filter((r) => q === "" || r.id.toLowerCase().includes(q) || rowLabel(r).toLowerCase().includes(q))
+    .sort((a, b) => (sort === "asc" ? rowLabel(a).localeCompare(rowLabel(b)) : rowLabel(b).localeCompare(rowLabel(a))));
 
   const ALL_ON = Object.fromEntries(MATRIX_TOOLS.map((t2) => [t2, true]));
 
@@ -376,7 +426,7 @@ export function ResourcesScene() {
                     <tr key={row.id} className="border-b border-app-line last:border-0">
                       <td>
                         <div className="flex items-center gap-1.5 py-1.5 font-mono text-[11px] text-app-ink">
-                          <span className="truncate">{row.id}</span>
+                          <span className="truncate">{rowLabel(row)}</span>
                           <button type="button" aria-label={t("res.deleteSkill")} onClick={() => removeRow(row.id)}
                             className="shrink-0 text-red-500/70 hover:text-red-600">
                             <TrashIcon size={12} />
@@ -391,7 +441,7 @@ export function ResourcesScene() {
                         const lit = row.on[tool];
                         return (
                           <td key={tool} className="py-1.5 text-center">
-                            <button type="button" aria-pressed={lit} aria-label={`${row.id}:${tool}${row.pinned?.[tool] ? " " + t("res.pinned") : ""}`}
+                            <button type="button" aria-pressed={lit} aria-label={`${rowLabel(row)}:${tool}${row.pinned?.[tool] ? " " + t("res.pinned") : ""}`}
                               onClick={() => toggleCell(row.id, tool)}
                               className={`inline-flex flex-col items-center gap-0.5 ${lit ? "" : "opacity-30 grayscale"}`}>
                               <ToolIcon tool={tool} size={15} />
@@ -421,7 +471,7 @@ export function ResourcesScene() {
                         {litRows.map((r) => (
                           <span key={r.id}
                             className="flex items-center gap-1 rounded-full border border-app-line bg-app-bg px-2.5 py-0.5 font-mono text-[11px] text-app-ink">
-                            {r.id}
+                            {rowLabel(r)}
                             {r.pinned?.[tool] && <span className="text-[9px] text-app-mut">{t("res.pinned")}</span>}
                           </span>
                         ))}
@@ -452,7 +502,7 @@ export function ResourcesScene() {
                   {presets.map((p) => (
                     <div key={p.id} className="rounded-xl border border-app-line bg-app-bg p-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-app-ink">{p.name}</span>
+                        <span className="text-[13px] font-semibold text-app-ink">{presetLabel(p)}</span>
                         <span className="ml-auto rounded bg-app-accent px-1.5 py-0.5 text-[10px] text-app-mut">{p.resources.length}</span>
                         <button type="button" aria-label={t("res.deleteSkill")}
                           onClick={() => setPresets((ps) => ps.filter((x) => x.id !== p.id))}
@@ -465,7 +515,7 @@ export function ResourcesScene() {
                           <span key={tool} className="flex items-center gap-1.5">
                             <ToolIcon tool={tool} size={13} />
                             <span className={`text-[11px] ${p.tools[tool] ? "font-medium text-app-ink" : "text-app-mut"}`}>{toolOf(tool).label}</span>
-                            <Switch on={p.tools[tool]} label={`${p.name} × ${toolOf(tool).label}`}
+                            <Switch on={p.tools[tool]} label={`${presetLabel(p)} × ${toolOf(tool).label}`}
                               onClick={() => togglePresetTool(p.id, tool)} />
                           </span>
                         ))}

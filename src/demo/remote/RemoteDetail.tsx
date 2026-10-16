@@ -1,15 +1,29 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDemo, type QuestionState } from "../store";
-import { setStateOf } from "../store";
+import { useLang } from "@/i18n/useLang";
+import { useDemo, setStateOf, msgDisplayText, type QuestionState } from "../store";
 import { ArrowLeftIcon, RefreshCwIcon } from "../../components/Icons";
-import { QA_MULTI, QA_SINGLE } from "../ClaudeTui";
+import { QA_MULTI, QA_SINGLE, submittedDisplayText } from "../qa";
 
-/** 思考展开态 3 行过程文本（会话数据，硬编码；tuvis 语境） */
-const THINKING_STEPS = ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"];
-/** 工具调用行（02 定稿 A 段消息流要素，静态） */
-const TOOL_CALL = { tag: "调用 Bash", cmd: 'grep -n "approve" src/remote/approve.rs' };
+/** 工具调用行命令与审批命令（语言无关，zh/en 同显） */
+const TOOL_CMD = 'grep -n "approve" src/remote/approve.rs';
 const APPROVE_CMD = "git commit -m 'feat: remote approve'";
+
+/** 批次 3 COPY 模式（T3.7；模板说明见 copy.parity.test.ts 头注释）：
+ *  窗 chrome 仍走既有 i18n 键（demo.phone.* / demo.remote.*，双语已在册，不重复搬迁），
+ *  本 COPY 只收文件内剩余硬编码中文（思考三步 / 工具调用标签）；
+ *  en 以 `: typeof ZH` 标注互校；zh 逐字保留现状（红线），en 为产品英文版 UI 口径。 */
+const ZH = {
+  /** 思考展开态 3 行过程文本（会话数据，tuvis 语境） */
+  thinkingSteps: ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"],
+  /** 工具调用行标签（02 定稿 A 段消息流要素，静态；命令见 TOOL_CMD） */
+  toolCallTag: "调用 Bash",
+};
+const EN: typeof ZH = {
+  thinkingSteps: ["Reading the board state snapshot...", "Computing the tray tri-state debounce window...", "Drafting the adjustment plan"],
+  toolCallTag: "Bash command",
+};
+export const COPY = { zh: ZH, en: EN } as const;
 
 /** 子 Agent chip 行（T43 保留项）：头像字母 + 名称 + 状态徽标，静态 + title 悬浮说明（状态色：绿/黄/红） */
 const SUB_AGENTS: { name: string; letter: string; avatarCls: string; statusCls: string; statusKey: string; mark: string }[] = [
@@ -39,6 +53,9 @@ const chip = (active: boolean) =>
  *  屏幕比例锁定：消息区 flex 封顶裁剪旧消息，交互卡恒可见，无内滚。 */
 export function RemoteDetail() {
   const { t } = useTranslation();
+  const lang = useLang();
+  /* 双机制说明：i18n 的 t 管窗 chrome（既有双语键），COPY 管剩余硬编码中文（T3.7） */
+  const copy = COPY[lang];
   const claude = useDemo((s) => s.sessions.claude);
   const remote = useDemo((s) => s.remote);
   const setRemote = useDemo((s) => s.setRemote);
@@ -46,22 +63,22 @@ export function RemoteDetail() {
   const [spin, setSpin] = useState(false);
   const [draft, setDraft] = useState("");
 
-  /* 交互①：发消息——气泡上屏并标「已排队」 */
+  /* 交互①：发消息——气泡上屏并标「已排队」；用户实时输入无法双语 → { raw }（D10） */
   const send = () => {
     const text = draft.trim();
     if (!text) return;
-    setRemote({ messages: [...remote.messages, { role: "user", text, queued: true }] });
+    setRemote({ messages: [...remote.messages, { role: "user", text: { raw: text }, queued: true }] });
     setDraft("");
   };
 
-  /* 交互④：题卡点选 + 提交 */
-  const pickOption = (opt: string) => {
+  /* 交互④：题卡点选 + 提交（D9：picked 存选项 id，不是显示串） */
+  const pickOption = (id: string) => {
     const q = remote.question;
     if (!q || q.submitted) return;
     if (q.kind === "single") {
-      setRemote({ question: { kind: "single", picked: opt, submitted: false } });
+      setRemote({ question: { kind: "single", picked: id, submitted: false } });
     } else {
-      const picked = q.picked.includes(opt) ? q.picked.filter((p) => p !== opt) : [...q.picked, opt];
+      const picked = q.picked.includes(id) ? q.picked.filter((p) => p !== id) : [...q.picked, id];
       setRemote({ question: { kind: "multi", picked, submitted: false } });
     }
   };
@@ -74,6 +91,10 @@ export function RemoteDetail() {
 
   const q: QuestionState = remote.question;
   const pickedEmpty = q === null || (q.kind === "single" ? q.picked === null : q.picked.length === 0);
+  /** 提交回显整行（M3：模板含冒号，走 i18n 插值；空 picked → 空串 → 整行不渲染，防悬空标签，审查 M5） */
+  const submittedEcho = q !== null && q.submitted
+    ? submittedDisplayText(q, lang, (list) => t("demo.remote.submitted", { list }))
+    : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-ink">
@@ -136,7 +157,7 @@ export function RemoteDetail() {
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-2.5 overflow-hidden py-2.5">
           {remote.thinkingExpanded ? (
             <div className="space-y-0.5 px-0.5 text-[11px] text-inkdim">
-              {THINKING_STEPS.map((s) => <div key={s}>▶ {s}</div>)}
+              {copy.thinkingSteps.map((s) => <div key={s}>▶ {s}</div>)}
             </div>
           ) : (
             <div className="px-0.5 text-[11px] text-inkdim">▶ {t("demo.phone.thinking")} · 9 {t("demo.phone.seconds")}</div>
@@ -144,19 +165,19 @@ export function RemoteDetail() {
           {remote.messages.filter((m) => !m.queued).map((m, i) =>
             m.role === "user" ? (
               <div key={i} className="max-w-[82%] self-end">
-                <div className="rounded-[16px] rounded-br-[4px] bg-[#EDEBE4] px-3 py-2 text-[12px] text-[#33312B]">{m.text}</div>
+                <div className="rounded-[16px] rounded-br-[4px] bg-[#EDEBE4] px-3 py-2 text-[12px] text-[#33312B]">{msgDisplayText(m, lang)}</div>
                 {m.queued && <div className="mt-0.5 text-right text-[10px] text-inkdim">{t("demo.phone.queued")}</div>}
               </div>
             ) : (
               <div key={i} className="max-w-[92%] self-start whitespace-pre-line px-0.5 text-[12px] leading-relaxed text-[#2A2925]">
-                {m.text}
+                {msgDisplayText(m, lang)}
               </div>
             ),
           )}
           <div className="flex items-center gap-2 rounded-[10px] border border-line bg-card px-2.5 py-[7px] text-[11.5px] text-inkdim">
             <span aria-hidden className="text-[10px]">▶</span>
-            <span className="shrink-0">{TOOL_CALL.tag}</span>
-            <span className="truncate font-mono text-[11px] text-ink">{TOOL_CALL.cmd}</span>
+            <span className="shrink-0">{copy.toolCallTag}</span>
+            <span className="truncate font-mono text-[11px] text-ink">{TOOL_CMD}</span>
           </div>
         </div>
 
@@ -199,7 +220,7 @@ export function RemoteDetail() {
             </div>
           )}
 
-          {/* 问答卡（P19：题面与 TUI 场景共享同一份常量——左右一致；选项深蓝主题） */}
+          {/* 问答卡（P19：题面与 TUI 场景共享同一份常量——左右一致；选项深蓝主题。D9：picked 只存选项 id） */}
           {q !== null && !q.submitted && (
             <div className="rounded-[14px] border-[1.5px] border-[#93B8F8] bg-[#F3F8FF] p-3 shadow-[0_2px_10px_rgba(37,99,235,0.08)]">
               <div className="flex items-center gap-1.5">
@@ -207,14 +228,14 @@ export function RemoteDetail() {
                   {q.kind === "single" ? t("demo.pill.question") : t("demo.pill.multi")}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
-                  {q.kind === "single" ? QA_SINGLE.question : QA_MULTI.question}
+                  {q.kind === "single" ? QA_SINGLE.question[lang] : QA_MULTI.question[lang]}
                 </span>
               </div>
               <div className="mt-2 space-y-2">
                 {(q.kind === "single" ? QA_SINGLE.options : QA_MULTI.options).map((opt) => {
-                  const picked = q.kind === "single" ? q.picked === opt.title : q.picked.includes(opt.title);
+                  const picked = q.kind === "single" ? q.picked === opt.id : q.picked.includes(opt.id);
                   return (
-                    <button key={opt.title} type="button" aria-pressed={picked} onClick={() => pickOption(opt.title)}
+                    <button key={opt.id} type="button" aria-pressed={picked} onClick={() => pickOption(opt.id)}
                       className={`flex w-full items-start gap-2 rounded-[10px] border px-2.5 py-2 text-left text-[12px] ${
                         picked ? "border-[#2563EB] bg-[#DBEAFE] shadow-[0_0_0_1px_#2563EB]" : "border-[#BFDBFE] bg-[#E8F0FE]/70 hover:border-[#93B8F8]"
                       }`}>
@@ -230,9 +251,9 @@ export function RemoteDetail() {
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="font-medium text-ink">{opt.title}</span>
-                        {"desc" in opt && opt.desc && (
-                          <span className="block text-[10px] leading-snug text-[#4B6BDB]">{opt.desc}</span>
+                        <span className="font-medium text-ink">{opt.title[lang]}</span>
+                        {opt.desc && (
+                          <span className="block text-[10px] leading-snug text-[#4B6BDB]">{opt.desc[lang]}</span>
                         )}
                       </span>
                     </button>
@@ -244,16 +265,18 @@ export function RemoteDetail() {
               </div>
               <div className="mt-2 flex items-center justify-between text-[11px] text-app-mut">
                 <span>{t("demo.remote.qaHint")}</span>
+                {/* M6：aria 含可见文本「发送」语义（label-in-name），测试与读屏都按此稳定取钮 */}
                 <button type="button" disabled={pickedEmpty} onClick={submitQuestion}
+                  aria-label={t("demo.remote.submitQa")}
                   className="shrink-0 pl-2 font-semibold text-[#1D4ED8] disabled:opacity-40">
                   {t("demo.phone.send")} ↵
                 </button>
               </div>
             </div>
           )}
-          {q !== null && q.submitted && (
+          {submittedEcho !== "" && (
             <div className="rounded-[10px] border border-line bg-card px-2.5 py-[7px] text-[11.5px] text-inkdim">
-              {t("demo.remote.submitted")}：{q.kind === "single" ? q.picked : q.picked.join("、")}
+              {submittedEcho}
             </div>
           )}
         </div>
@@ -264,7 +287,7 @@ export function RemoteDetail() {
         {remote.messages.filter((m) => m.queued).map((m, i) => (
           <div key={i} className="flex items-center gap-1.5 rounded-full border border-app-line bg-app-accent/50 px-2.5 py-1 text-[10.5px] text-app-mut">
             <span aria-hidden>⏳</span>
-            <span className="truncate">{m.text}</span>
+            <span className="truncate">{msgDisplayText(m, lang)}</span>
             <span className="shrink-0 font-medium text-inkdim">{t("demo.phone.queued")}</span>
           </div>
         ))}

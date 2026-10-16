@@ -1,7 +1,8 @@
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Reveal } from "@/components/Reveal";
 import { SectionTitle } from "@/components/SectionTitle";
+import { useLang } from "@/i18n/useLang";
 import { DesktopStage } from "@/demo/DesktopStage";
 import { AppBoard } from "@/demo/AppBoard";
 import { PhoneFrame } from "@/demo/PhoneFrame";
@@ -13,8 +14,9 @@ import { RemoteBoard } from "@/demo/remote/RemoteBoard";
 export function ProductShowcase() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { lang } = useParams();
-  const goDemoD2 = () => navigate(`/${lang ?? "zh"}/demo#d2`);
+  // 语言走 useLang（en* → en，其余 → zh）；原 lang ?? "zh" 裸参兜底删除（非法值不再拼进链接）
+  const lang = useLang();
+  const goDemoD2 = () => navigate(`/${lang}/demo#d2`);
   return (
     <Reveal>
       <section id="product" className="scroll-mt-20 py-16">
