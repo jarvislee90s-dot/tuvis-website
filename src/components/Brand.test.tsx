@@ -100,8 +100,8 @@ describe("品牌触点 /en 零「兔维斯」", () => {
 
   it("CodexAppWindow 说明区品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <CodexAppWindow />);
-    // TODO(B3 COPY)：锚点 = 品牌 token + 待 COPY 尾词（整句 COPY 化后须重锚）
-    expect(container.textContent).toContain("Tuvis官网");
+    // B3-T5 重锚：说明区整句 COPY 化后 en 为英文——锚 = 品牌 token + 英文尾词（原「Tuvis官网」已废）
+    expect(container.textContent).toContain("the Tuvis website");
     expect(container.textContent).not.toContain("兔维斯");
   });
 });
@@ -113,5 +113,10 @@ describe("COPY 化窗·/zh 品牌 token 锚点（B3-T5）", () => {
   it("ClaudeTui 默认回复（zh）显「兔维斯桌面端」", () => {
     const { container } = mountAt("/zh", <ClaudeTui />);
     expect(container.textContent).toContain("（兔维斯桌面端）");
+  });
+
+  it("CodexAppWindow 说明区（zh）显「这个仓库是兔维斯官网」", () => {
+    const { container } = mountAt("/zh", <CodexAppWindow />);
+    expect(container.textContent).toContain("这个仓库是兔维斯官网");
   });
 });

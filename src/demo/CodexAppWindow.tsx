@@ -1,5 +1,4 @@
 import type { SVGProps } from "react";
-import type { Lang } from "@/i18n";
 import { brandWord } from "@/components/Brand";
 import { AppWindowShell } from "./AppWindowShell";
 import { useLang } from "@/i18n/useLang";
@@ -34,48 +33,86 @@ const Icon = {
   ),
 };
 
-/** 文案常量区（侧栏/主区真实内容，集中声明；中文照截图原文） */
+/** 文案常量区（侧栏/主区真实内容，集中声明；中文照截图原文）。
+ *  账户胶囊/导航/Projects 组名/ApiMonitor/底部输入条为语言无关的真实产品英文 UI——留常量，不进 COPY */
 const ACCOUNT = "ChatGPT Work";
 const NAV = [
   { icon: "pencil", label: "New chat", medium: true },
   { icon: "clock", label: "Scheduled", medium: false },
   { icon: "compass", label: "Plugins", medium: false },
 ] as const;
-const SEARCH_PLACEHOLDER = "搜索";
-const PROJECTS = [
-  { name: "tuvis-website", tasks: ["$agnes-image 生成参考图", "首页产品形态改版", "…任务树"] },
-  { name: "tuvis-app", tasks: ["远程审批卡文案", "托盘三态接线", "测试一下", "你好", "Show more"] },
-  { name: "tuvis-docs", tasks: ["快速上手精编", "FAQ 收集", "…"] },
-];
 const API_MONITOR = "ApiMonitor";
 const FOOTER_USER = "zhipu_glm";
-
-const CHAT_TITLE = "这个项目的作用是什么来着？…";
-const TREE_TITLE = "项目结构";
-const TREE = [
-  "├─ docs/ 计划与参考图",
-  "├─ src/ 站点与演示",
-  "│  ├─ home/ 首页区块",
-  "│  ├─ demo/ 四场景+账本",
-  "│  └─ components/ 公共组件",
-  "├─ public/img 静态资源",
-  "├─ scripts/ 构建脚本",
-  "└─ package.json",
-];
-const NOTES_TITLE = "几个说明";
-/** 说明区文案：品牌词按语言（D1/B3-T1 只动品牌词，其余中文照截图原文，待批次 3 后续 COPY 化）。 */
-const notes = (lang: Lang) => [
-  `这个仓库是${brandWord(lang)}官网（Vite + React）`,
-  "演示数据全部本地模拟，无网络请求",
-  "计划文档在 docs/superpowers/plans/",
-];
 const INPUT_HINT = "Work with ChatGPT";
 const FULL_ACCESS = "⚠ Full access";
 const MODEL_LABEL = "GLM-5.3-Flash High ▾";
+/** 项目序（名称逐字照截图，语言无关）；任务树文案在 COPY.projectTasks 按同名键取 */
+const PROJECTS = ["tuvis-website", "tuvis-app", "tuvis-docs"] as const;
 
-/** Codex APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F9F9F9；d1 剧本 s4 与 codex 卡开窗承接。 */
+/** 批次 3 COPY 模式（T3.3；模板说明见 copy.parity.test.ts 头注释）：
+ *  窗内随语言变化的文案收进 COPY.{zh,en}，渲染处 const t = COPY[useLang()]；
+ *  en 子树以 `: typeof ZH` 标注互校；zh 逐字保留现状（红线）；{{brand}} = brandWord(lang) 占位。 */
+const ZH = {
+  searchPlaceholder: "搜索",
+  chatTitle: "这个项目的作用是什么来着？…",
+  treeTitle: "项目结构",
+  tree: [
+    "├─ docs/ 计划与参考图",
+    "├─ src/ 站点与演示",
+    "│  ├─ home/ 首页区块",
+    "│  ├─ demo/ 四场景+账本",
+    "│  └─ components/ 公共组件",
+    "├─ public/img 静态资源",
+    "├─ scripts/ 构建脚本",
+    "└─ package.json",
+  ],
+  notesTitle: "几个说明",
+  notes: [
+    "这个仓库是{{brand}}官网（Vite + React）",
+    "演示数据全部本地模拟，无网络请求",
+    "计划文档在 docs/superpowers/plans/",
+  ],
+  projectTasks: {
+    "tuvis-website": ["$agnes-image 生成参考图", "首页产品形态改版", "…任务树"],
+    "tuvis-app": ["远程审批卡文案", "托盘三态接线", "测试一下", "你好", "Show more"],
+    "tuvis-docs": ["快速上手精编", "FAQ 收集", "…"],
+  },
+};
+const EN: typeof ZH = {
+  searchPlaceholder: "Search",
+  chatTitle: "What does this project do again?…",
+  treeTitle: "Project structure",
+  tree: [
+    "├─ docs/ plans & reference images",
+    "├─ src/ site & demos",
+    "│  ├─ home/ homepage sections",
+    "│  ├─ demo/ four scenes + ledger",
+    "│  └─ components/ shared components",
+    "├─ public/img static assets",
+    "├─ scripts/ build scripts",
+    "└─ package.json",
+  ],
+  notesTitle: "A few notes",
+  notes: [
+    "This repo is the {{brand}} website (Vite + React)",
+    "All demo data is simulated locally — no network requests",
+    "Plan docs live in docs/superpowers/plans/",
+  ],
+  projectTasks: {
+    "tuvis-website": ["Generate reference images with $agnes-image", "Homepage product revamp", "…more tasks"],
+    "tuvis-app": ["Remote approval card copy", "Tray tri-state wiring", "Run the tests", "Hello", "Show more"],
+    "tuvis-docs": ["Getting-started guide edit", "FAQ collection", "…"],
+  },
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** Codex APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F9F9F9；d1 剧本 s4 与 codex 卡开窗承接。
+ *  中文文案（任务树/主区/说明）取 COPY（zh/en），侧栏功能项为真实产品英文 UI 留常量。 */
 export function CodexAppWindow({ className = "", onClose }: { className?: string; onClose?: () => void }) {
   const lang = useLang();
+  const t = COPY[lang];
+  /** 说明区当前语言文本 + 品牌词插值（{{brand}} = brandWord，B3-T1） */
+  const notes = t.notes.map((n) => n.replace("{{brand}}", brandWord(lang)));
   return (
     <AppWindowShell className={`border-[#E5E5E5] bg-white text-[#18181B] ${className}`}
       sidebarClassName="border-[#ECECEC] bg-[#F9F9F9]"
@@ -90,7 +127,7 @@ export function CodexAppWindow({ className = "", onClose }: { className?: string
           {/* ③ 搜索行 */}
           <div className="mt-3 flex items-center gap-2 text-[#71717A]">
             <Icon.search />
-            <span>{SEARCH_PLACEHOLDER}</span>
+            <span>{t.searchPlaceholder}</span>
           </div>
           {/* ④⑤⑥ 导航三行 */}
           <div className="mt-3 space-y-2">
@@ -106,13 +143,13 @@ export function CodexAppWindow({ className = "", onClose }: { className?: string
           {/* ⑦ Projects 组 + 三项目任务树（数据常量渲染，truncate） */}
           <div className="mt-4 text-[#A1A1AA]">Projects</div>
           <div className="mt-1.5 space-y-3">
-            {PROJECTS.map((proj) => (
-              <div key={proj.name}>
+            {PROJECTS.map((name) => (
+              <div key={name}>
                 <div className="flex items-center gap-1.5 font-semibold">
-                  <span className="text-[#71717A]"><Icon.folder /></span>{proj.name}
+                  <span className="text-[#71717A]"><Icon.folder /></span>{name}
                 </div>
                 <div className="mt-1 space-y-1">
-                  {proj.tasks.map((task) => (
+                  {t.projectTasks[name].map((task) => (
                     <div key={task} className="truncate pl-[18px] text-[#71717A]">{task}</div>
                   ))}
                 </div>
@@ -132,22 +169,22 @@ export function CodexAppWindow({ className = "", onClose }: { className?: string
       }>
       {/* ① 标题条 */}
       <div className="flex h-10 items-center gap-2 border-b border-[#E5E5E5] px-3">
-        <span className="truncate text-xs font-medium">{CHAT_TITLE}</span>
+        <span className="truncate text-xs font-medium">{t.chatTitle}</span>
         <span aria-hidden className="text-[#71717A]">⋯</span>
         <span className="ml-auto text-[#71717A]"><Icon.panel width={13} height={13} /></span>
       </div>
       {/* ② 内容区：树状计划卡 + 几个说明（flex-1 撑满定高窗，输入条贴底） */}
       <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-4">
         <div className="rounded-lg border border-[#E5E5E5] p-3">
-          <div className="text-xs font-semibold">{TREE_TITLE}</div>
+          <div className="text-xs font-semibold">{t.treeTitle}</div>
           <div className="mt-1.5 space-y-0.5 font-mono text-[11px] text-[#71717A]">
-            {TREE.map((line) => <div key={line} className="whitespace-pre">{line}</div>)}
+            {t.tree.map((line) => <div key={line} className="whitespace-pre">{line}</div>)}
           </div>
         </div>
         <div>
-          <div className="text-xs font-semibold">{NOTES_TITLE}</div>
+          <div className="text-xs font-semibold">{t.notesTitle}</div>
           <div className="mt-1.5 space-y-1 text-[11px] leading-relaxed">
-            {notes(lang).map((note) => <div key={note}>• {note}</div>)}
+            {notes.map((note) => <div key={note}>• {note}</div>)}
           </div>
         </div>
       </div>
