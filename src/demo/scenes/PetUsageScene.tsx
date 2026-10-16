@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { useLang } from "@/i18n/useLang";
 import { useDemo } from "../store";
+import { formatUnits } from "../ledgerData";
 import { CloseIcon } from "../../components/Icons";
 import { PlayerFrame } from "../PlayerFrame";
 import { DesktopStage } from "../DesktopStage";
@@ -25,8 +27,61 @@ function PetRepoRow({ pet, label, ok }: {
   );
 }
 
+/** token 详情浮窗数值（对照 pet-window.png 真机；语言无关纯数字，渲染经 formatUnits(v, lang) 出本语言单位：
+ *  zh 亿/万、en K/M/B——原「1.76亿」这类中文单位整句已拆为数字 + COPY 模板，插值见 fill） */
+const USAGE = {
+  reqInput: 176_000_000,      // 1.76亿 / 176.00 M
+  cacheHit: 170_000_000,      // 1.70亿 / 170.00 M
+  output: 1_351_800,          // 135.18万 / 1.35 M（en 判档按绝对值：≥1e6 落 M）
+  toolZCode: 175_000_000,     // 1.75亿 / 175.00 M
+  toolCodex: 717_100,         // 71.71万 / 717.10 K
+  sessionZCode: 43_049_800,   // 4304.98万 / 43.05 M
+} as const;
+
+/** 批次 3 COPY 模式（B3-T8；模板说明见 copy.parity.test.ts 头注释）：
+ *  场景内随语言变化的文案收进 COPY.{zh,en}，渲染处按语言取；en 以 `: typeof ZH` 标注互校；
+ *  zh 逐字保留现状（红线），en 为产品英文版 UI 口径。
+ *  语言无关项不入 COPY：宠物名/卡片标签/菜单/双弹窗走既有 i18n 键 pet.*；截断号按各自排版惯例
+ *  （zh 「…」 / en "..."，parity ②b 禁 en 用省略号）；命中率 97.0% 为现状字面量（不从数值重算）。 */
+const ZH = {
+  /** 头顶常驻卡 1（ZCode Bondtoolbox 扫描任务）：标题 / 两种状态 / 次行结果 */
+  scanTitle: "ZCode Bondtoolbox 扫描 E:\\LLMproject 下 G…",
+  scanRunning: "运行中",
+  scanWaiting: "等待操作",
+  scanResult: "qwen-code 清理完成：已释放约 0.5 GB…",
+  /** 头顶常驻卡 2（Kimi Code 消息 + 状态） */
+  kimiTitle: "Kimi Code zh 你好",
+  kimiDone: "已完成",
+  /** token 详情浮窗四行（{{名}} = formatUnits(v, lang) 插值；术语对齐 i18n usage.metric.*） */
+  usageReq: "请求输入 {{v}} · 命中率 97.0%",
+  usageCache: "缓存命中 {{cache}} · 产出 {{output}}",
+  usageByTool: "按工具 请求输入：ZCode {{zcode}} · Codex {{codex}} · Kim…",
+  usageSession: "本会话 ZCode {{v}} · 无标题",
+};
+const EN: typeof ZH = {
+  scanTitle: "ZCode Bondtoolbox scanning E:\\LLMproject for G...",
+  scanRunning: "Running",
+  scanWaiting: "Waiting for input",
+  scanResult: "qwen-code cleanup complete: freed ~0.5 GB...",
+  kimiTitle: "Kimi Code en Hello",
+  kimiDone: "Done",
+  usageReq: "Request input {{v}} · hit rate 97.0%",
+  usageCache: "Cache hits {{cache}} · output {{output}}",
+  usageByTool: "Request input by tool: ZCode {{zcode}} · Codex {{codex}} · Kim...",
+  usageSession: "This session ZCode {{v}} · Untitled",
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** COPY 模板插值（{{key}} → 值）：数字整句的数值由调用方先经 formatUnits(v, lang) 本地化 */
+function fill(tpl: string, vars: Record<string, string>): string {
+  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v), tpl);
+}
+
 export function PetUsageScene() {
   const { t } = useTranslation();
+  /* 双机制说明：i18n 的 t 管窗内控件（既有 pet.* 键），COPY（取 copy）管仿真通知卡与 token 浮窗内文（B3-T8） */
+  const lang = useLang();
+  const copy = COPY[lang];
   const petRun = useDemo((s) => s.petRun);
   const setPetRun = useDemo((s) => s.setPetRun);
   const [pet, setPet] = useState<PetId>("bell");
@@ -258,13 +313,13 @@ export function PetUsageScene() {
                   </button>
                   <div className="flex items-center gap-1.5 pr-4">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${msg1Alert ? "animate-pulse bg-red-600" : "bg-yellow-500"}`} aria-hidden="true" />
-                    <span className="truncate text-[10px] leading-tight text-app-ink">ZCode Bondtoolbox 扫描 E:\LLMproject 下 G…</span>
+                    <span className="truncate text-[10px] leading-tight text-app-ink">{copy.scanTitle}</span>
                   </div>
                   <div className={`text-[10px] leading-tight ${msg1Alert ? "text-red-600" : "text-yellow-800"}`}>
-                    {msg1Alert ? "等待操作" : "运行中"}
+                    {msg1Alert ? copy.scanWaiting : copy.scanRunning}
                   </div>
                   <div className="truncate text-[10px] leading-tight text-app-mut">
-                    <span className="font-semibold text-green-600">✓</span> qwen-code 清理完成：已释放约 0.5 GB…
+                    <span className="font-semibold text-green-600">✓</span> {copy.scanResult}
                   </div>
                 </div>
               )}
@@ -276,9 +331,9 @@ export function PetUsageScene() {
                   </button>
                   <div className="flex items-center gap-1.5 pr-4">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" aria-hidden="true" />
-                    <span className="truncate text-[10px] leading-tight text-app-ink">Kimi Code zh 你好</span>
+                    <span className="truncate text-[10px] leading-tight text-app-ink">{copy.kimiTitle}</span>
                   </div>
-                  <div className="text-[10px] leading-tight text-app-mut">已完成</div>
+                  <div className="text-[10px] leading-tight text-app-mut">{copy.kimiDone}</div>
                 </div>
               )}
             </div>
@@ -311,10 +366,10 @@ export function PetUsageScene() {
             {/* token 详情浮窗（P13：悬浮或剧本步 4 才出现；四行格式对照 pet-window.png 真机） */}
             {(hover || scriptHover) && (
               <div className="absolute -top-2 left-full ml-2 w-56 rounded-[14px] border border-app-line bg-app-bg px-2.5 py-2 shadow-soft">
-                <div className="text-[10px] font-semibold leading-tight text-app-ink">请求输入 1.76亿 · 命中率 97.0%</div>
-                <div className="text-[10px] leading-tight text-app-mut">缓存命中 1.70亿 · 产出 135.18万</div>
-                <div className="truncate text-[10px] leading-tight text-app-mut">按工具 请求输入：ZCode 1.75亿 · Codex 71.71万 · Kim…</div>
-                <div className="truncate text-[10px] leading-tight text-app-mut">本会话 ZCode 4304.98万 · 无标题</div>
+                <div className="text-[10px] font-semibold leading-tight text-app-ink">{fill(copy.usageReq, { v: formatUnits(USAGE.reqInput, lang) })}</div>
+                <div className="text-[10px] leading-tight text-app-mut">{fill(copy.usageCache, { cache: formatUnits(USAGE.cacheHit, lang), output: formatUnits(USAGE.output, lang) })}</div>
+                <div className="truncate text-[10px] leading-tight text-app-mut">{fill(copy.usageByTool, { zcode: formatUnits(USAGE.toolZCode, lang), codex: formatUnits(USAGE.toolCodex, lang) })}</div>
+                <div className="truncate text-[10px] leading-tight text-app-mut">{fill(copy.usageSession, { v: formatUnits(USAGE.sessionZCode, lang) })}</div>
                 <button className="ml-auto mt-0.5 block text-[10px] text-app-mut hover:text-app-ink hover:underline"
                   onClick={() => document.getElementById("ledger")?.scrollIntoView({ behavior: "smooth" })}>{t("pet.detail")} »</button>
               </div>
