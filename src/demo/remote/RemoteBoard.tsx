@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { brandWord } from "@/components/Brand";
-import { useDemoLang } from "../useDemoLang";
+import { useLang } from "@/i18n/useLang";
 import { useDemo } from "../store";
 import { edgeStyle, toolOf } from "../tools";
 import { ToolIcon } from "../ToolIcon";
@@ -36,7 +36,7 @@ const chip = (active: boolean) =>
  *  onOpenDetail 注入通道（B35）：首页复用时接管「点卡」跳 /:lang/demo#d2。 */
 export function RemoteBoard({ onOpenDetail }: { onOpenDetail?: () => void }) {
   const { t } = useTranslation();
-  const lang = useDemoLang();
+  const lang = useLang();
   const sessions = useDemo((s) => s.sessions);
   const remote = useDemo((s) => s.remote);
   const setRemote = useDemo((s) => s.setRemote);

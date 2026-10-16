@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/i18n";
 import { brandWord } from "@/components/Brand";
-import { useDemoLang } from "./useDemoLang";
+import { useLang } from "@/i18n/useLang";
 
 export interface TuiLine { text: string; tone?: "cmd" | "ok" | "warn" | "dim" }
 export interface TuiReply { headline: string; bullets: string[] }
@@ -226,7 +226,7 @@ export function ClaudeTui({
   picked?: string[]; onPick?: (title: string) => void;
   className?: string; onClose?: () => void;
 }) {
-  const lang = useDemoLang();
+  const lang = useLang();
   /* 未显式传 reply 时按语言生成默认正文（品牌词随语言，B3-T1） */
   const replyText = reply ?? defaultReply(lang);
   const scrollRef = useRef<HTMLDivElement>(null);

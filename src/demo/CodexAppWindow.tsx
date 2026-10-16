@@ -2,7 +2,7 @@ import type { SVGProps } from "react";
 import type { Lang } from "@/i18n";
 import { brandWord } from "@/components/Brand";
 import { AppWindowShell } from "./AppWindowShell";
-import { useDemoLang } from "./useDemoLang";
+import { useLang } from "@/i18n/useLang";
 
 /** Codex APP 窗（T35，对照 docs/design/p10-ref/codex-app-real.png）：
  *  ChatGPT Work 亮色双列——侧栏账户胶囊/Projects 任务树，主区标题条/树状计划卡/黑↑输入行。 */
@@ -75,7 +75,7 @@ const MODEL_LABEL = "GLM-5.3-Flash High ▾";
 
 /** Codex APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F9F9F9；d1 剧本 s4 与 codex 卡开窗承接。 */
 export function CodexAppWindow({ className = "", onClose }: { className?: string; onClose?: () => void }) {
-  const lang = useDemoLang();
+  const lang = useLang();
   return (
     <AppWindowShell className={`border-[#E5E5E5] bg-white text-[#18181B] ${className}`}
       sidebarClassName="border-[#ECECEC] bg-[#F9F9F9]"

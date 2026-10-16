@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { usePageMeta } from "@/utils/usePageMeta";
-import { useParams } from "react-router";
+import { useLang } from "@/i18n/useLang";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import data from "@/content/changelog.json";
@@ -21,9 +21,9 @@ const ITEM_MD: Components = {
 
 export default function ChangelogPage() {
   const { t } = useTranslation();
-  const { lang } = useParams();
-  // 语言权威源 = URL（与 DocsArticlePage 同口径），不用 i18n.language（切语首帧滞后一拍）
-  const en = lang?.startsWith("en") ?? false;
+  // 语言权威源 = URL（与 DocsArticlePage 同口径），不用 i18n.language（切语首帧滞后一拍）；
+  // /:lang 归一统一走 useLang（en* → en，缺失/非法 → zh），与替换前的 startsWith 判定等价
+  const en = useLang() === "en";
   usePageMeta({ title: t("meta.changelog.title"), description: t("meta.changelog.desc") });
   return (
     <main className="mx-auto max-w-3xl px-5 py-14">

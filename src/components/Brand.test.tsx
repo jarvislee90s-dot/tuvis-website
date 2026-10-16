@@ -11,7 +11,7 @@ import { TopBar } from "./layout/TopBar";
 
 /** D1 品牌词裁决：/zh 页「兔维斯 Tuvis」、/en 页仅「Tuvis」（/en 零 CJK 红线的一部分）。
  *  品牌词是单值按语言切换的数据，不走 i18n 键——由 brandName 纯函数 + Brand 组件承载。
- *  Brand 读 useDemoLang（useParams 归一），须挂在 /:lang 路由下。 */
+ *  Brand 读 useLang（useParams 归一，@/i18n 共享入口——原 demo 侧钩子已迁此），须挂在 /:lang 路由下。 */
 function mountAt(entry: string, el: ReactNode) {
   return render(
     <MemoryRouter initialEntries={[entry]}>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { brandName } from "@/components/Brand";
-import { useDemoLang } from "@/demo/useDemoLang";
+import { useLang } from "@/i18n/useLang";
 import { WindowFrame } from "@/demo/WindowFrame";
 import changelog from "@/content/changelog.json";
 
@@ -19,7 +19,7 @@ const linkBtn =
   "flex items-center gap-1.5 rounded-lg border border-app-line bg-app-bg px-3 py-1.5 text-xs font-medium text-app-ink transition hover:bg-app-accent/50";
 
 export function AboutWindow({ className = "" }: { className?: string }) {
-  const lang = useDemoLang();
+  const lang = useLang();
   const [starOpen, setStarOpen] = useState(true);
   return (
     <WindowFrame title="关于" className={className}>
