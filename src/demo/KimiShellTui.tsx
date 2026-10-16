@@ -47,9 +47,9 @@ const ZH = {
 const EN: typeof ZH = {
   session: {
     user: "Help me plan the board's remote approval card",
-    think: "Thinking… first the existing card and approval flow, then the copy and state colors",
+    think: "Thinking... first the existing card and approval flow, then the copy and state colors",
     reply: [
-      "Sure — here's the plan for the remote approval card; the approval channel already has a base (src/remote/approve.rs):",
+      "Sure — here's the plan for the remote approval card; the approval channel is already in place (src/remote/approve.rs):",
       "• Red card = awaiting approval, full command shown in mono",
       "• \"Allow\" → ✓ Approved resumes the run, fully logged",
       "• The result is written to the usage ledger automatically",

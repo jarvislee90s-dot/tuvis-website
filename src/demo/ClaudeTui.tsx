@@ -61,7 +61,7 @@ const EN: typeof ZH = {
       "I'm ready — current working directory is E:\\LLMproject\\Github\\tuvis-app ({{brand}} desktop app).",
       "• 3 agent sessions online, 1 awaiting approval",
       "• Remote channel connected (MateBook16s · v0.5.6)",
-      "• 12.4M tokens booked in today's ledger",
+      "• 12.4M tokens recorded in today's ledger",
       "Anything I can help you with?",
     ],
   },

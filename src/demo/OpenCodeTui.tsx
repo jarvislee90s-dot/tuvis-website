@@ -42,7 +42,7 @@ const ZH = {
 const EN: typeof ZH = {
   session: {
     user: "How should the tray icon's three states be organized as a state machine?",
-    think: "Thinking… first the existing tray menu and the three-state assets, then the state model",
+    think: "Thinking... first the existing tray menu and the three-state assets, then the state model",
     reply: [
       "I'd funnel the three states into one enum and let the view just look it up (src/tray/states.ts):",
       "• green = all idle, yellow = a session awaits approval, red = a session errored",

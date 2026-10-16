@@ -80,7 +80,7 @@ const ZH = {
 };
 const EN: typeof ZH = {
   searchPlaceholder: "Search",
-  chatTitle: "What does this project do again?…",
+  chatTitle: "What does this project do again?...",
   treeTitle: "Project structure",
   tree: [
     "├─ docs/ plans & reference images",
@@ -99,9 +99,9 @@ const EN: typeof ZH = {
     "Plan docs live in docs/superpowers/plans/",
   ],
   projectTasks: {
-    "tuvis-website": ["Generate reference images with $agnes-image", "Homepage product revamp", "…more tasks"],
+    "tuvis-website": ["Generate reference images with $agnes-image", "Homepage product revamp", "...more tasks"],
     "tuvis-app": ["Remote approval card copy", "Tray tri-state wiring", "Run the tests", "Hello", "Show more"],
-    "tuvis-docs": ["Getting-started guide edit", "FAQ collection", "…"],
+    "tuvis-docs": ["Quick-start guide edit", "FAQ collection", "..."],
   },
 };
 export const COPY = { zh: ZH, en: EN } as const;

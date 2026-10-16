@@ -5,7 +5,7 @@ import { COPY as KIMI_COPY } from "./KimiShellTui";
 import { COPY as OPENCODE_COPY } from "./OpenCodeTui";
 
 /**
- * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3-7/T3-8 后续 11 个文件照此办理）
+ * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/T3.8 后续 11 个文件照此办理）
  * =====================================================================
  * 模式（每个窗体/文案组件文件一份，示例见 ClaudeTui.tsx）：
  *   1. 文件内 `const ZH = {...}; const EN: typeof ZH = {...}; export const COPY = { zh: ZH, en: EN } as const;`
@@ -20,7 +20,9 @@ import { COPY as OPENCODE_COPY } from "./OpenCodeTui";
  * 本文件门禁（新 COPY 文件请把命名导出登记进 SECTIONS）：
  *   ① zh/en 键集合递归 deep-equal（含数组长度——少译一行的 en 会被抓出）；
  *   ② en 叶子不匹配 CJK 表意字（/[\u4e00-\u9fff]/，/en 零中文硬红线的一部分）；
- *   ②b en 叶子不匹配 CJK 标点/全角字符（加严：防 、。「」（） 等全角漏网）；
+ *   ②b en 叶子不匹配 CJK 标点/全角字符（加严：防 、。「」（） 等全角漏网）。覆盖范围 =
+ *      CJK 标点 \u3000-\u303f + 全角形式 \uff00-\uffef + General Punctuation 区里的 CJK 排版惯用字符
+ *      （曲引号 \u2018-\u201d、省略号 \u2026、中文破折号 ——；单独 em dash/dash 是地道英文用法，不禁）；
  *   ③ zh/en 叶子均非空（en 空串会在 /en 渲染开天窗）。
  * 断言失败信息带 `文件.COPY.语言.路径`（如 CodexAppWindow.COPY.en.tree[3]），便于定位。
  */
@@ -69,7 +71,7 @@ describe("COPY parity：批次 3 窗 zh/en 形状与语言门禁", () => {
 
     it(`${file}：en 叶子零 CJK 标点/全角字符`, () => {
       for (const [path, v] of en) {
-        expect(v, `${file}.COPY.en.${path}`).not.toMatch(/[\u3000-\u303f\uff00-\uffef]/);
+        expect(v, `${file}.COPY.en.${path}`).not.toMatch(/[\u2018-\u201d\u2026\u3000-\u303f\uff00-\uffef]|——/);
       }
     });
 
