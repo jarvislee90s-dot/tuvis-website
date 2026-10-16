@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { usePageMeta } from "@/utils/usePageMeta";
 import { D1Scene } from "@/demo/scenes/D1Scene";
 import { RemoteScene } from "@/demo/scenes/RemoteScene";
 import { PetUsageScene } from "@/demo/scenes/PetUsageScene";
@@ -7,6 +8,7 @@ import { LedgerSection } from "@/demo/LedgerSection";
 
 export default function DemoPage() {
   const { t } = useTranslation();
+  usePageMeta({ title: t("meta.demo.title"), description: t("meta.demo.desc") });
   return (
     /* B21 per-section 容器：<main> 退为 px-5 定位容器；D1 用 7xl，其余区块保持 5xl */
     <main className="px-5 py-14">

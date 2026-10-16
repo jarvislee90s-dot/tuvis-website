@@ -46,11 +46,11 @@ export function OpenSourceDownload() {
             <div className="mt-5 flex flex-wrap gap-3">
               <button onClick={() => goToInstaller("windows")}
                 className={`rounded-[14px] bg-btnp px-5 py-2.5 font-semibold text-btnpt transition ${os === "windows" ? "ring-2 ring-hud ring-offset-2 ring-offset-card" : ""}`}>
-                {t("dl.win")}{os === "windows" && <span className="ml-1.5 text-[10px] font-normal opacity-80">当前系统</span>}
+                {t("dl.win")}{os === "windows" && <span className="ml-1.5 text-[10px] font-normal opacity-80">{t("dl.currentOs")}</span>}
               </button>
               <button onClick={() => goToInstaller("macos")}
                 className={`rounded-[14px] bg-btnp px-5 py-2.5 font-semibold text-btnpt transition ${os === "macos" ? "ring-2 ring-hud ring-offset-2 ring-offset-card" : ""}`}>
-                {t("dl.mac")}{os === "macos" && <span className="ml-1.5 text-[10px] font-normal opacity-80">当前系统</span>}
+                {t("dl.mac")}{os === "macos" && <span className="ml-1.5 text-[10px] font-normal opacity-80">{t("dl.currentOs")}</span>}
               </button>
               <a href={LATEST} target="_blank" rel="noopener noreferrer"
                 className="rounded-[14px] border border-line px-5 py-2.5 font-semibold hover:border-hud">{t("dl.all")}</a>

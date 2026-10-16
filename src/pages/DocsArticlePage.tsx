@@ -4,6 +4,7 @@
 // 占位见 docs.missing 文案），zh 为全量正式稿。
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageMeta } from "@/utils/usePageMeta";
 import { Link, useParams } from "react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,6 +51,9 @@ export default function DocsArticlePage() {
   const prev = idx > 0 ? MANUAL_FLAT[idx - 1] : undefined;
   const next = idx < MANUAL_FLAT.length - 1 ? MANUAL_FLAT[idx + 1] : undefined;
   const title = meta && lang === "zh" ? meta.zh : (meta?.en ?? slug);
+  // 页签标题取 manual.ts 元数据（同步可得，md 加载前后都正确），不走 i18n；
+  // 页签统一带品牌后缀（与 Home/Demo/Changelog 的「页面名 — Tuvis」模式一致），未知 slug 回退同带
+  usePageMeta({ title: `${title} — Tuvis`, description: t("meta.docs.desc") });
 
   // 图片引用：MD 里 `../img/…`（双语章节同源共享 img/，GitHub 上直接看也成立）
   // → 站点绝对路径；正文首行 `# 标题` 剥掉——标题位由页面头部承担（与侧栏/

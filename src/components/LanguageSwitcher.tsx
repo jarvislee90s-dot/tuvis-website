@@ -9,11 +9,11 @@ export function LanguageSwitcher() {
   const other: Lang = cur === "zh" ? "en" : "zh";
   return (
     <button
-      aria-label={`switch language ${other === "zh" ? "中文" : "EN"}`}
+      aria-label={`switch language to ${other === "zh" ? "Chinese (ZH)" : "English (EN)"}`}
       className="rounded-lg border border-line px-2 py-1 text-xs uppercase hover:opacity-70"
       onClick={() => nav(loc.pathname.replace(`/${cur}`, `/${other}`) + loc.search)}
     >
-      {other === "zh" ? "中文" : "EN"}
+      {other === "zh" ? "ZH" : "EN"}
     </button>
   );
 }
