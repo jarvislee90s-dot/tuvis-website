@@ -28,6 +28,19 @@ describe("resolveBootPath", () => {
     expect(resolveBootPath("https://jarvislee90s-dot.github.io/tuvis-website/", GH)).toBe("/");
   });
 
+  it("base 带尾斜杠（如直接传 BASE_URL）自动归一化", () => {
+    expect(
+      resolveBootPath("https://jarvislee90s-dot.github.io/tuvis-website/en/changelog", {
+        base: "/tuvis-website/",
+        origin: "https://jarvislee90s-dot.github.io",
+      }),
+    ).toBe("/en/changelog");
+  });
+
+  it("同源但 pathname 不在 base 下 → 根路径", () => {
+    expect(resolveBootPath("https://jarvislee90s-dot.github.io/other/page", GH)).toBe("/");
+  });
+
   it("origin 与传入不符 → 根路径（防纵深）", () => {
     expect(
       resolveBootPath("https://example.com/tuvis-website/en/changelog", GH),
