@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router";
 import i18n from "i18next"; // 语言切换（CompatMatrix.test 先例）：同一单例，@/i18n 已对其 init
 import "@/i18n"; // 侧效应导入：RemoteDetail 的 useTranslation 需要全局 i18next 资源
-import { QA_MULTI } from "../ClaudeTui";
+import { QA_MULTI } from "../qa";
 import { REMOTE_INIT, useDemo } from "../store";
 import { RemoteDetail } from "./RemoteDetail";
 
@@ -25,7 +25,8 @@ function mountAt(entry: string, el: ReactNode) {
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** 按显示串取题卡选项钮：title 取自选项表（不硬编码文案），正则先转义 */
 const option = (title: string) => screen.getByRole("button", { name: new RegExp(escapeRegExp(title)) });
-const titleOf = (id: string) => QA_MULTI.options.find((o) => o.id === id)!.title;
+/** 按 id 取当前语言的显示串（T3.3：title 双语，zh/en 各自取） */
+const titleOf = (id: string, lang: "zh" | "en") => QA_MULTI.options.find((o) => o.id === id)!.title[lang];
 /** 题卡提交钮：按稳定语义选择器（可见「发送」+ 提交语义，M6；可见文本必须在 aria 内，label-in-name） */
 const submitAnswer = () => screen.getByRole("button", { name: i18n.t("demo.remote.submitQa") });
 
@@ -80,22 +81,22 @@ describe("RemoteDetail 题卡：picked 存 id、回显按 lang（D9 交互）", 
 
   it("勾选/取消/提交全走 id；zh「已提交：…、…」/ en「Submitted: …, …」", async () => {
     const zh = mountAt("/zh", <RemoteDetail />);
-    fireEvent.click(option(titleOf("finance")));
-    fireEvent.click(option(titleOf("investing")));
+    fireEvent.click(option(titleOf("finance", "zh")));
+    fireEvent.click(option(titleOf("investing", "zh")));
     expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance", "investing"], submitted: false });
     // 再点一次 = 按 id 取消勾选（toggle 语义不碰显示串）
-    fireEvent.click(option(titleOf("investing")));
+    fireEvent.click(option(titleOf("investing", "zh")));
     expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance"], submitted: false });
-    fireEvent.click(option(titleOf("investing")));
+    fireEvent.click(option(titleOf("investing", "zh")));
     fireEvent.click(submitAnswer());
     expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance", "investing"], submitted: true });
-    expect(zh.container.textContent).toContain(`已提交：${titleOf("finance")}、${titleOf("investing")}`);
+    expect(zh.container.textContent).toContain(`已提交：${titleOf("finance", "zh")}、${titleOf("investing", "zh")}`);
 
-    // 同态切 en：前缀分隔符半角冒号 + 半角逗号 join（title 仍中文，批次 3 COPY 化 T3.3 处理）
+    // 同态切 en：前缀分隔符半角冒号 + 半角逗号 join + title 取英文侧（T3.3 双语题卡）
     cleanup();
     await i18n.changeLanguage("en");
     const en = mountAt("/en", <RemoteDetail />);
-    expect(en.container.textContent).toContain(`Submitted: ${titleOf("finance")}, ${titleOf("investing")}`);
+    expect(en.container.textContent).toContain(`Submitted: ${titleOf("finance", "en")}, ${titleOf("investing", "en")}`);
     expect(en.container.textContent).not.toContain("Submitted：");
   });
 

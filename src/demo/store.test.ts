@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { QA_MULTI, QA_SINGLE, pickedDisplayText, submittedDisplayText } from "./ClaudeTui";
+import { QA_MULTI, QA_SINGLE, pickedDisplayText, submittedDisplayText } from "./qa";
 import { REMOTE_INIT, QUEUED_MSG, SEED_MSGS, msgDisplayText, useDemo, type QuestionState } from "./store";
 import { d1Reset, d1Steps } from "./steps-d1";
 import { d2Reset, d2Steps } from "./steps-d2";
@@ -42,15 +42,31 @@ describe("msgDisplayText（显示取值纯函数）", () => {
 
 /** D9：picked 存语言无关 id——选项表自带 id、id 唯一且不等于显示串；显示时按表解析 + 按语言 join */
 describe("picked id 化（D9）", () => {
-  it("QA 选项表 id 非空、唯一、不等于显示串、不是下标", () => {
+  it("QA 选项表 id 非空、唯一、不等于显示串（zh/en 两侧）、不是下标", () => {
     for (const { options } of [QA_SINGLE, QA_MULTI]) {
       const ids = options.map((o) => o.id);
       for (const o of options) {
         expect(o.id.trim()).not.toBe("");
-        expect(o.id).not.toBe(o.title);
+        expect(o.id).not.toBe(o.title.zh);
+        expect(o.id).not.toBe(o.title.en);
         expect(o.id).not.toMatch(/^\d+$/);
       }
       expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it("题面/选项 title/desc 双语形态：en 零 CJK、zh 非空（T3.3 题卡数据门禁）", () => {
+    for (const { question, options } of [QA_SINGLE, QA_MULTI]) {
+      expect(question.en, "question.en").not.toMatch(/[\u4e00-\u9fff]/);
+      expect(question.zh.trim(), "question.zh").not.toBe("");
+      for (const o of options) {
+        expect(o.title.en, `${o.id}.title.en`).not.toMatch(/[\u4e00-\u9fff]/);
+        expect(o.title.zh.trim(), `${o.id}.title.zh`).not.toBe("");
+        if (o.desc) {
+          expect(o.desc.en, `${o.id}.desc.en`).not.toMatch(/[\u4e00-\u9fff]/);
+          expect(o.desc.zh.trim(), `${o.id}.desc.zh`).not.toBe("");
+        }
+      }
     }
   });
 
@@ -63,10 +79,10 @@ describe("picked id 化（D9）", () => {
     warn.mockRestore();
   });
 
-  it("多选 id 列表 → 显示串按语言 join（zh「、」/ en「, 」）", () => {
+  it("多选 id 列表 → 显示串按语言 join 且按语言取题（zh「、」/ en「, 」）", () => {
     const q: { kind: "multi"; picked: string[] } = { kind: "multi", picked: ["finance", "investing"] };
     expect(pickedDisplayText(q, "zh")).toBe("金融/信用评级、投资理财常识");
-    expect(pickedDisplayText(q, "en")).toBe("金融/信用评级, 投资理财常识");
+    expect(pickedDisplayText(q, "en")).toBe("Finance / credit ratings, Personal investing");
   });
 
   it("空 picked → 显示串与提交回显整行均为空串（M5，防悬空「已提交：」）", () => {
@@ -99,7 +115,7 @@ describe("picked id 化（D9）", () => {
         const ids = q.kind === "single" ? (q.picked === null ? [] : [q.picked]) : q.picked;
         for (const id of ids) {
           expect(table.some((o) => o.id === id), `${name}/${step.detailKey} 悬空 picked id: ${id}`).toBe(true);
-          expect(pickedDisplayText({ kind: q.kind, picked: [id] }, "zh")).toBe(table.find((o) => o.id === id)?.title);
+          expect(pickedDisplayText({ kind: q.kind, picked: [id] }, "zh")).toBe(table.find((o) => o.id === id)?.title.zh);
         }
       }
     }

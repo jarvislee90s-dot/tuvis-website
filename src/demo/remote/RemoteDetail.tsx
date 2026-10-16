@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLang } from "@/i18n/useLang";
 import { useDemo, setStateOf, msgDisplayText, type QuestionState } from "../store";
 import { ArrowLeftIcon, RefreshCwIcon } from "../../components/Icons";
-import { QA_MULTI, QA_SINGLE, submittedDisplayText } from "../ClaudeTui";
+import { QA_MULTI, QA_SINGLE, submittedDisplayText } from "../qa";
 
 /** 思考展开态 3 行过程文本（会话数据，硬编码；tuvis 语境） */
 const THINKING_STEPS = ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"];
@@ -210,7 +210,7 @@ export function RemoteDetail() {
                   {q.kind === "single" ? t("demo.pill.question") : t("demo.pill.multi")}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
-                  {q.kind === "single" ? QA_SINGLE.question : QA_MULTI.question}
+                  {q.kind === "single" ? QA_SINGLE.question[lang] : QA_MULTI.question[lang]}
                 </span>
               </div>
               <div className="mt-2 space-y-2">
@@ -233,9 +233,9 @@ export function RemoteDetail() {
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="font-medium text-ink">{opt.title}</span>
-                        {"desc" in opt && opt.desc && (
-                          <span className="block text-[10px] leading-snug text-[#4B6BDB]">{opt.desc}</span>
+                        <span className="font-medium text-ink">{opt.title[lang]}</span>
+                        {opt.desc && (
+                          <span className="block text-[10px] leading-snug text-[#4B6BDB]">{opt.desc[lang]}</span>
                         )}
                       </span>
                     </button>

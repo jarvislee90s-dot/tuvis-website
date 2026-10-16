@@ -13,7 +13,7 @@ export function msgDisplayText(m: Pick<RemoteMsg, "text">, lang: Lang): string {
   return "zh" in m.text ? m.text[lang] : m.text.raw;
 }
 
-/** D9：picked 存选项 id（语言无关，见 ClaudeTui 的 QA 选项表），显示时才按 lang 解析文案 */
+/** D9：picked 存选项 id（语言无关，见 qa.ts 的 QA 选项表），显示时才按 lang 解析文案 */
 export type QuestionState =
   | { kind: "single"; picked: string | null; submitted: boolean }
   | { kind: "multi"; picked: string[]; submitted: boolean }

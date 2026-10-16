@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/i18n";
 import { brandWord } from "@/components/Brand";
 import { useLang } from "@/i18n/useLang";
+import { QA_MULTI, QA_SINGLE } from "./qa";
 
 export interface TuiLine { text: string; tone?: "cmd" | "ok" | "warn" | "dim" }
 export interface TuiReply { headline: string; bullets: string[] }
@@ -83,14 +84,6 @@ const PLAN_TITLE = "Ready to code?";
 const PLAN_OPTIONS = ["Yes, and auto-accept edits", "Yes, and manually approve edits", "No, keep planning"];
 const SELECT_USER_LINE = "帮我把这道题归到题目领域";
 const SELECT_CHIP = "题目领域";
-const SELECT_QUESTION = "这道题属于哪个领域？";
-/** D9：id = 语言无关的选项身份（picked 只存 id）；title 目前仍为中文，批次 3 COPY 化（T3.3）时只改 title 不动 id。
- *  约束：id 只增不改（种子/脚本 picked 与它绑死）、不得用显示串或数组下标当 id。 */
-const SELECT_OPTIONS: { id: string; title: string; desc: string }[] = [
-  { id: "finance", title: "金融/信用评级", desc: "宏观利率、行业景气与企业信用" },
-  { id: "supply-chain", title: "产业/供应链", desc: "上中下游产能、库存与价格传导" },
-  { id: "methodology", title: "方法论/工程", desc: "因子构造、回测框架与数据管道" },
-];
 const MULTI_RECAP =
   "※ recap: 远程审批卡文案已定稿，保存到 E:\\LLMproject\\Github\\tuvis-app\\docs\\remote-card.md。" +
   "下一步：等你确认后我把审批状态机接进看板红绿灯。(disable recaps in /config)";
@@ -98,49 +91,7 @@ const MULTI_HOOK_ERROR = "⎿ UserPromptSubmit hook error";
 const MULTI_HOOK_DETAIL =
   "  ⎿ Failed with non-blocking status code: /usr/bin/bash: line 1: C:/Users/bunny/.tuvis/bin/tuvis-hook-listener.exe: Permission denied";
 const MULTI_THOUGHT = "✻ Thought for 34s (ctrl+o to expand)";
-const MULTI_QUESTION = "想让我考你哪个领域的多选题？";
-const MULTI_OPTIONS: { id: string; title: string; desc?: string }[] = [
-  { id: "finance", title: "金融/信用评级", desc: "贴合你的工作场景，比如债券、信用评级、持仓管理类题目" },
-  { id: "investing", title: "投资理财常识", desc: "股票、基金、个人理财等实用金融常识" },
-  { id: "life-trivia", title: "生活/趣味常识", desc: "历史、地理、科学、生活百科等轻松题目" },
-  { id: "random", title: "随便来一道", desc: "我来随机选一个领域，给你出题" },
-  { id: "type-something", title: "Type something." },
-  { id: "chat", title: "Chat about this" },
-];
 const OPTION_FOOT = "Enter to select · ↑/↓ to navigate · Esc to cancel";
-
-/** P19：题面共享常量——手机详情页的问答卡与 TUI 场景引用同一份数据，保证左右一致 */
-export const QA_MULTI = { question: MULTI_QUESTION, options: MULTI_OPTIONS } as const;
-export const QA_SINGLE = { question: SELECT_QUESTION, options: SELECT_OPTIONS } as const;
-
-export type QaKind = "single" | "multi";
-
-/** D9：picked 存 id → 显示时按 id 取显示串（未登记 id 原样回退 + DEV 告警，防旧种子/脏脚本静默吞）。
- *  title 尚为中文；批次 3 COPY 化（T3.3）后在本函数内改按 lang 取 {zh,en}，调用方与 picked 形状不动。 */
-export function qaOptionTitle(kind: QaKind, id: string): string {
-  const options: readonly { id: string; title: string }[] = kind === "single" ? SELECT_OPTIONS : MULTI_OPTIONS;
-  const hit = options.find((o) => o.id === id);
-  if (!hit && import.meta.env.DEV) console.warn(`[demo] 未登记的 QA 选项 id：${kind}/${id}——回退原样显示`);
-  return hit?.title ?? id;
-}
-
-/** D9：提交回显 = picked id 列表 → 显示串；join 分隔符按语言（en「, 」/ zh「、」） */
-export function pickedDisplayText(q: { kind: QaKind; picked: string | string[] | null }, lang: Lang): string {
-  if (q.kind === "single") return typeof q.picked === "string" ? qaOptionTitle("single", q.picked) : "";
-  const ids = Array.isArray(q.picked) ? q.picked : [];
-  return ids.map((id) => qaOptionTitle("multi", id)).join(lang === "en" ? ", " : "、");
-}
-
-/** D9：提交回显整行 = 前缀（调用方传 t(...)）+ 语言化分隔冒号 + 显示串；/en 不落全角「：」。
- *  无可显示项（空 picked）返回空串——调用方据此整行不渲染，防「已提交：」悬空标签 */
-export function submittedDisplayText(
-  label: string,
-  q: { kind: QaKind; picked: string | string[] | null },
-  lang: Lang,
-): string {
-  const picked = pickedDisplayText(q, lang);
-  return picked === "" ? "" : `${label}${lang === "en" ? ": " : "："}${picked}`;
-}
 
 /** 场景选项行（approval/plan/select/multiselect 四处复用同一组件）；描述行次色、缩进 5 空格对齐标题列。
  *  P19 可选联动：传 onPick 时整行可点（与手机问答卡双向同步）；marker = 已选标记（多选 ✓）。 */
@@ -190,17 +141,18 @@ function PlanScene() {
 }
 
 /** select 场景（单选近似）：题目领域 chip + 粗体问题 + 带描述编号选项 + Enter-to-select 底行。
- *  P19 联动：picked[0] = 手机卡选中项的 id（无选中时 ❯ 停在第一行）；onPick 传入则整行可点。 */
-function SelectScene({ picked, onPick }: { picked?: string[]; onPick?: (id: string) => void }) {
+ *  P19 联动：picked[0] = 手机卡选中项的 id（无选中时 ❯ 停在第一行）；onPick 传入则整行可点。
+ *  题面/选项文案取自 qa.ts（共享表，按 lang 取；M9） */
+function SelectScene({ lang, picked, onPick }: { lang: Lang; picked?: string[]; onPick?: (id: string) => void }) {
   return (
     <div className="mt-3">
       <div><span className="rounded bg-[#2A2824] px-1.5 text-[#D97757]">{SELECT_CHIP}</span></div>
-      <div className="mt-1 whitespace-pre font-bold">{SELECT_QUESTION}</div>
+      <div className="mt-1 whitespace-pre font-bold">{QA_SINGLE.question[lang]}</div>
       <div className="mt-1 space-y-0.5">
-        {SELECT_OPTIONS.map((o, i) => {
+        {QA_SINGLE.options.map((o, i) => {
           const selected = picked && picked.length > 0 ? picked[0] === o.id : i === 0;
           return (
-            <OptionRow key={o.id} index={i + 1} title={o.title} description={o.desc} selected={selected}
+            <OptionRow key={o.id} index={i + 1} title={o.title[lang]} description={o.desc?.[lang]} selected={selected}
               onClick={onPick ? () => onPick(o.id) : undefined} />
           );
         })}
@@ -212,8 +164,9 @@ function SelectScene({ picked, onPick }: { picked?: string[]; onPick?: (id: stri
 
 /** multiselect 场景：逐字对照 claude-tui-multiselect.png——
  *  ※ recap（用户行上方）→ hook error 树 → Thought 34s → chip → 粗体问题 → 编号选项 1-6 → 底行。
- *  P19 联动：picked = 手机卡勾选集（选项 id；✓ 绿标 + 行高亮）；onPick 传入则整行可点。 */
-function MultiselectScene({ picked, onPick }: { picked?: string[]; onPick?: (id: string) => void }) {
+ *  P19 联动：picked = 手机卡勾选集（选项 id；✓ 绿标 + 行高亮）；onPick 传入则整行可点。
+ *  题面/选项文案取自 qa.ts（共享表，按 lang 取；M9） */
+function MultiselectScene({ lang, picked, onPick }: { lang: Lang; picked?: string[]; onPick?: (id: string) => void }) {
   const hasPick = !!picked && picked.length > 0;
   return (
     <div className="mt-3">
@@ -221,14 +174,14 @@ function MultiselectScene({ picked, onPick }: { picked?: string[]; onPick?: (id:
       <div className="whitespace-pre text-[#8B857A]">{MULTI_HOOK_DETAIL}</div>
       <div className="mt-2 whitespace-pre text-[#8B857A]">{MULTI_THOUGHT}</div>
       <div className="mt-2"><span className="rounded bg-[#2A2824] px-1.5 text-[#D97757]">{SELECT_CHIP}</span></div>
-      <div className="mt-1 whitespace-pre font-bold">{MULTI_QUESTION}</div>
+      <div className="mt-1 whitespace-pre font-bold">{QA_MULTI.question[lang]}</div>
       <div className="mt-1 space-y-0.5">
-        {MULTI_OPTIONS.map((o, i) => {
+        {QA_MULTI.options.map((o, i) => {
           const selected = hasPick && picked!.includes(o.id);
           return (
             <div key={o.id}>
               {i === 5 && <div className="my-1 h-px bg-[#2A2824]" />}
-              <OptionRow index={i + 1} title={o.title} description={o.desc} selected={selected}
+              <OptionRow index={i + 1} title={o.title[lang]} description={o.desc?.[lang]} selected={selected}
                 marker={selected ? "✓" : undefined}
                 onClick={onPick ? () => onPick(o.id) : undefined} />
             </div>
@@ -352,8 +305,8 @@ export function ClaudeTui({
               {/* ③⑤ 场景块：approval/plan/select/multiselect 替换 Thought+Reply（占 ③ 位，对照截图用户行下即场景内容） */}
               {scene === "approval" && <ApprovalScene />}
               {scene === "plan" && <PlanScene />}
-              {scene === "select" && <SelectScene picked={picked} onPick={onPick} />}
-              {scene === "multiselect" && <MultiselectScene picked={picked} onPick={onPick} />}
+              {scene === "select" && <SelectScene lang={lang} picked={picked} onPick={onPick} />}
+              {scene === "multiselect" && <MultiselectScene lang={lang} picked={picked} onPick={onPick} />}
               {/* ④ 剧情行（D2 联动，全场景保留） */}
               {extraLines.map((l, i) => (
                 <div key={i} className={`whitespace-pre ${l.tone ? TONE[l.tone] : ""}`}>{l.text}</div>
