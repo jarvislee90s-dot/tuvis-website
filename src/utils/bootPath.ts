@@ -21,3 +21,29 @@ export function resolveBootPath(
   }
   return "/";
 }
+
+/** 与 scripts/make-404.mjs 注入脚本约定的存储键（两侧字面量保持一致，勿单改一处） */
+const REDIRECT_KEY = "tuvis-redirect";
+
+/** restoreBootLocation 所需的最小 router 面——结构类型，不 import @/router，本文件保持零依赖 */
+interface NavigateLike {
+  navigate(to: string, opts?: { replace?: boolean }): void | Promise<void>;
+}
+
+/**
+ * GH Pages 404 兜底第二跳：读 404.html 存下的原始 URL，经 resolveBootPath 解析后
+ * 用 router.navigate（replace）恢复深链。必须在 RouterProvider render 前调用——
+ * data router 在模块求值时即创建并初始化，此后再 history.replaceState 它不感知（不触发重导航），
+ * 深链会坍缩到 /zh；router.navigate 则让 router 自身记下新位置。行为由 boot.integration.test.tsx 锁定。
+ * 无论解析结果如何都清键，防 404→根→404 死循环。
+ */
+export function restoreBootLocation(
+  router: NavigateLike,
+  opts: { base: string; origin: string },
+): void {
+  const raw = sessionStorage.getItem(REDIRECT_KEY);
+  if (!raw) return;
+  const path = resolveBootPath(raw, opts);
+  router.navigate(path, { replace: true });
+  sessionStorage.removeItem(REDIRECT_KEY);
+}
