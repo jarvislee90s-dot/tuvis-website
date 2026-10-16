@@ -11,7 +11,7 @@ import { COPY as ZCODE_COPY } from "./ZCodeTaskWindow";
 import { COPY as D1_SCENE_COPY } from "./scenes/D1Scene";
 import { COPY as PET_USAGE_COPY } from "./scenes/PetUsageScene";
 import { COPY as REMOTE_SCENE_COPY } from "./scenes/RemoteScene";
-import { COPY as RESOURCES_SCENE_COPY } from "./scenes/ResourcesScene";
+import { COPY as RESOURCES_SCENE_COPY, BUILTIN_PRESET_IDS, PLUGIN_ROW_IDS } from "./scenes/ResourcesScene";
 
 /**
  * 批次 3 COPY 模式门禁（B3-T5 确立；B3-T6/T3.7/B3-T8 后续 13 个文件照此办理）
@@ -105,5 +105,25 @@ describe("COPY parity：批次 3 窗 zh/en 形状与语言门禁", () => {
 describe("尾随空格叶子锚点：en 承接同行元素", () => {
   it("FilePreview /en h1Link 以空格结尾（承 <em> 强调段「a 7-chapter illustrated guide」）", () => {
     expect(FILE_PREVIEW_COPY.en.h1Link).toBe("becomes ");
+  });
+});
+
+/** 数据表成员门禁（B3-T8 审查 Minor-3）：插件行/内置预设的显示名按 id 查译名表，未登记即静默回落 id
+ *  本身（ASCII slug）——新增行漏译两侧都不报错，故 id 集与译名表键集必须互相锁死（en 侧由 ① 键集合
+ *  递归一致传递保证，这里锁 zh）。 */
+describe("ResourcesScene 数据表成员：行 id 与译名表键集互锁", () => {
+  it("每个 PLUGIN_ROWS.id 都已登记译名（漏登会静默落 slug）", () => {
+    const missing = PLUGIN_ROW_IDS.filter((id) => !(id in RESOURCES_SCENE_COPY.zh.pluginNames));
+    expect(missing, "未登记译名的插件行 id").toEqual([]);
+  });
+
+  it("译名表无死键：pluginNames 键集恰为 PLUGIN_ROWS.id 集合", () => {
+    expect(Object.keys(RESOURCES_SCENE_COPY.zh.pluginNames).sort()).toEqual([...PLUGIN_ROW_IDS].sort());
+  });
+
+  it("每个内置预设 id 都已登记译名，且 presetNames 键集恰为内置预设 id 集合（自定义预设走用户输入，不在此表）", () => {
+    const named = Object.keys(RESOURCES_SCENE_COPY.zh.presetNames);
+    expect(BUILTIN_PRESET_IDS.filter((id) => !named.includes(id)), "未登记译名的内置预设 id").toEqual([]);
+    expect(named.sort()).toEqual([...BUILTIN_PRESET_IDS].sort());
   });
 });

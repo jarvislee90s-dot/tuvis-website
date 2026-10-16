@@ -100,9 +100,16 @@ const EN: typeof ZH = {
     "voice-annotate": "Voice annotation",
     "petdex-bridge": "petdex bridge",
   },
-  presetNames: { frontend: "Frontend design", superpowers: "Superpowers dev kit" },
+  // 术语对齐 steps-res.ts / demo.detail.d3s4-5 的「the Frontend preset」「the Superpowers kit」
+  // （B3-T8 审查 Minor-2：预设卡名与剧本字幕同一实体须同一叫法）
+  presetNames: { frontend: "Frontend preset", superpowers: "Superpowers kit" },
 };
 export const COPY = { zh: ZH, en: EN } as const;
+
+/** 数据表行的语言无关 id（供 copy.parity 成员门禁核对）：显示层按 id 查译名、未登记静默回落 id 本身——
+ *  新增行/内置预设漏登两语言译名时无任何报错，故 id 集须对测试可见（B3-T8 rider Minor-3）。 */
+export const PLUGIN_ROW_IDS = PLUGIN_ROWS.map((r) => r.id);
+export const BUILTIN_PRESET_IDS = [FRONTEND_PRESET.id, SUPERPOWERS_PRESET.id];
 
 /** 译名表按键查表（Record 视图：id 是运行时字符串，字面量键表无法直索引）；未登记的行返回 undefined，调用方落回 id */
 function nameOf(names: object, id: string): string | undefined {
