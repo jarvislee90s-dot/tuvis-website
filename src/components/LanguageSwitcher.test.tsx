@@ -18,13 +18,13 @@ function mountAt(entry: string) {
 describe("LanguageSwitcher：ZH/EN 文案与英文 aria", () => {
   afterEach(cleanup);
 
-  it("/en 场景：按钮显示 ZH，aria 为 switch language to Chinese", () => {
+  it("/en 场景：按钮显示 ZH，aria 为 switch language to Chinese (ZH)", () => {
     mountAt("/en");
-    expect(screen.getByRole("button", { name: "switch language to Chinese" })).toHaveTextContent("ZH");
+    expect(screen.getByRole("button", { name: "switch language to Chinese (ZH)" })).toHaveTextContent("ZH");
   });
 
-  it("/zh 场景：按钮显示 EN，aria 为 switch language to English", () => {
+  it("/zh 场景：按钮显示 EN，aria 为 switch language to English (EN)", () => {
     mountAt("/zh");
-    expect(screen.getByRole("button", { name: "switch language to English" })).toHaveTextContent("EN");
+    expect(screen.getByRole("button", { name: "switch language to English (EN)" })).toHaveTextContent("EN");
   });
 });

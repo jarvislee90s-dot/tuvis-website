@@ -2,6 +2,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
+import { stubIntersectionObserver } from "@/test/domStubs";
 
 /** 页签快验：真实路由表 + 真实页面组件，锁四页面 × 双语言的 document.title。
  *  meta description 由 usePageMeta 单测覆盖，这里不再重复断言。 */
@@ -17,19 +18,8 @@ describe("页面接线：四页面真实路由渲染后页签标题正确", () =
   beforeEach(() => {
     // jsdom 不实现 scrollTo，Silent 掉 ScrollManager 回顶提示（非被测行为）
     window.scrollTo = () => {};
-    // 首页 Reveal 走 framer-motion whileInView，jsdom 无 IntersectionObserver——
-    // 缺失时树会崩进 RR 默认 ErrorBoundary（标题自此冻结）。桩掉即可，非被测行为
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-        takeRecords() {
-          return [];
-        }
-      },
-    );
+    // 首页 Reveal（whileInView）缺 IO 时树会崩进 RR 默认 ErrorBoundary（标题自此冻结）
+    stubIntersectionObserver();
   });
   afterEach(() => {
     cleanup();
