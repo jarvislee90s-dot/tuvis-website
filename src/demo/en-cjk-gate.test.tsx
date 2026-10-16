@@ -21,6 +21,9 @@ import zh from "@/i18n/zh.json";
  *   ① /en/changelog —— changelog.json 条目是`{zh, en?}`混合（HEAD 内 14 版 175 条零 en，2026-10-16 上游
  *      发版同步后 15 版 191 条里 26 条有 en），未译条目按产品「诚实降级」口径回落中文原文 + 徽章标注。
  *      故零 Han 断言换成：标题/英文说明在 + 「English in progress」徽章数 = 未译条目数（降级机制在岗）。
+ *   ①b /en/changelog section 键 —— 各版本 h3 直渲 changelog.json 的 section 键（如 v0.5.5 的
+ *      「Changed（Breaking…）」），键本身是上游数据、未随条目一起英文化，/en 渲染中文小标题属已知缺口
+ *      （同源 tuvis#160）。本页整体已由 ① 移出零 Han 断言，此处仅登记，防后续把该页并入硬红线时误判。
  *   ② /en 首页矩阵区——组名/行名取主仓 capabilities.json 的 nameEn ?? name，nameEn 未补时（tuvis#160
  *      缺口 C，HEAD 内 JSON 全缺）该区必然中文。豁免粒度 = 矩阵「数据组卡」容器（CompatMatrix.tsx 的
  *      div.mt-4.space-y-4，正好只包上游 JSON 驱动的组名/行名/备注文本），section 自身的 i18n chrome
