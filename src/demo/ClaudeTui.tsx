@@ -3,6 +3,7 @@ import type { Lang } from "@/i18n";
 import { brandWord } from "@/components/Brand";
 import { useLang } from "@/i18n/useLang";
 import { QA_MULTI, QA_SINGLE } from "./qa";
+import type { Bilingual } from "./types";
 
 export interface TuiLine { text: string; tone?: "cmd" | "ok" | "warn" | "dim" }
 export interface TuiReply { headline: string; bullets: string[] }
@@ -235,14 +236,16 @@ function MultiselectScene({ lang, picked, onPick }: { lang: Lang; picked?: strin
  *  mode="session"（默认）渲染完整会话态（三行头部/灰底用户消息/思考折叠/回复/※ 状态行/auto mode 底行/右下 toast）；
  *  mode="welcome" 保留 P8 欢迎盒态（当前无调用方，组件 API 预留）。
  *  scene（默认 "session"）：场景块替换 ③Thought+⑤Reply，header/用户行/extraLines/状态行/输入行/modeLine/toast 全保留；
- *  select/multiselect 接管用户行内容（透传覆盖）。 */
+ *  select/multiselect 接管用户行内容（透传覆盖）。
+ *  toast 契约（B3-T8）：正文为 Bilingual（types.ts），渲染处按 lang 取（zh「等待批准」/ en「awaiting approval」），
+ *  标题为语言无关产品名；调用方传 COPY 双支派生体（D1Scene/RemoteScene）。 */
 export function ClaudeTui({
   mode = "session", scene = "session", userMsg, reply, modeLine = DEFAULT_MODELINE,
   extraLines = [], waiting = false, toast = null, className = "", onClose,
   picked, onPick,
 }: {
   mode?: "welcome" | "session"; scene?: TuiScene; userMsg?: string; reply?: TuiReply; modeLine?: string;
-  extraLines?: TuiLine[]; waiting?: boolean; toast?: { title: string; body: string } | null;
+  extraLines?: TuiLine[]; waiting?: boolean; toast?: { title: string; body: Bilingual } | null;
   /** P19 可选联动：picked = 手机问答卡的选项 id 集；onPick = 点终端选项行按 id 回写手机卡 */
   picked?: string[]; onPick?: (id: string) => void;
   className?: string; onClose?: () => void;
@@ -404,13 +407,13 @@ export function ClaudeTui({
         </div>
       </div>
 
-      {/* ⑩ 右下 toast 通知卡 */}
+      {/* ⑩ 右下 toast 通知卡（正文按 lang 取 Bilingual 分支，B3-T8） */}
       {toast && (
         <div className="absolute bottom-3 right-3 rounded-md border border-[#333] bg-[#1A1A1A] p-2 text-[10px] shadow-pop">
           <div className="flex items-center gap-1.5 whitespace-pre">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#4EC98A]" aria-hidden />
             <span className="font-semibold text-[#D8D3C8]">{toast.title}</span>
-            <span className="text-[#8B857A]">· {toast.body}</span>
+            <span className="text-[#8B857A]">· {toast.body[lang]}</span>
           </div>
         </div>
       )}

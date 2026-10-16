@@ -112,7 +112,7 @@ export function RemoteScene() {
               extraLines={tuiLines(remote.approval, remote.messages, lang)}
               waiting={remote.approval === "pending"}
               modeLine={remote.planMode ? "» plan mode on (shift+tab to cycle) · < for agents" : undefined}
-              toast={claude.state === "idle" ? { title: "Claude", body: "远程审批 · 空闲" } : null} />
+              toast={claude.state === "idle" ? { title: "Claude", body: { zh: "远程审批 · 空闲", en: "Remote approval · idle" } } : null} />
           </div>
         </div>
       </DesktopStage>

@@ -48,7 +48,7 @@ export function D1Scene() {
               {windows.toolWin === "claude" && (
                 <motion.div key="claude" {...SPRING} className="h-full">
                   <ClaudeTui mode="session" className="h-full" waiting={claude.state === "waiting"}
-                    toast={{ title: "Claude", body: "tuvis-app · 等待批准" }}
+                    toast={{ title: "Claude", body: { zh: "tuvis-app · 等待批准", en: "tuvis-app · awaiting approval" } }}
                     onClose={closeWin} />
                 </motion.div>
               )}
