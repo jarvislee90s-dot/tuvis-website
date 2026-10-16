@@ -39,7 +39,8 @@ const MODEL_LABEL = "Hy4 preview ▾";
 
 /** 导航角标位（语言无关）：按位对齐 COPY.nav——下标 i 的角标挂第 i 行，"assistant"/"more" 为 COPY.navBadge 的键；
  *  末位 more 角标靠右（原「中文键名 → 角标」映射改为语言无关键名）。
- *  ⚠ 硬约束：增删/重排 COPY.nav 必须同步本数组（长度与下标都要对）——错位会把角标挂到别的行上。 */
+ *  ⚠ 硬约束：增删/重排 COPY.nav 必须同步本数组及下方图标数组（长度与下标都要对；越界即 undefined 崩溃）
+ *  ——错位会把角标挂到别的行上。 */
 const NAV_BADGE = [null, "assistant", null, null, null, "more"] as const;
 
 /** 批次 3 COPY 模式（T3.3；模板说明见 copy.parity.test.ts 头注释）：

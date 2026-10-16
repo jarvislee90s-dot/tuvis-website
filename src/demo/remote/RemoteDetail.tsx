@@ -21,7 +21,7 @@ const ZH = {
 };
 const EN: typeof ZH = {
   thinkingSteps: ["Reading the board state snapshot...", "Computing the tray tri-state debounce window...", "Drafting the adjustment plan"],
-  toolCallTag: "Bash call",
+  toolCallTag: "Bash command",
 };
 export const COPY = { zh: ZH, en: EN } as const;
 

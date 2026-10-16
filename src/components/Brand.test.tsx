@@ -12,7 +12,8 @@ import { TopBar } from "./layout/TopBar";
 
 /** D1 品牌词裁决：/zh 页「兔维斯 Tuvis」、/en 页仅「Tuvis」（/en 零 CJK 红线的一部分）。
  *  品牌词是单值按语言切换的数据，不走 i18n 键——由 brandName 纯函数 + Brand 组件承载。
- *  Brand 读 useLang（useParams 归一，@/i18n 共享入口——原 demo 侧钩子已迁此），须挂在 /:lang 路由下。 */
+ *  Brand 读 useLang（useParams 归一，@/i18n 共享入口——原 demo 侧钩子已迁此），须挂在 /:lang 路由下。
+ *  约定：生产代码的 data-testid 仅限红线锚点（如 about-brand）——普通断言按角色/文本取元素，不新增测试专用 id。 */
 function mountAt(entry: string, el: ReactNode) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
@@ -126,7 +127,10 @@ describe("AboutWindow 品牌红线（B3-T7 M1）", () => {
 
   it("/en：整窗零 CJK（含属性），且求 Star 横幅品牌词为裸词", () => {
     const { container } = mountAt("/en", <AboutWindow />);
-    expect(container.innerHTML).not.toMatch(/[\u4e00-\u9fff]/);
+    // B3-T8：字符类对齐 parity ②b（CJK 标点 + 全角区；不含曲引号 \u2018-\u201d，防误伤英文撇号）
+    expect(container.innerHTML).not.toMatch(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/);
+    // 尾随空格 DOM 锚点：newVersion en 以空格结尾，版本号 span 直连后仍分词（「detected: v0.5.x」）
+    expect(container.textContent).toContain("detected: v");
     expect(container.textContent).toContain("If Tuvis has helped you");
   });
 });
