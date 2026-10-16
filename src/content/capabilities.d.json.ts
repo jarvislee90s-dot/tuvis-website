@@ -4,7 +4,7 @@ declare const data: {
   tools: string[];
   groups: {
     key: string; name: string; nameEn?: string;
-    rows: { name: string; nameEn?: string; key: string; support: Record<string, string>; note?: string }[];
+    rows: { name: string; nameEn?: string; key: string; support: Record<string, string>; note?: string; noteEn?: string }[];
   }[];
 };
 export default data;

@@ -6,7 +6,7 @@ import { toolOf } from "@/demo/tools";
 import cap from "@/content/capabilities.json";
 
 /** 兼容矩阵板块（T40）：数据 = 同步产物 content/capabilities.json 单一源（列序/行组随 JSON 自动跟随）。
- *  文字态单元格（决策 8）：✓/✓/🧪/✕ + 文案；行级 note 走单元格 title/aria-label 悬浮；
+ *  文字态单元格（决策 8）：✓/✓/🧪/✕ + 文案；行级 note（noteEn 优先）走单元格 title/aria-label 悬浮；
  *  Codex 列头 † 脚注（CLI 支持完整远程 / APP 仅查看）；行名/组名取 JSON 原文，nameEn 前向兼容。 */
 const LEGEND = ["yes", "partial", "experimental", "no"] as const;
 
@@ -50,7 +50,7 @@ export function CompatMatrix() {
                 <table className="w-full min-w-[820px] table-fixed border-collapse text-xs">
                   <thead>
                     <tr>
-                      <th className="sticky left-0 z-10 w-[22%] bg-card py-2 text-left font-medium text-inkdim">能力</th>
+                      <th className="sticky left-0 z-10 w-[22%] bg-card py-2 text-left font-medium text-inkdim">{t("matrix.colCap")}</th>
                       {cap.tools.map((tool) => (
                         <th key={tool} className="py-2 text-center font-medium"
                           title={tool === "codex" ? t("matrix.codexNote") : undefined}>
@@ -66,21 +66,25 @@ export function CompatMatrix() {
                     </tr>
                   </thead>
                   <tbody>
-                    {group.rows.map((row) => (
-                      <tr key={row.key} className="border-t border-line">
-                        <td className="sticky left-0 z-10 bg-card py-2 pr-3 text-inkdim">{row.nameEn ?? row.name}</td>
-                        {cap.tools.map((tool) => {
-                          const state = CELL[row.support[tool]] ?? CELL.no;
-                          const label = t(state.key);
-                          return (
-                            <td key={tool} className="py-2 text-center" title={row.note}
-                              aria-label={row.note ? `${label} · ${row.note}` : undefined}>
-                              <span className={state.cls}>{state.mark} {label}</span>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                    {group.rows.map((row) => {
+                      // 悬浮备注：en 侧优先 noteEn，主仓未补则回退中文原文
+                      const note = row.noteEn ?? row.note;
+                      return (
+                        <tr key={row.key} className="border-t border-line">
+                          <td className="sticky left-0 z-10 bg-card py-2 pr-3 text-inkdim">{row.nameEn ?? row.name}</td>
+                          {cap.tools.map((tool) => {
+                            const state = CELL[row.support[tool]] ?? CELL.no;
+                            const label = t(state.key);
+                            return (
+                              <td key={tool} className="py-2 text-center" title={note}
+                                aria-label={note ? `${label} · ${note}` : undefined}>
+                                <span className={state.cls}>{state.mark} {label}</span>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
