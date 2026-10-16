@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
 import { stubIntersectionObserver } from "@/test/domStubs";
 import changelog from "@/content/changelog.json";
+import cap from "@/content/capabilities.json";
 import en from "@/i18n/en.json";
 import zh from "@/i18n/zh.json";
 
@@ -17,17 +18,18 @@ import zh from "@/i18n/zh.json";
  * 均不拦；B3-T6/T3.7 审查裁决，与 copy.parity 的 ②/②b 同源）。
  *
  * 本页例外（豁免须在此登记 + 指向上游依据，不得就地放宽字符类）：
- *   ① /en/changelog —— changelog.json 条目全 `{zh}`（截至 B3-T8 实测 14 版 175 条零 en），
- *      /en 正文必然是中文原文（产品「诚实降级」口径）。故零 Han 断言换成：标题/英文说明在 +
- *      「English in progress」徽章数 = 未译条目数（降级机制在岗）。
- *   ② /en 首页矩阵区 —— 组名/行名取主仓 capabilities.json 的 nameEn ?? name，该 JSON 未补 nameEn
- *      （tuvis#160 缺口 C）。豁免范围严格限于矩阵 <section>，其余首页区块仍零 Han。
+ *   ① /en/changelog —— changelog.json 条目是`{zh, en?}`混合（HEAD 内 14 版 175 条零 en，2026-10-16 上游
+ *      发版同步后 15 版 191 条里 26 条有 en），未译条目按产品「诚实降级」口径回落中文原文 + 徽章标注。
+ *      故零 Han 断言换成：标题/英文说明在 + 「English in progress」徽章数 = 未译条目数（降级机制在岗）。
+ *   ② /en 首页矩阵区 —— 组名/行名取主仓 capabilities.json 的 nameEn ?? name，nameEn 未补时（tuvis#160
+ *      缺口 C，HEAD 内 JSON 全缺）该区必然中文。豁免范围严格限于矩阵 <section>，且随数据自动开关
+ *      （见 MATRIX_NAME_EN_GAP）：缺则豁免并断言「确实含 Han」（防豁免空转），补全则自动并入整页硬红线。
  */
 
 const HAN = /[\u4e00-\u9fff]/;
 const WAIT = { timeout: 3000 };
 
-/** changelog 条目总数 / 未译条数（徽章数 = 后者；B3-T8 时 175/175，故 /en/changelog 不做零 Han 断言） */
+/** changelog 条目总数 / 未译条数（徽章数 = 后者；本条随数据漂移自动跟随，不写死） */
 const ITEM_COUNT = changelog.reduce(
   (n, rel) => n + Object.values(rel.sections).reduce((m, items) => m + items.length, 0),
   0,
@@ -36,6 +38,10 @@ const UNTRANSLATED = changelog.reduce(
   (n, rel) => n + Object.values(rel.sections).reduce((m, items) => m + items.filter((it) => !it.en).length, 0),
   0,
 );
+
+/** 矩阵区文本缺口：任一 组/行 缺 nameEn 即该区必然渲染中文（tuvis#160 缺口 C）。
+ *  注：noteEn 缺 4 行只影响 title/aria-label 属性、不在本门禁的文本字符面，故不参与本判定。 */
+const MATRIX_NAME_EN_GAP = cap.groups.some((g) => !g.nameEn || g.rows.some((r) => !r.nameEn));
 
 /** body 全部文本节点拼接（= 门禁口径）；exclude 子树内的节点跳过（首页矩阵豁免用） */
 function bodyText(exclude?: Element | null): string {
@@ -104,7 +110,7 @@ describe("B3 总门禁：/en 四路由零 Han（豁免见文件头）+ /zh 护�
     expect(bodyText()).not.toMatch(HAN);
   });
 
-  it("/en 首页：矩阵区外整页零 Han——其余六区块齐在（矩阵豁免 = 上游 tuvis#160 缺口 C，nameEn 未补）", async () => {
+  it("/en 首页：整页零 Han（其余六区块齐在；矩阵区豁免随上游 nameEn 缺口自动开关，见文件头）", async () => {
     mountAt("/en");
     // 语言锚 = h1（hero.title en 恰「Tuvis」，同 Brand.test 口径）
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Tuvis"), WAIT);
@@ -114,9 +120,14 @@ describe("B3 总门禁：/en 四路由零 Han（豁免见文件头）+ /zh 护�
     const matrix = screen.getByRole("heading", { level: 2, name: en["matrix.title"] }).closest("section");
     expect(matrix).not.toBeNull();
     expectRealPage();
-    // 豁免确有必要：矩阵区当前含 Han（上游补 nameEn 后，此断言与豁免一并移除，届时首页进零 Han 硬红线）
-    expect(matrix!.textContent).toMatch(HAN);
-    expect(bodyText(matrix)).not.toMatch(HAN);
+    if (MATRIX_NAME_EN_GAP) {
+      // 豁免依据在场：缺 nameEn 的行确实在渲染中文（豁免若空转 = 断言面被无谓缩小）
+      expect(matrix!.textContent).toMatch(HAN);
+      expect(bodyText(matrix)).not.toMatch(HAN);
+    } else {
+      // nameEn 已补全：矩阵区并入整页硬红线（bodyText(null) 即全页）
+      expect(bodyText()).not.toMatch(HAN);
+    }
   });
 
   it("/zh 护栏：首页可达且中文在（h1 恰「兔维斯 Tuvis」、正文含「兔维斯」）", async () => {
