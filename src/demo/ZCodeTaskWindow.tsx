@@ -190,6 +190,25 @@ const EN: typeof ZH = {
 };
 export const COPY = { zh: ZH, en: EN } as const;
 
+/** B3-T6 遗留护栏：PROJECTS 的 star.at / badgeAt 是 COPY.projects 组内任务的下标，两表分离——
+ *  COPY 增删任务行而忘记同步下标时会静默错位（角标挂错行 / 黄标丢行）；parity 门禁只管 zh/en 形状，不管下标。
+ *  dev 期直接告警（test 环境 DEV 亦为真，改动即报）。 */
+if (import.meta.env.DEV) {
+  for (const lang of ["zh", "en"] as const) {
+    const table = COPY[lang];
+    for (const proj of PROJECTS) {
+      const n = table.projects[proj.name].tasks.length;
+      const starAt = proj.star ? proj.star.at : -1;
+      if (starAt >= n || proj.badgeAt >= n) {
+        console.warn(
+          `ZCodeTaskWindow（${lang}）：${proj.name} 下标越界（star.at=${starAt} / badgeAt=${proj.badgeAt} / tasks=${n}）` +
+          "——PROJECTS 与 COPY.projects 不同步，角标/黄标会错位",
+        );
+      }
+    }
+  }
+}
+
 /** ZCode 任务窗（暗色）：侧栏 #1B1B22 / 主区 #15151A / 蓝 #3B82F6；d1 剧本 s7 与 zcode 卡开窗承接。
  *  窗内文案（侧栏/任务标题/事件流/输入条）取 COPY（zh/en），快捷键/窗口控件/模型标签为语言无关常量。 */
 export function ZCodeTaskWindow({ className = "", onClose }: { className?: string; onClose?: () => void }) {
