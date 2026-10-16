@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { usePageMeta } from "@/utils/usePageMeta";
 import { useParams } from "react-router";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -23,6 +24,7 @@ export default function ChangelogPage() {
   const { lang } = useParams();
   // 语言权威源 = URL（与 DocsArticlePage 同口径），不用 i18n.language（切语首帧滞后一拍）
   const en = lang?.startsWith("en") ?? false;
+  usePageMeta({ title: t("meta.changelog.title"), description: t("meta.changelog.desc") });
   return (
     <main className="mx-auto max-w-3xl px-5 py-14">
       <h1 className="text-3xl font-bold">{t("log.title")}</h1>
