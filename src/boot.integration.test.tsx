@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
-import { restoreBootLocation } from "@/utils/bootPath";
+import { REDIRECT_KEY, restoreBootLocation } from "@/utils/bootPath";
 
 // ---- 测试环境 realm 桥接（仅本文件）----
 // RR 真实导航时 new AbortController()（= jsdom 版）并把 signal 交给 new Request(url, { signal })；
@@ -24,8 +24,8 @@ class CompatRequest {
 }
 globalThis.Request = CompatRequest as unknown as typeof Request;
 
-// 404.html 注入脚本的存储键（scripts/make-404.mjs，勿单改一处）
-const KEY = "tuvis-redirect";
+// 404.html 注入脚本的存储键（scripts/make-404.mjs 侧是字面量，这里引同一常量）
+const KEY = REDIRECT_KEY;
 // vitest jsdom 默认 URL 带端口（http://localhost:3000），预置 URL 必须与其实同源——
 // 写死 http://localhost 会被 resolveBootPath 的 origin 防线降级为 "/"
 const ORIGIN = window.location.origin;
@@ -34,6 +34,7 @@ const ORIGIN = window.location.origin;
 function bootWith(rawRedirect: string) {
   sessionStorage.setItem(KEY, rawRedirect);
   const router = createBrowserRouter(routes, { basename: BASE });
+  // 有意传 BASE（无尾斜杠）；生产 main.tsx 传 BASE_URL（带尾斜杠）——尾斜杠归一化分支由 bootPath.test.ts 覆盖
   restoreBootLocation(router, { base: BASE, origin: window.location.origin });
   return router;
 }
@@ -71,6 +72,7 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
   it("反向用例：跨 origin 的预置 URL 被 origin 防线拒绝——落回 basename 根，键同样清除", () => {
     const router = bootWith(`https://jarvislee90s-dot.github.io/tuvis-website/en/changelog`);
 
+    // 不 render：渲染会触发 "/" → /zh 兜底重定向（非本用例关注点），落位以 router/地址栏状态为准
     // 防线拒绝 → 解析为 "/" → RR 7.18 里 navigate("/") 落在 basename 根（state.location 含 basename）
     expect(router.state.location.pathname).toBe(BASE);
     expect(window.location.pathname).toBe("/tuvis-website");
@@ -80,6 +82,7 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
   it("根路径用例：base 自身（带尾斜杠形态）→ 根路径，交由 router 兜底重定向", () => {
     const router = bootWith(`${ORIGIN}/tuvis-website/`);
 
+    // 同上不 render：根路径的兜底重定向（→ /zh）是 router 既有行为，此处只锁 restore 落位与清键
     expect(router.state.location.pathname).toBe(BASE);
     expect(window.location.pathname).toBe("/tuvis-website");
     expect(sessionStorage.getItem(KEY)).toBeNull();
