@@ -268,7 +268,7 @@
   "log.title": "更新日志",
   "log.enNote": "条目英文逐条补译中；标注 English in progress 的条目暂显示中文原文。",
   "log.enProgress": "English in progress",
-  "meta.home.title": "兔维斯 Tuvis —— 桌面多 Agent 指挥台",
+  "meta.home.title": "兔维斯 Tuvis —— 你的桌面多 Agent 指挥台",
   "meta.home.desc": "兔维斯（Tuvis）：一块看板看清并掌控所有 AI Agent——会话状态、远程消息注入、Skill/MCP/预设管理、用量账本，从桌面到手机。",
   "meta.demo.title": "交互演示 —— 兔维斯 Tuvis",
   "meta.demo.desc": "会话看板、远程消息注入、资源与预设组管理、桌宠与用量账本——兔维斯全功能站内模拟，点开即玩，无需安装。",

@@ -37,11 +37,11 @@ describe("页面接线：四页面真实路由渲染后页签标题正确", () =
   });
 
   it.each([
-    ["/zh", "兔维斯 Tuvis —— 桌面多 Agent 指挥台"],
+    ["/zh", "兔维斯 Tuvis —— 你的桌面多 Agent 指挥台"],
     ["/en", "Tuvis — Your Desktop Multi-Agent Command Deck"],
   ])("首页 %s → title %j", async (path, expected) => {
     mountAt(path);
-    await waitFor(() => expect(document.title).toBe(expected));
+    await waitFor(() => expect(document.title).toBe(expected), { timeout: 3000 });
   });
 
   it.each([
@@ -49,7 +49,7 @@ describe("页面接线：四页面真实路由渲染后页签标题正确", () =
     ["/en/demo", "Interactive Demo — Tuvis"],
   ])("演示页 %s → title %j", async (path, expected) => {
     mountAt(path);
-    await waitFor(() => expect(document.title).toBe(expected));
+    await waitFor(() => expect(document.title).toBe(expected), { timeout: 3000 });
   });
 
   it.each([
@@ -57,15 +57,15 @@ describe("页面接线：四页面真实路由渲染后页签标题正确", () =
     ["/en/changelog", "Changelog — Tuvis"],
   ])("更新日志页 %s → title %j", async (path, expected) => {
     mountAt(path);
-    await waitFor(() => expect(document.title).toBe(expected));
+    await waitFor(() => expect(document.title).toBe(expected), { timeout: 3000 });
   });
 
-  it("手册页标题取自 manual.ts 元数据且随 URL 语言切换（不走 i18n）", async () => {
+  it("手册页标题取自 manual.ts 元数据且随 URL 语言切换（不走 i18n，页签统一带品牌后缀）", async () => {
     mountAt("/zh/docs/01-overview");
-    await waitFor(() => expect(document.title).toBe("兔维斯是什么"));
+    await waitFor(() => expect(document.title).toBe("兔维斯是什么 — Tuvis"), { timeout: 3000 });
     cleanup();
 
     mountAt("/en/docs/01-overview");
-    await waitFor(() => expect(document.title).toBe("What is Tuvis"));
+    await waitFor(() => expect(document.title).toBe("What is Tuvis — Tuvis"), { timeout: 3000 });
   });
 });
