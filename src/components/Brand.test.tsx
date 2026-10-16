@@ -93,8 +93,8 @@ describe("品牌触点 /en 零「兔维斯」", () => {
 
   it("ClaudeTui 默认回复句内品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <ClaudeTui />);
-    // TODO(B3 COPY)：锚点 = 品牌 token + 待 COPY 尾词（整句 COPY 化后须重锚）
-    expect(container.textContent).toContain("Tuvis桌面端");
+    // B3-T5 重锚：默认回复整句 COPY 化后 en 为英文——锚 = 品牌 token + 英文尾词（原「Tuvis桌面端」已废）
+    expect(container.textContent).toContain("(Tuvis desktop app)");
     expect(container.textContent).not.toContain("兔维斯");
   });
 
@@ -103,5 +103,15 @@ describe("品牌触点 /en 零「兔维斯」", () => {
     // TODO(B3 COPY)：锚点 = 品牌 token + 待 COPY 尾词（整句 COPY 化后须重锚）
     expect(container.textContent).toContain("Tuvis官网");
     expect(container.textContent).not.toContain("兔维斯");
+  });
+});
+
+/** B3-T5 重锚：COPY 化后 /zh 文案逐字保留——品牌 token 仍须以中文形态出现（防翻译顺手改稿） */
+describe("COPY 化窗·/zh 品牌 token 锚点（B3-T5）", () => {
+  afterEach(cleanup);
+
+  it("ClaudeTui 默认回复（zh）显「兔维斯桌面端」", () => {
+    const { container } = mountAt("/zh", <ClaudeTui />);
+    expect(container.textContent).toContain("（兔维斯桌面端）");
   });
 });
