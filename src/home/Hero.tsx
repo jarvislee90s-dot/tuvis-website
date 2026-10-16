@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Reveal } from "@/components/Reveal";
+import { useLang } from "@/i18n/useLang";
 import changelog from "@/content/changelog.json";
 
 /** 首页 Hero 单排（P13：看板+手机第二排迁出至「产品形态」区）：左 2/3 文案列（列内稍居中——
@@ -7,6 +8,7 @@ import changelog from "@/content/changelog.json";
  *  徽章版本号动态取自同步产物 changelog.json 最新版本（构建时对齐 tuvis 主仓）。 */
 export function Hero() {
   const { t } = useTranslation();
+  const lang = useLang();
   return (
     <Reveal>
       <section className="py-14 md:py-20">
@@ -17,7 +19,11 @@ export function Hero() {
               v{changelog[0]?.version ?? "0.0.0"} · {t("hero.badgeTag")}
             </span>
             <h1 className="mt-5 text-4xl font-bold tracking-tight md:text-5xl">
-              {t("hero.title")} <span className="text-inkdim">Tuvis</span>
+              {/* D1 品牌词单值：zh hero.title=「兔维斯」+ 次级色 Tuvis 尾巴（改前形态）；en hero.title 已含
+                  Tuvis（D1 裁决 en 只显 Tuvis），再补尾巴会成「Tuvis Tuvis」——en 不渲染尾巴。hero.title
+                  键仍服务下方海报 alt，不动 i18n。 */}
+              {t("hero.title")}
+              {lang === "zh" && <>{" "}<span className="text-inkdim">Tuvis</span></>}
             </h1>
             <p className="mt-3 text-xl font-semibold text-ok">{t("hero.subtitle")}</p>
             <p className="mt-3 max-w-lg text-inkdim">{t("hero.desc")}</p>

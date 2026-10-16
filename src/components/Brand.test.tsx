@@ -73,7 +73,10 @@ describe("TopBar 品牌位：Link 内嵌 Brand", () => {
 
   it("/en：导航品牌位零「兔维斯」", () => {
     mountAt("/en", <TopBar />);
-    expect(within(screen.getByRole("navigation")).queryByText(/兔维斯/)).toBeNull();
+    const nav = within(screen.getByRole("navigation"));
+    // M2 正向断言：/en 品牌位必须实际渲染 Tuvis（防品牌位被删/渲染空转时红线断言假绿）
+    expect(nav.getByText("Tuvis")).toBeInTheDocument();
+    expect(nav.queryByText(/兔维斯/)).toBeNull();
   });
 });
 
@@ -90,13 +93,15 @@ describe("品牌触点 /en 零「兔维斯」", () => {
 
   it("ClaudeTui 默认回复句内品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <ClaudeTui />);
-    expect(container.textContent).toContain("（Tuvis桌面端）");
+    // TODO(B3 COPY)：锚点收窄为品牌 token（批次 3 整句 COPY 化后需重锚整句）
+    expect(container.textContent).toContain("Tuvis桌面端");
     expect(container.textContent).not.toContain("兔维斯");
   });
 
   it("CodexAppWindow 说明区品牌词取裸词后无「兔维斯」", () => {
     const { container } = mountAt("/en", <CodexAppWindow />);
-    expect(container.textContent).toContain("这个仓库是Tuvis官网");
+    // TODO(B3 COPY)：锚点收窄为品牌 token（批次 3 整句 COPY 化后需重锚整句）
+    expect(container.textContent).toContain("Tuvis官网");
     expect(container.textContent).not.toContain("兔维斯");
   });
 });
