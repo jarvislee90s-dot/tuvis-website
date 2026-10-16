@@ -75,8 +75,10 @@ export function RemoteDetail() {
 
   const q: QuestionState = remote.question;
   const pickedEmpty = q === null || (q.kind === "single" ? q.picked === null : q.picked.length === 0);
-  /** 提交回显整行；空 picked → 空串 → 整行不渲染（防「已提交：」悬空标签，审查 M5） */
-  const submittedEcho = q !== null && q.submitted ? submittedDisplayText(t("demo.remote.submitted"), q, lang) : "";
+  /** 提交回显整行（M3：模板含冒号，走 i18n 插值；空 picked → 空串 → 整行不渲染，防悬空标签，审查 M5） */
+  const submittedEcho = q !== null && q.submitted
+    ? submittedDisplayText(q, lang, (list) => t("demo.remote.submitted", { list }))
+    : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-ink">

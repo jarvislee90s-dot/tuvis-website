@@ -81,13 +81,15 @@ export function pickedDisplayText(q: { kind: QaKind; picked: string | string[] |
   return ids.map((id) => qaOptionTitle("multi", id, lang)).join(lang === "en" ? ", " : "、");
 }
 
-/** D9：提交回显整行 = 前缀（调用方传已翻译 label）+ 语言化分隔冒号 + 显示串；/en 不落全角「：」。
- *  无可显示项（空 picked）返回空串——调用方据此整行不渲染，防「已提交：」悬空标签（M5） */
+/** M3/D9：提交回显整行 = 已翻译模板（含冒号，i18n 键 demo.remote.submitted 的 {{list}} 插值）+ 显示串。
+ *  空 picked → 空串（M5）——调用方据此整行不渲染，防「已提交：」悬空标签。
+ *  模板经 render 回调由调用方传入：qa.ts 保持纯模块（不 import i18next、不读实例语言——后者切语首帧滞后，
+ *  与组件侧 useLang 的 URL 权威口径可能错拍）。 */
 export function submittedDisplayText(
-  label: string,
   q: { kind: QaKind; picked: string | string[] | null },
   lang: Lang,
+  render: (list: string) => string,
 ): string {
   const list = pickedDisplayText(q, lang);
-  return list === "" ? "" : `${label}${lang === "en" ? ": " : "："}${list}`;
+  return list === "" ? "" : render(list);
 }

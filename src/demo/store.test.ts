@@ -86,11 +86,14 @@ describe("picked id 化（D9）", () => {
   });
 
   it("空 picked → 显示串与提交回显整行均为空串（M5，防悬空「已提交：」）", () => {
+    // M3：整行模板（含冒号）由调用方以 render 回调传入（组件侧 = i18n 键 demo.remote.submitted 插值）
+    const zhFmt = (list: string) => `已提交：${list}`;
+    const enFmt = (list: string) => `Submitted: ${list}`;
     expect(pickedDisplayText({ kind: "multi", picked: [] }, "zh")).toBe("");
     expect(pickedDisplayText({ kind: "single", picked: null }, "en")).toBe("");
-    expect(submittedDisplayText("已提交", { kind: "multi", picked: [] }, "zh")).toBe("");
-    expect(submittedDisplayText("Submitted", { kind: "multi", picked: ["chat"] }, "en")).toBe("Submitted: Chat about this");
-    expect(submittedDisplayText("已提交", { kind: "single", picked: "finance" }, "zh")).toBe("已提交：金融/信用评级");
+    expect(submittedDisplayText({ kind: "multi", picked: [] }, "zh", zhFmt)).toBe("");
+    expect(submittedDisplayText({ kind: "multi", picked: ["chat"] }, "en", enFmt)).toBe("Submitted: Chat about this");
+    expect(submittedDisplayText({ kind: "single", picked: "finance" }, "zh", zhFmt)).toBe("已提交：金融/信用评级");
   });
 
   it("全脚本种子巡检：任何步骤种下的 question.picked ⊆ 选项表且可解析（表驱动，M4）", () => {
