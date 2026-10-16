@@ -8,6 +8,7 @@ export function LanguageSwitcher() {
   const cur = (LANGS.includes(lang as Lang) ? lang : "zh") as Lang;
   const other: Lang = cur === "zh" ? "en" : "zh";
   return (
+    /* D8 裁决：可见 ZH/EN + aria 英文全名，故意不用 i18n 键（/en 零 CJK） */
     <button
       aria-label={`switch language to ${other === "zh" ? "Chinese (ZH)" : "English (EN)"}`}
       className="rounded-lg border border-line px-2 py-1 text-xs uppercase hover:opacity-70"

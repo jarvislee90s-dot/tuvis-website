@@ -1,5 +1,7 @@
 import type { SVGProps } from "react";
+import type { Lang } from "@/i18n";
 import { AppWindowShell } from "./AppWindowShell";
+import { useDemoLang } from "./useDemoLang";
 
 /** Codex APP 窗（T35，对照 docs/design/p10-ref/codex-app-real.png）：
  *  ChatGPT Work 亮色双列——侧栏账户胶囊/Projects 任务树，主区标题条/树状计划卡/黑↑输入行。 */
@@ -60,8 +62,9 @@ const TREE = [
   "└─ package.json",
 ];
 const NOTES_TITLE = "几个说明";
-const NOTES = [
-  "这个仓库是兔维斯官网（Vite + React）",
+/** 说明区文案：品牌词按语言（D1/B3-T1 只动品牌词，其余中文照截图原文，待批次 3 后续 COPY 化）。 */
+const notes = (lang: Lang) => [
+  `这个仓库是${lang === "zh" ? "兔维斯" : "Tuvis"}官网（Vite + React）`,
   "演示数据全部本地模拟，无网络请求",
   "计划文档在 docs/superpowers/plans/",
 ];
@@ -71,6 +74,7 @@ const MODEL_LABEL = "GLM-5.3-Flash High ▾";
 
 /** Codex APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F9F9F9；d1 剧本 s4 与 codex 卡开窗承接。 */
 export function CodexAppWindow({ className = "", onClose }: { className?: string; onClose?: () => void }) {
+  const lang = useDemoLang();
   return (
     <AppWindowShell className={`border-[#E5E5E5] bg-white text-[#18181B] ${className}`}
       sidebarClassName="border-[#ECECEC] bg-[#F9F9F9]"
@@ -142,7 +146,7 @@ export function CodexAppWindow({ className = "", onClose }: { className?: string
         <div>
           <div className="text-xs font-semibold">{NOTES_TITLE}</div>
           <div className="mt-1.5 space-y-1 text-[11px] leading-relaxed">
-            {NOTES.map((note) => <div key={note}>• {note}</div>)}
+            {notes(lang).map((note) => <div key={note}>• {note}</div>)}
           </div>
         </div>
       </div>

@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link } from "react-router";
+import { brandName } from "@/components/Brand";
+import { useDemoLang } from "@/demo/useDemoLang";
 import { WindowFrame } from "@/demo/WindowFrame";
 import changelog from "@/content/changelog.json";
 
-/** 「关于」仿真窗（P14，对照用户提供的 CC Switch 关于页截图，内容换兔维斯语境；演示文案硬编码中文——app 窗惯例）：
+/** 「关于」仿真窗（P14，对照用户提供的 CC Switch 关于页截图，内容换兔维斯语境；演示文案硬编码中文——app 窗惯例；
+ *  品牌名例外：按语言取 brandName，见 D1/B3-T1）：
  *  应用卡（logo + 名称 + 当前版本 + 「更新到 v{LATEST}」）→ 检测行 → 官方网站/更新日志/近期更新 链接行 →
  *  ★ 求 Star 橙底横幅（去点 Star + × 可关，关闭仅本视图）。 */
 const REPO = "https://github.com/jarvislee90s-dot/tuvis";
@@ -16,7 +19,7 @@ const linkBtn =
   "flex items-center gap-1.5 rounded-lg border border-app-line bg-app-bg px-3 py-1.5 text-xs font-medium text-app-ink transition hover:bg-app-accent/50";
 
 export function AboutWindow({ className = "" }: { className?: string }) {
-  const { lang } = useParams();
+  const lang = useDemoLang();
   const [starOpen, setStarOpen] = useState(true);
   return (
     <WindowFrame title="关于" className={className}>
@@ -25,7 +28,7 @@ export function AboutWindow({ className = "" }: { className?: string }) {
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-app-line bg-app-bg p-3">
           <img src={`${import.meta.env.BASE_URL}img/appicon-dark.png`} alt="" className="h-9 w-9 rounded-xl" />
           <div className="min-w-0">
-            <div className="text-sm font-bold text-app-ink">兔维斯 Tuvis</div>
+            <div className="text-sm font-bold text-app-ink">{brandName(lang)}</div>
             <div className="font-mono text-[11px] text-app-mut">版本 {PREV}</div>
           </div>
           <a href={LATEST_URL} target="_blank" rel="noopener noreferrer"
@@ -42,7 +45,7 @@ export function AboutWindow({ className = "" }: { className?: string }) {
           <a href={REPO} target="_blank" rel="noopener noreferrer" className={linkBtn}>
             <span aria-hidden>🌐</span> 官方网站
           </a>
-          <Link to={`/${lang ?? "zh"}/changelog`} className={linkBtn}>
+          <Link to={`/${lang}/changelog`} className={linkBtn}>
             <span aria-hidden>↗</span> 更新日志
           </Link>
           <a href={`${REPO}/releases`} target="_blank" rel="noopener noreferrer" className={linkBtn}>

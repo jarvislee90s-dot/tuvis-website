@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import type { Lang } from "@/i18n";
+import { useDemoLang } from "./useDemoLang";
 
 export interface TuiLine { text: string; tone?: "cmd" | "ok" | "warn" | "dim" }
 export interface TuiReply { headline: string; bullets: string[] }
@@ -25,16 +27,19 @@ const SESSION_HEADER = [
 const THOUGHT_LINE = "✻ Thought for 9s (ctrl+o to expand)";
 const STATUS_LINE = "※ Sautéed for 10s · done 15:48";
 const DEFAULT_MODELINE = "» auto mode on (shift+tab to cycle) · < for agents";
-const DEFAULT_REPLY: TuiReply = {
-  headline: "你好！👋",
-  bullets: [
-    "我已就绪，当前工作目录是 E:\\LLMproject\\Github\\tuvis-app（兔维斯桌面端）。",
-    "• 3 个 Agent 会话在线，1 个等待批准",
-    "• 远程通道已连接（MateBook16s · v0.5.6）",
-    "• 今日账本入账 1240 万 tokens",
-    "有什么我可以帮你的吗？",
-  ],
-};
+/** 默认回复正文：品牌词按语言（D1/B3-T1 只动品牌词，其余中文文案待批次 3 后续整体 COPY 化）。 */
+function defaultReply(lang: Lang): TuiReply {
+  return {
+    headline: "你好！👋",
+    bullets: [
+      `我已就绪，当前工作目录是 E:\\LLMproject\\Github\\tuvis-app（${lang === "zh" ? "兔维斯" : "Tuvis"}桌面端）。`,
+      "• 3 个 Agent 会话在线，1 个等待批准",
+      "• 远程通道已连接（MateBook16s · v0.5.6）",
+      "• 今日账本入账 1240 万 tokens",
+      "有什么我可以帮你的吗？",
+    ],
+  };
+}
 
 /** 头部像素兔（逐格对照用户 2026-10-12 参考图：太空侵略者式——宽方身圆角、白色竖眼、
  *  两侧中段凸出小方块（手臂）、底部四条短腿；身体 #D97757 单色，眼白 #F5F1E8 同终端正文色） */
@@ -210,7 +215,7 @@ function MultiselectScene({ picked, onPick }: { picked?: string[]; onPick?: (t: 
  *  scene（默认 "session"）：场景块替换 ③Thought+⑤Reply，header/用户行/extraLines/状态行/输入行/modeLine/toast 全保留；
  *  select/multiselect 接管用户行内容（透传覆盖）。 */
 export function ClaudeTui({
-  mode = "session", scene = "session", userMsg = "你好", reply = DEFAULT_REPLY, modeLine = DEFAULT_MODELINE,
+  mode = "session", scene = "session", userMsg = "你好", reply, modeLine = DEFAULT_MODELINE,
   extraLines = [], waiting = false, toast = null, className = "", onClose,
   picked, onPick,
 }: {
@@ -220,6 +225,9 @@ export function ClaudeTui({
   picked?: string[]; onPick?: (title: string) => void;
   className?: string; onClose?: () => void;
 }) {
+  const lang = useDemoLang();
+  /* 未显式传 reply 时按语言生成默认正文（品牌词随语言，B3-T1） */
+  const replyText = reply ?? defaultReply(lang);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const [grabbing, setGrabbing] = useState(false);
@@ -321,9 +329,9 @@ export function ClaudeTui({
               {/* ⑤ 助手回复块（仅 session；场景态由上方场景块替换） */}
               {scene === "session" && (
                 <>
-                  <div className="mt-3 whitespace-pre">{reply.headline}</div>
+                  <div className="mt-3 whitespace-pre">{replyText.headline}</div>
                   <div className="space-y-0.5">
-                    {reply.bullets.map((b) => <div key={b} className="whitespace-pre">{b}</div>)}
+                    {replyText.bullets.map((b) => <div key={b} className="whitespace-pre">{b}</div>)}
                   </div>
                 </>
               )}
