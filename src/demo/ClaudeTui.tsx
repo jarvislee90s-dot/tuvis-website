@@ -129,6 +129,16 @@ export function pickedDisplayText(q: { kind: QaKind; picked: string | string[] |
   return ids.map((id) => qaOptionTitle("multi", id)).join(lang === "en" ? ", " : "、");
 }
 
+/** D9：提交回显整行 = 前缀（调用方传 t(...)）+ 语言化分隔冒号 + 显示串；
+ *  /en 不落全角「：」（en「: 」/ zh「：」） */
+export function submittedDisplayText(
+  label: string,
+  q: { kind: QaKind; picked: string | string[] | null },
+  lang: Lang,
+): string {
+  return `${label}${lang === "en" ? ": " : "："}${pickedDisplayText(q, lang)}`;
+}
+
 /** 场景选项行（approval/plan/select/multiselect 四处复用同一组件）；描述行次色、缩进 5 空格对齐标题列。
  *  P19 可选联动：传 onPick 时整行可点（与手机问答卡双向同步）；marker = 已选标记（多选 ✓）。 */
 function OptionRow({ index, title, selected = false, description, marker, onClick }: {

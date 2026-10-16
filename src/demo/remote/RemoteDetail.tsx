@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLang } from "@/i18n/useLang";
 import { useDemo, setStateOf, msgDisplayText, type QuestionState } from "../store";
 import { ArrowLeftIcon, RefreshCwIcon } from "../../components/Icons";
-import { QA_MULTI, QA_SINGLE, pickedDisplayText } from "../ClaudeTui";
+import { QA_MULTI, QA_SINGLE, submittedDisplayText } from "../ClaudeTui";
 
 /** 思考展开态 3 行过程文本（会话数据，硬编码；tuvis 语境） */
 const THINKING_STEPS = ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"];
@@ -254,7 +254,7 @@ export function RemoteDetail() {
           )}
           {q !== null && q.submitted && (
             <div className="rounded-[10px] border border-line bg-card px-2.5 py-[7px] text-[11.5px] text-inkdim">
-              {t("demo.remote.submitted")}：{pickedDisplayText(q, lang)}
+              {submittedDisplayText(t("demo.remote.submitted"), q, lang)}
             </div>
           )}
         </div>

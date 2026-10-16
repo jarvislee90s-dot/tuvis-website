@@ -2,11 +2,23 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import i18n from "i18next"; // 语言切换（CompatMatrix.test 先例）：同一单例，@/i18n 已对其 init
 import "@/i18n"; // 侧效应导入：RemoteDetail 的 useTranslation 需要全局 i18next 资源
 import { QA_MULTI, QA_SINGLE, pickedDisplayText } from "./ClaudeTui";
 import { RemoteDetail } from "./remote/RemoteDetail";
 import { REMOTE_INIT, QUEUED_MSG, SEED_MSGS, msgDisplayText, useDemo } from "./store";
 import { d2Reset, d2Steps } from "./steps-d2";
+
+/** 挂到 /:lang 路由下（RemoteDetail 与 useLang/useParams 需要路由参数） */
+function mountAt(entry: string, el: ReactNode) {
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route path="/:lang" element={el} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
 
 /** D10：种子/脚本消息必须是 {zh,en} 双语形态（用户实时输入才是 {raw}） */
 describe("RemoteMsg.text 双语联合类型（D10）", () => {
@@ -78,8 +90,10 @@ describe("picked id 化（D9）", () => {
     const ids = q !== null && q.kind === "multi" ? q.picked : [];
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) {
-      // 回退 = id 本身 → 说明该 id 不在多选表内（悬空种子）
-      expect(pickedDisplayText({ kind: "multi", picked: [id] }, "zh")).not.toBe(id);
+      // 直接成员关系断言 + 与表内 title 逐项比对（回退语义只兜底脏数据，不参与此断言）
+      expect(QA_MULTI.options.some((o) => o.id === id), `悬空 picked id: ${id}`).toBe(true);
+      const title = QA_MULTI.options.find((o) => o.id === id)?.title;
+      expect(pickedDisplayText({ kind: "multi", picked: [id] }, "zh")).toBe(title);
     }
   });
 });
@@ -88,15 +102,6 @@ describe("picked id 化（D9）", () => {
 describe("RemoteDetail send：用户输入写 {raw} 形态", () => {
   beforeEach(() => useDemo.setState({ remote: { ...REMOTE_INIT } }));
   afterEach(cleanup);
-
-  const mountAt = (entry: string, el: ReactNode) =>
-    render(
-      <MemoryRouter initialEntries={[entry]}>
-        <Routes>
-          <Route path="/:lang" element={el} />
-        </Routes>
-      </MemoryRouter>,
-    );
 
   const sendDraft = (text: string) => {
     const input = screen.getByRole("textbox");
@@ -127,5 +132,37 @@ describe("RemoteDetail send：用户输入写 {raw} 形态", () => {
     cleanup();
     const { container } = mountAt("/en", <RemoteDetail />);
     expect(container.textContent).toContain("把 README 也更新");
+  });
+});
+
+/** D9 交互护栏：题卡点选写 id、取消勾选走 id、提交回显按 lang 取表内 title 与分隔符 */
+describe("RemoteDetail 题卡：picked 存 id、回显按 lang（D9 交互）", () => {
+  beforeEach(() =>
+    useDemo.setState({ remote: { ...REMOTE_INIT, question: { kind: "multi", picked: [], submitted: false } } }),
+  );
+  afterEach(async () => { cleanup(); await i18n.changeLanguage("zh"); });
+
+  const option = (title: string) => screen.getByRole("button", { name: new RegExp(title) });
+
+  it("勾选/取消/提交全走 id；zh「已提交：…、…」/ en「Submitted: …, …」", async () => {
+    const zh = mountAt("/zh", <RemoteDetail />);
+    fireEvent.click(option("金融/信用评级"));
+    fireEvent.click(option("投资理财常识"));
+    expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance", "investing"], submitted: false });
+    // 再点一次 = 按 id 取消勾选（toggle 语义不碰显示串）
+    fireEvent.click(option("投资理财常识"));
+    expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance"], submitted: false });
+    fireEvent.click(option("投资理财常识"));
+    fireEvent.click(screen.getByRole("button", { name: /↵/ }));
+    expect(useDemo.getState().remote.question).toEqual({ kind: "multi", picked: ["finance", "investing"], submitted: true });
+    expect(zh.container.textContent).toContain("已提交：金融/信用评级、投资理财常识");
+
+    // 同态切 en（隔离挂载不走 LangLayout，这里显式切 i18next 复现 /en 首页）：前缀分隔符半角冒号 + 半角逗号 join
+    // （title 仍中文，COPY 化在 B3-T5）
+    cleanup();
+    await i18n.changeLanguage("en");
+    const en = mountAt("/en", <RemoteDetail />);
+    expect(en.container.textContent).toContain("Submitted: 金融/信用评级, 投资理财常识");
+    expect(en.container.textContent).not.toContain("Submitted：");
   });
 });
