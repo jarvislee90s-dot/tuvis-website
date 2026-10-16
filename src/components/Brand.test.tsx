@@ -1,0 +1,68 @@
+import type { ReactNode } from "react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { MemoryRouter, Route, Routes } from "react-router";
+import "@/i18n"; // 侧效应导入：TopBar 的 useTranslation 需要全局 i18next 资源
+import { Brand, brandName } from "./Brand";
+import { TopBar } from "./layout/TopBar";
+
+/** D1 品牌词裁决：/zh 页「兔维斯 Tuvis」、/en 页仅「Tuvis」（/en 零 CJK 红线的一部分）。
+ *  品牌词是单值按语言切换的数据，不走 i18n 键——由 brandName 纯函数 + Brand 组件承载。
+ *  Brand 读 useDemoLang（useParams 归一），须挂在 /:lang 路由下。 */
+function mountAt(entry: string, el: ReactNode) {
+  render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route path="/:lang" element={el} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("brandName：品牌词纯函数（D1）", () => {
+  it("zh → 「兔维斯 Tuvis」", () => {
+    expect(brandName("zh")).toBe("兔维斯 Tuvis");
+  });
+
+  it("en → 「Tuvis」", () => {
+    expect(brandName("en")).toBe("Tuvis");
+  });
+});
+
+describe("Brand：按路由语言渲染品牌名", () => {
+  afterEach(cleanup);
+
+  it("/zh：文本为「兔维斯 Tuvis」，Tuvis 走次级色 span", () => {
+    mountAt("/zh", <div data-testid="host"><Brand /></div>);
+    const host = screen.getByTestId("host");
+    expect(host.textContent).toBe("兔维斯 Tuvis");
+    expect(screen.getByText("Tuvis")).toHaveClass("text-inkdim");
+  });
+
+  it("/en：文本恰为「Tuvis」，零「兔维斯」", () => {
+    mountAt("/en", <div data-testid="host"><Brand /></div>);
+    const host = screen.getByTestId("host");
+    expect(host.textContent).toBe("Tuvis");
+    expect(host.textContent).not.toContain("兔维斯");
+  });
+
+  it("非法 lang（/fr）：归一后回退 zh 品牌名", () => {
+    mountAt("/fr", <div data-testid="host"><Brand /></div>);
+    expect(screen.getByTestId("host").textContent).toBe("兔维斯 Tuvis");
+  });
+});
+
+describe("TopBar 品牌位：Link 内嵌 Brand", () => {
+  afterEach(cleanup);
+
+  it("/zh：导航品牌位文本仍为「兔维斯 Tuvis」", () => {
+    mountAt("/zh", <TopBar />);
+    const brandLink = within(screen.getByRole("navigation")).getByText(/兔维斯/);
+    expect(brandLink.textContent).toBe("兔维斯 Tuvis");
+  });
+
+  it("/en：导航品牌位零「兔维斯」", () => {
+    mountAt("/en", <TopBar />);
+    expect(within(screen.getByRole("navigation")).queryByText(/兔维斯/)).toBeNull();
+  });
+});

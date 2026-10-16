@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import { Brand } from "@/components/Brand";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 /** 导航项（P13：首页/产品形态/功能/演示/文档/更新日志 + EN；GitHub 入口在 Hero/Footer） */
@@ -23,7 +24,7 @@ export function TopBar() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
         <Link to={`/${zh}`} className="flex items-center gap-2 font-bold">
           <img src={`${import.meta.env.BASE_URL}img/appicon-dark.png`} alt="Tuvis" className="h-7 w-7 rounded-lg" />
-          兔维斯 <span className="text-inkdim">Tuvis</span>
+          <Brand />
         </Link>
         {/* 桌面导航（P13 字号加大 text-sm → text-base） */}
         <div className="hidden items-center gap-6 text-base text-inkdim md:flex">
