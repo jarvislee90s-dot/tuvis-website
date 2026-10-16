@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { useDemo, setStateOf } from "../store";
+import type { Bilingual } from "../types";
 import { PlayerFrame } from "../PlayerFrame";
 import { DesktopStage } from "../DesktopStage";
 import { ClaudeTui } from "../ClaudeTui";
@@ -25,6 +26,22 @@ const SPRING = {
 
 const closeWin = () => useDemo.getState().setWindows({ toolWin: null });
 
+/** 批次 3 COPY 模式（B3-T8；模板说明见 copy.parity.test.ts 头注释）：
+ *  场景内随语言变化的文案收进 COPY.{zh,en}，渲染处按语言取；en 以 `: typeof ZH` 标注互校；
+ *  zh 逐字保留现状（红线），en 为产品英文版 UI 口径。
+ *  本场景语言相关文案只剩 ClaudeTui 右下 toast 正文一处——通知卡文案与工具卡标签走既有 i18n 键。 */
+const ZH = {
+  /** ClaudeTui toast 正文（B3-T5 披露的遗留硬编码；契约 = Bilingual，见 ClaudeTui） */
+  toastBody: "tuvis-app · 等待批准",
+};
+const EN: typeof ZH = {
+  toastBody: "tuvis-app · awaiting approval",
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** toast 契约（Bilingual，B3-T8）：zh/en 双支同源 COPY，ClaudeTui 侧按 lang 取（标题为语言无关产品名） */
+const TOAST_BODY: Bilingual = { zh: ZH.toastBody, en: EN.toastBody };
+
 export function D1Scene() {
   const { t } = useTranslation();
   const windows = useDemo((s) => s.windows);
@@ -48,7 +65,7 @@ export function D1Scene() {
               {windows.toolWin === "claude" && (
                 <motion.div key="claude" {...SPRING} className="h-full">
                   <ClaudeTui mode="session" className="h-full" waiting={claude.state === "waiting"}
-                    toast={{ title: "Claude", body: { zh: "tuvis-app · 等待批准", en: "tuvis-app · awaiting approval" } }}
+                    toast={{ title: "Claude", body: TOAST_BODY }}
                     onClose={closeWin} />
                 </motion.div>
               )}
