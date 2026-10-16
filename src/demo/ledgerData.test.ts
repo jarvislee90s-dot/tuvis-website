@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LEDGERS, totalTokens, hitRate, formatCN, formatInt, smoothPath, type RangeKey } from "./ledgerData";
+import { LEDGERS, totalTokens, hitRate, formatCN, formatUnits, formatInt, smoothPath, type RangeKey } from "./ledgerData";
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -68,5 +68,41 @@ describe("ledger v4 invariants", () => {
     expect(LEDGERS.custom).toBe(LEDGERS.last30d);
     expect(LEDGERS.last30d.trend.labels[0]).toBe("9/12");
     expect(LEDGERS.last30d.trend.labels.at(-1)).toBe("10/11");
+  });
+});
+
+describe("formatUnits 语种化单位（zh 万/亿不动；en K/M/B，D3）", () => {
+  it("en 三档：两位小数 + 单位前空格", () => {
+    expect(formatUnits(4_374_410_324, "en")).toBe("4.37 B");
+    expect(formatUnits(17_951_000, "en")).toBe("17.95 M");
+    expect(formatUnits(999, "en")).toBe("999");
+  });
+  it("en 原数分支镜像 zh：Math.round 且无千分位", () => {
+    expect(formatUnits(999.5, "en")).toBe("1000");
+    expect(formatUnits(0, "en")).toBe("0");
+    expect(formatUnits(-999, "en")).toBe("-999");
+  });
+  it("en 档界：1e3/1e6/1e9 恰入档；999_999 舍入不跨档", () => {
+    expect(formatUnits(1e3, "en")).toBe("1.00 K");
+    expect(formatUnits(1e4, "en")).toBe("10.00 K");
+    expect(formatUnits(999_999, "en")).toBe("1000.00 K");   // 机械口径：四舍五入不触发跨档进位
+    expect(formatUnits(1e6, "en")).toBe("1.00 M");
+    expect(formatUnits(1e9, "en")).toBe("1.00 B");
+  });
+  it("en 负数按 Math.abs 判档、输出保留负号（与 zh 按原值判档刻意不同）", () => {
+    expect(formatUnits(-1_234, "en")).toBe("-1.23 K");
+    expect(formatUnits(-17_951_000, "en")).toBe("-17.95 M");
+    expect(formatUnits(-4_374_410_324, "en")).toBe("-4.37 B");
+  });
+  it("zh 全档回归：逐字等于 formatCN（B18 口径红线）", () => {
+    const VS = [0, 608, 999, 999.5, 1e4, 17_951_000, 1e8, 4_374_410_324, -1_234, -4_374_410_324];
+    for (const v of VS) expect(formatUnits(v, "zh")).toBe(formatCN(v));
+    expect(formatUnits(1e4, "zh")).toBe("1.00万");
+    expect(formatUnits(1e8, "zh")).toBe("1.00亿");
+    expect(formatUnits(-4_374_410_324, "zh")).toBe("-4374410324");   // zh 负数恒落原数分支（现状不变）
+  });
+  it("formatCN 保留为 zh 向后兼容别名", () => {
+    expect(formatCN(608)).toBe(formatUnits(608, "zh"));
+    expect(formatCN(4_374_410_324)).toBe(formatUnits(4_374_410_324, "zh"));
   });
 });

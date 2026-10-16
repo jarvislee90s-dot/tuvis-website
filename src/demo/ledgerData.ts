@@ -1,3 +1,5 @@
+import type { Lang } from "@/i18n";   // 仅类型：type-only 不把 i18next 运行时拖进纯数据模块
+
 export interface DistRow { name: string; tokens: number }
 
 /** 范围五档（自 LedgerSection 移入）：custom 为 last30d 别名（B30） */
@@ -256,11 +258,29 @@ export const hitRate = (m: LedgerMetrics) => m.cacheHit / m.reqInput;
 
 /** 千分位：4392361324 → "4,392,361,324" */
 export const formatInt = (v: number) => v.toLocaleString("en-US");
-/** 中文单位（B18）：≥1亿 → "43.74亿"（两位小数）；≥1万 → "1795.10万"；否则原数 */
-export function formatCN(v: number): string {
-  if (v >= 1e8) return `${(v / 1e8).toFixed(2)}亿`;
-  if (v >= 1e4) return `${(v / 1e4).toFixed(2)}万`;
+
+/** 用量数字本地化（D3，渲染层按语言选口径，ledger 数据本身保持纯数字）：
+ *  zh = B18 现口径不变（≥1亿 → "43.74亿"、≥1万 → "1795.10万"，两位小数；否则原数 Math.round）；
+ *  en = K/M/B 两位小数 + 单位前空格（≥1e9 → "4.37 B"、≥1e6 → "17.95 M"、≥1e3 → "1.23 K"），
+ *  原数分支镜像 zh 的 Math.round（无千分位，999.5 → "1000"）。
+ *  负数口径两语言刻意不同（测试锁死）：zh 判档用原值 v，故负数恒落原数分支（-4_374_410_324 → "-4374410324"，
+ *  B18 红线不动）；en 判档用 Math.abs(v) 且输出保留负号（-1_234 → "-1.23 K"、-4_374_410_324 → "-4.37 B"）。 */
+export function formatUnits(v: number, lang: Lang): string {
+  if (lang === "zh") {
+    if (v >= 1e8) return `${(v / 1e8).toFixed(2)}亿`;
+    if (v >= 1e4) return `${(v / 1e4).toFixed(2)}万`;
+    return String(Math.round(v));
+  }
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(v / 1e9).toFixed(2)} B`;
+  if (a >= 1e6) return `${(v / 1e6).toFixed(2)} M`;
+  if (a >= 1e3) return `${(v / 1e3).toFixed(2)} K`;
   return String(Math.round(v));
+}
+
+/** B18 中文单位别名：保留为 formatUnits(v, "zh") 的向后兼容入口，一个版本周期后移除 */
+export function formatCN(v: number): string {
+  return formatUnits(v, "zh");
 }
 
 /** Catmull-Rom → 三次贝塞尔平滑路径（零依赖，真图圆滑曲线） */
