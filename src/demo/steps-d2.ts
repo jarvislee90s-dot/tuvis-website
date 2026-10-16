@@ -23,7 +23,8 @@ export const d2Steps: Step[] = [
   { dur: 2600, enter: () => R()({ ...B, messages: [...SEED_MSGS, QUEUED_MSG], approval: "approved", question: null, files: false, planMode: true }),
     label: { zh: "计划模式：banner 亮起，底行切换", en: "Plan mode: banner on, mode line switches" },
     detailKey: "demo.detail.d2s5" },
-  { dur: 2600, enter: () => R()({ ...B, messages: [...SEED_MSGS, QUEUED_MSG], approval: "approved", question: { kind: "multi", picked: ["摘要", "用量"], submitted: true }, files: false, planMode: false }),
+  // D9：picked 存选项 id（ClaudeTui QA_MULTI 表；勿用显示串/下标）——回显按 lang 解析文案
+  { dur: 2600, enter: () => R()({ ...B, messages: [...SEED_MSGS, QUEUED_MSG], approval: "approved", question: { kind: "multi", picked: ["finance", "investing"], submitted: true }, files: false, planMode: false }),
     label: { zh: "题卡：单选/多选点选提交", en: "Question cards: pick and submit" },
     detailKey: "demo.detail.d2s6" },
   { dur: 2600, enter: () => { R()({ ...B, messages: [...SEED_MSGS, QUEUED_MSG], approval: "approved", question: null, files: true, planMode: false }); setStateOf("claude", "idle"); },
