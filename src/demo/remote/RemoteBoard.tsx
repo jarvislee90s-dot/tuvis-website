@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import { brandWord } from "@/components/Brand";
 import { useDemoLang } from "../useDemoLang";
 import { useDemo } from "../store";
 import { edgeStyle, toolOf } from "../tools";
@@ -53,7 +54,7 @@ export function RemoteBoard({ onOpenDetail }: { onOpenDetail?: () => void }) {
     <div className="flex min-h-0 flex-1 flex-col text-ink">
       {/* 1. 品牌行：品牌词按语言（D1，zh 兔维斯 / en Tuvis）+ 版本（动态，同 Hero 徽章源）+ 本机名 */}
       <div className="flex items-baseline gap-1.5">
-        <span className="text-[15px] font-extrabold">{lang === "zh" ? "兔维斯" : "Tuvis"}</span>
+        <span className="text-[15px] font-extrabold">{brandWord(lang)}</span>
         <span className="font-mono text-[10px] text-inkdim">v{changelog[0]?.version ?? "0.5.6"}</span>
         <span className="ml-auto text-[12px] text-inkdim">MateBook16s</span>
       </div>

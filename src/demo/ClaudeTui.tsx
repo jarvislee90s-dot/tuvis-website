@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/i18n";
+import { brandWord } from "@/components/Brand";
 import { useDemoLang } from "./useDemoLang";
 
 export interface TuiLine { text: string; tone?: "cmd" | "ok" | "warn" | "dim" }
@@ -32,7 +33,7 @@ function defaultReply(lang: Lang): TuiReply {
   return {
     headline: "你好！👋",
     bullets: [
-      `我已就绪，当前工作目录是 E:\\LLMproject\\Github\\tuvis-app（${lang === "zh" ? "兔维斯" : "Tuvis"}桌面端）。`,
+      `我已就绪，当前工作目录是 E:\\LLMproject\\Github\\tuvis-app（${brandWord(lang)}桌面端）。`,
       "• 3 个 Agent 会话在线，1 个等待批准",
       "• 远程通道已连接（MateBook16s · v0.5.6）",
       "• 今日账本入账 1240 万 tokens",

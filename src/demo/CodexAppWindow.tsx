@@ -1,5 +1,6 @@
 import type { SVGProps } from "react";
 import type { Lang } from "@/i18n";
+import { brandWord } from "@/components/Brand";
 import { AppWindowShell } from "./AppWindowShell";
 import { useDemoLang } from "./useDemoLang";
 
@@ -64,7 +65,7 @@ const TREE = [
 const NOTES_TITLE = "几个说明";
 /** 说明区文案：品牌词按语言（D1/B3-T1 只动品牌词，其余中文照截图原文，待批次 3 后续 COPY 化）。 */
 const notes = (lang: Lang) => [
-  `这个仓库是${lang === "zh" ? "兔维斯" : "Tuvis"}官网（Vite + React）`,
+  `这个仓库是${brandWord(lang)}官网（Vite + React）`,
   "演示数据全部本地模拟，无网络请求",
   "计划文档在 docs/superpowers/plans/",
 ];

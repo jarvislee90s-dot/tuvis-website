@@ -3,14 +3,17 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import "@/i18n"; // 侧效应导入：TopBar 的 useTranslation 需要全局 i18next 资源
-import { Brand, brandName } from "./Brand";
+import { ClaudeTui } from "@/demo/ClaudeTui";
+import { CodexAppWindow } from "@/demo/CodexAppWindow";
+import { RemoteBoard } from "@/demo/remote/RemoteBoard";
+import { Brand, brandName, brandWord } from "./Brand";
 import { TopBar } from "./layout/TopBar";
 
 /** D1 品牌词裁决：/zh 页「兔维斯 Tuvis」、/en 页仅「Tuvis」（/en 零 CJK 红线的一部分）。
  *  品牌词是单值按语言切换的数据，不走 i18n 键——由 brandName 纯函数 + Brand 组件承载。
  *  Brand 读 useDemoLang（useParams 归一），须挂在 /:lang 路由下。 */
 function mountAt(entry: string, el: ReactNode) {
-  render(
+  return render(
     <MemoryRouter initialEntries={[entry]}>
       <Routes>
         <Route path="/:lang" element={el} />
@@ -26,6 +29,13 @@ describe("brandName：品牌词纯函数（D1）", () => {
 
   it("en → 「Tuvis」", () => {
     expect(brandName("en")).toBe("Tuvis");
+  });
+});
+
+describe("brandWord：品牌裸词", () => {
+  it("zh → 「兔维斯」、en → 「Tuvis」", () => {
+    expect(brandWord("zh")).toBe("兔维斯");
+    expect(brandWord("en")).toBe("Tuvis");
   });
 });
 
@@ -64,5 +74,29 @@ describe("TopBar 品牌位：Link 内嵌 Brand", () => {
   it("/en：导航品牌位零「兔维斯」", () => {
     mountAt("/en", <TopBar />);
     expect(within(screen.getByRole("navigation")).queryByText(/兔维斯/)).toBeNull();
+  });
+});
+
+/** Minor-2 红线锁：品牌触点 /en 渲染零「兔维斯」（AboutWindow 不加——求 Star 横幅整句中文按
+ *  批次 3 COPY 任务处理，笼统断言必挂；其品牌位走 brandName 已由纯函数单测覆盖）。 */
+describe("品牌触点 /en 零「兔维斯」", () => {
+  afterEach(cleanup);
+
+  it("RemoteBoard 品牌行取裸词后无「兔维斯」", () => {
+    const { container } = mountAt("/en", <RemoteBoard />);
+    expect(container.textContent).toContain("Tuvis");
+    expect(container.textContent).not.toContain("兔维斯");
+  });
+
+  it("ClaudeTui 默认回复句内品牌词取裸词后无「兔维斯」", () => {
+    const { container } = mountAt("/en", <ClaudeTui />);
+    expect(container.textContent).toContain("（Tuvis桌面端）");
+    expect(container.textContent).not.toContain("兔维斯");
+  });
+
+  it("CodexAppWindow 说明区品牌词取裸词后无「兔维斯」", () => {
+    const { container } = mountAt("/en", <CodexAppWindow />);
+    expect(container.textContent).toContain("这个仓库是Tuvis官网");
+    expect(container.textContent).not.toContain("兔维斯");
   });
 });
