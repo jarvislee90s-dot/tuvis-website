@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { useLang } from "@/i18n/useLang";
 import { AppWindowShell } from "./AppWindowShell";
 
 /** WorkBuddy APP 窗（T35，对照 docs/design/p10-ref/workbuddy-real.png）：
@@ -31,42 +32,91 @@ const Icon = {
   mic: (p: SVGProps<SVGSVGElement>) => <svg {...svgProps} {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>,
 };
 
-/** 文案常量区（侧栏/对话真实内容，集中声明；中文照截图原文） */
+/** 语言无关常量（真实产品英文 UI，zh/en 同显）：应用名/版本号/模型标签留常量，不进 COPY */
 const APP_TITLE = "WorkBuddy";
 const APP_VERSION = "5.7.6";
-const DISCOVER = "发现应用";
-const NAV = ["新建任务", "助理", "专家·技能·连接器", "定时任务", "资料库", "更多"];
-const NAV_EXTRA: Record<string, string> = { 助理: "BETA", 更多: "灵感" };
-const TASKS: [string, string][] = [
-  ["规划看板红绿灯联动", "10月10日"],
-  ["询问模型身份", "10月4日"],
-  ["远程审批卡文案润色", "10月2日"],
-];
-const SPACES: [string, string][] = [
-  ["tuvis-app·会话看板", "10月11日"],
-  ["tuvis-website·首页文案", "10月9日"],
-  ["tuvis-docs·手册精编", ""],
-  ["账本分享图", ""],
-];
-const FOOTER_USER = "李佳卫";
-const STATION = { title: "Buddy加油站", points: "100 积分" };
-
-const CHAT_TITLE = "你是什么模型";
-const USER_BUBBLE = "你是什么模型";
-const REPLY_STATUS = "已完成 15s ›";
-const REPLY = [
-  "我是 WorkBuddy 内置的助手 Hy4（Hybrid-4 preview）。",
-  "由 Z.ai 训练的大语言模型驱动，当前以 preview 档位运行，上下文 128k。",
-  "需要我继续处理「终稿 md 最后一段」吗？",
-];
-const COST_LABEL = "共消耗 ◇3.08 · Hy4 preview";
-const INPUT_HINT = "今天帮你做些什么？@ 添加上下文，/调用技能与指令";
-const FULL_ACCESS = "⚠允许完全访问";
 const MODEL_LABEL = "Hy4 preview ▾";
-const AI_FOOTER = "内容由 AI 生成，请核实重要信息";
 
-/** WorkBuddy APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F6F8F5、识别绿 #4AD06A；d1 剧本 s6 与 workbuddy 卡开窗承接。 */
+/** 导航角标位（语言无关）：按位对齐 COPY.nav——"assistant"/"more" 为 COPY.navBadge 的键；
+ *  末位 more 角标靠右（原「中文键名 → 角标」映射改为语言无关键名） */
+const NAV_BADGE = [null, "assistant", null, null, null, "more"] as const;
+
+/** 批次 3 COPY 模式（T3.3；模板说明见 copy.parity.test.ts 头注释）：
+ *  窗内随语言变化的文案收进 COPY.{zh,en}，渲染处 const t = COPY[useLang()]；
+ *  en 子树以 `: typeof ZH` 标注互校；zh 逐字保留现状（红线）；en 为产品英文版 UI 口径。 */
+const ZH = {
+  discover: "发现应用",
+  nav: ["新建任务", "助理", "专家·技能·连接器", "定时任务", "资料库", "更多"],
+  /** 导航角标（键名与 NAV_BADGE 对齐）：助理 = BETA、更多 = 灵感 */
+  navBadge: { assistant: "BETA", more: "灵感" },
+  tasksLabel: "任务(3)",
+  tasks: [
+    { name: "规划看板红绿灯联动", date: "10月10日" },
+    { name: "询问模型身份", date: "10月4日" },
+    { name: "远程审批卡文案润色", date: "10月2日" },
+  ],
+  spacesLabel: "空间(5)",
+  /** 空间列表：无日期行不写 date 键（③ 叶子非空，不用 "" 哨兵） */
+  spaces: [
+    { name: "tuvis-app·会话看板", date: "10月11日" },
+    { name: "tuvis-website·首页文案", date: "10月9日" },
+    { name: "tuvis-docs·手册精编" },
+    { name: "账本分享图" },
+  ],
+  footerUser: "李佳卫",
+  /** 加油站浮卡：en claimable 尾随空格承接加粗点数值（zh 直连无空格，故空格只能留在文案内） */
+  station: { title: "Buddy加油站", claimable: "今日可领", points: "100 积分", claim: "立即领取" },
+  chatTitle: "你是什么模型",
+  userBubble: "你是什么模型",
+  replyStatus: "已完成 15s ›",
+  reply: [
+    "我是 WorkBuddy 内置的助手 Hy4（Hybrid-4 preview）。",
+    "由 Z.ai 训练的大语言模型驱动，当前以 preview 档位运行，上下文 128k。",
+    "需要我继续处理「终稿 md 最后一段」吗？",
+  ],
+  costLabel: "共消耗 ◇3.08 · Hy4 preview",
+  inputHint: "今天帮你做些什么？@ 添加上下文，/调用技能与指令",
+  fullAccess: "⚠允许完全访问",
+  aiFooter: "内容由 AI 生成，请核实重要信息",
+};
+const EN: typeof ZH = {
+  discover: "Discover apps",
+  nav: ["New task", "Assistant", "Experts · Skills · Connectors", "Scheduled tasks", "Library", "More"],
+  navBadge: { assistant: "BETA", more: "Inspiration" },
+  tasksLabel: "Tasks (3)",
+  tasks: [
+    { name: "Plan board status-light wiring", date: "Oct 10" },
+    { name: "Ask about model identity", date: "Oct 4" },
+    { name: "Remote approval card copy polish", date: "Oct 2" },
+  ],
+  spacesLabel: "Spaces (5)",
+  spaces: [
+    { name: "tuvis-app · Session board", date: "Oct 11" },
+    { name: "tuvis-website · Homepage copy", date: "Oct 9" },
+    { name: "tuvis-docs · Manual polish" },
+    { name: "Ledger share graphic" },
+  ],
+  footerUser: "Li Jiawei",
+  station: { title: "Buddy Boost", claimable: "Claimable today: ", points: "100 credits", claim: "Claim now" },
+  chatTitle: "What model are you?",
+  userBubble: "What model are you?",
+  replyStatus: "Done in 15s ›",
+  reply: [
+    "I'm Hy4, the assistant built into WorkBuddy (Hybrid-4 preview).",
+    "Powered by a large language model trained by Z.ai, running in preview mode with a 128k context.",
+    "Want me to continue with the last paragraph of the final md?",
+  ],
+  costLabel: "Used ◇3.08 · Hy4 preview",
+  inputHint: "What can I help you with today? @ to add context, / to invoke skills and commands",
+  fullAccess: "⚠ Full access",
+  aiFooter: "AI-generated content — please verify important information",
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
+/** WorkBuddy APP 任务窗（亮色）：窗底 #FFFFFF / 侧栏 #F6F8F5、识别绿 #4AD06A；d1 剧本 s6 与 workbuddy 卡开窗承接。
+ *  窗内文案取 COPY（zh/en），侧栏图标/应用名/模型标签为语言无关常量。 */
 export function WorkBuddyAppWindow({ className = "", onClose }: { className?: string; onClose?: () => void }) {
+  const t = COPY[useLang()];
   return (
     <AppWindowShell className={`border-[#E5E5E5] bg-white text-[#1F2321] ${className}`}
       sidebarClassName="border-[#E7EBE6] bg-[#F6F8F5]"
@@ -81,40 +131,41 @@ export function WorkBuddyAppWindow({ className = "", onClose }: { className?: st
               <div className="text-[10px] text-[#6B7280]">{APP_VERSION}</div>
             </div>
             <span className="ml-auto rounded-full border border-[#4AD06A]/40 bg-[#4AD06A]/10 px-2.5 py-1 text-[#2E9E52]">
-              {DISCOVER} <span aria-hidden>▾</span>
+              {t.discover} <span aria-hidden>▾</span>
             </span>
           </div>
-          {/* ④ 导航 6 行（自绘 12px 图标位） */}
+          {/* ④ 导航 6 行（自绘 12px 图标位；角标位取 NAV_BADGE，文案取 COPY） */}
           <div className="mt-3 space-y-2">
-            {NAV.map((label, i) => {
+            {t.nav.map((label, i) => {
               const I = [Icon.plus, Icon.user, Icon.grid, Icon.timer, Icon.book, Icon.dots][i];
+              const badgeKey = NAV_BADGE[i];
               return (
                 <div key={label} className="flex items-center gap-2">
                   <span className="text-[#6B7280]"><I /></span>{label}
-                  {NAV_EXTRA[label] && (
-                    <span className={`text-[9px] text-[#6B7280] ${label === "更多" ? "ml-auto" : ""}`}>{NAV_EXTRA[label]}</span>
+                  {badgeKey && (
+                    <span className={`text-[9px] text-[#6B7280] ${badgeKey === "more" ? "ml-auto" : ""}`}>{t.navBadge[badgeKey]}</span>
                   )}
                 </div>
               );
             })}
           </div>
           {/* ⑤ 任务(3) */}
-          <div className="mt-4 text-[#9CA3AF]">任务(3)</div>
+          <div className="mt-4 text-[#9CA3AF]">{t.tasksLabel}</div>
           <div className="mt-1 space-y-1.5">
-            {TASKS.map(([name, date]) => (
-              <div key={name} className="flex items-center gap-2">
-                <span className="truncate">{name}</span>
-                <span className="ml-auto shrink-0 text-[10px] text-[#9CA3AF]">{date}</span>
+            {t.tasks.map((task) => (
+              <div key={task.name} className="flex items-center gap-2">
+                <span className="truncate">{task.name}</span>
+                <span className="ml-auto shrink-0 text-[10px] text-[#9CA3AF]">{task.date}</span>
               </div>
             ))}
           </div>
           {/* ⑥ 空间(5) */}
-          <div className="mt-4 text-[#9CA3AF]">空间(5)</div>
+          <div className="mt-4 text-[#9CA3AF]">{t.spacesLabel}</div>
           <div className="mt-1 space-y-1.5">
-            {SPACES.map(([name, date]) => (
-              <div key={name} className="flex items-center gap-2">
-                <span className="truncate">{name}</span>
-                {date && <span className="ml-auto shrink-0 text-[10px] text-[#9CA3AF]">{date}</span>}
+            {t.spaces.map((space) => (
+              <div key={space.name} className="flex items-center gap-2">
+                <span className="truncate">{space.name}</span>
+                {space.date && <span className="ml-auto shrink-0 text-[10px] text-[#9CA3AF]">{space.date}</span>}
               </div>
             ))}
           </div>
@@ -122,20 +173,20 @@ export function WorkBuddyAppWindow({ className = "", onClose }: { className?: st
           </div>
           <div className="mt-2 flex shrink-0 items-center gap-1.5 border-t border-[#E7EBE6] pt-2">
             <span aria-hidden className="h-5 w-5 shrink-0 rounded-full bg-[#4AD06A]" />
-            <span className="truncate">{FOOTER_USER}</span>
+            <span className="truncate">{t.footerUser}</span>
             <span className="ml-auto flex items-center gap-2 text-[#6B7280]"><Icon.bell /><Icon.headset /></span>
           </div>
           {/* ⑧ Buddy 加油站浮卡（绝对定位于侧栏 relative 内） */}
           <div className="absolute bottom-10 left-2 right-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-[10px]">
-            <div className="font-semibold">{STATION.title} <span aria-hidden className="float-right text-[#9CA3AF]">×</span></div>
-            <div className="mt-0.5 text-[#6B7280]">今日可领<span className="font-semibold text-amber-600">{STATION.points}</span></div>
-            <div className="mt-1.5 w-fit rounded-md bg-[#1F2321] px-2 py-1 text-white">立即领取</div>
+            <div className="font-semibold">{t.station.title} <span aria-hidden className="float-right text-[#9CA3AF]">×</span></div>
+            <div className="mt-0.5 text-[#6B7280]">{t.station.claimable}<span className="font-semibold text-amber-600">{t.station.points}</span></div>
+            <div className="mt-1.5 w-fit rounded-md bg-[#1F2321] px-2 py-1 text-white">{t.station.claim}</div>
           </div>
         </div>
       }>
       {/* ① 标题条 + 右侧五图标 */}
       <div className="flex h-10 items-center border-b border-[#E5E5E5] px-3">
-        <span className="truncate text-xs font-medium">{CHAT_TITLE}</span>
+        <span className="truncate text-xs font-medium">{t.chatTitle}</span>
         <span className="ml-auto flex items-center gap-2.5 text-[#9CA3AF]">
           <Icon.search width={13} height={13} /><Icon.share width={13} height={13} />
           <Icon.timer width={13} height={13} /><Icon.doc width={13} height={13} />
@@ -144,19 +195,19 @@ export function WorkBuddyAppWindow({ className = "", onClose }: { className?: st
       </div>
       {/* ② 聊天区：用户气泡 + 助手块（flex-1 撑满定高窗） */}
       <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-4">
-        <div className="ml-auto w-fit max-w-[75%] rounded-2xl rounded-tr-md bg-[#F2F3F5] px-3 py-2 text-xs">{USER_BUBBLE}</div>
+        <div className="ml-auto w-fit max-w-[75%] rounded-2xl rounded-tr-md bg-[#F2F3F5] px-3 py-2 text-xs">{t.userBubble}</div>
         <div className="flex gap-2">
           <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#4AD06A] text-[10px] font-bold text-white">W</span>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] text-[#9CA3AF]">{REPLY_STATUS}</div>
+            <div className="text-[10px] text-[#9CA3AF]">{t.replyStatus}</div>
             <div className="mt-1 space-y-1.5 text-xs leading-relaxed">
-              {REPLY.map((para) => <div key={para}>{para}</div>)}
+              {t.reply.map((para) => <div key={para}>{para}</div>)}
             </div>
             {/* 操作排：复制/赞/踩/喇叭/重试/分享/⋯ + 消耗 */}
             <div className="mt-2 flex items-center gap-2.5 text-[#9CA3AF]">
               <Icon.copy /><Icon.like /><Icon.dislike /><Icon.speaker /><Icon.retry /><Icon.share />
               <Icon.dots />
-              <span className="ml-auto text-[10px]">{COST_LABEL}</span>
+              <span className="ml-auto text-[10px]">{t.costLabel}</span>
             </div>
           </div>
         </div>
@@ -164,10 +215,10 @@ export function WorkBuddyAppWindow({ className = "", onClose }: { className?: st
       {/* ③ 输入区 */}
       <div className="shrink-0 border-t border-[#E5E5E5] p-3">
         <div className="rounded-2xl border border-[#E5E5E5] p-2">
-          <div className="text-[11px] text-[#6B7280]">{INPUT_HINT}</div>
+          <div className="text-[11px] text-[#6B7280]">{t.inputHint}</div>
           <div className="mt-1.5 flex items-center gap-2 text-[11px]">
             <span aria-hidden className="text-[#6B7280]">＋</span>
-            <span className="text-[#D92D20]">{FULL_ACCESS} <span aria-hidden>▾</span></span>
+            <span className="text-[#D92D20]">{t.fullAccess} <span aria-hidden>▾</span></span>
             <span className="ml-auto text-[#6B7280]">{MODEL_LABEL}</span>
             <span className="text-[#6B7280]"><Icon.mic /></span>
             <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-[#4AD06A] text-white">↑</span>
@@ -175,7 +226,7 @@ export function WorkBuddyAppWindow({ className = "", onClose }: { className?: st
         </div>
       </div>
       {/* ④ 页脚 */}
-      <div className="shrink-0 py-1.5 text-center text-[10px] text-[#9CA3AF]">{AI_FOOTER}</div>
+      <div className="shrink-0 py-1.5 text-center text-[10px] text-[#9CA3AF]">{t.aiFooter}</div>
     </AppWindowShell>
   );
 }
