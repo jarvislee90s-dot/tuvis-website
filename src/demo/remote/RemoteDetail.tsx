@@ -5,11 +5,25 @@ import { useDemo, setStateOf, msgDisplayText, type QuestionState } from "../stor
 import { ArrowLeftIcon, RefreshCwIcon } from "../../components/Icons";
 import { QA_MULTI, QA_SINGLE, submittedDisplayText } from "../qa";
 
-/** 思考展开态 3 行过程文本（会话数据，硬编码；tuvis 语境） */
-const THINKING_STEPS = ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"];
-/** 工具调用行（02 定稿 A 段消息流要素，静态） */
-const TOOL_CALL = { tag: "调用 Bash", cmd: 'grep -n "approve" src/remote/approve.rs' };
+/** 工具调用行命令与审批命令（语言无关，zh/en 同显） */
+const TOOL_CMD = 'grep -n "approve" src/remote/approve.rs';
 const APPROVE_CMD = "git commit -m 'feat: remote approve'";
+
+/** 批次 3 COPY 模式（T3.7；模板说明见 copy.parity.test.ts 头注释）：
+ *  窗 chrome 仍走既有 i18n 键（demo.phone.* / demo.remote.*，双语已在册，不重复搬迁），
+ *  本 COPY 只收文件内剩余硬编码中文（思考三步 / 工具调用标签）；
+ *  en 以 `: typeof ZH` 标注互校；zh 逐字保留现状（红线），en 为产品英文版 UI 口径。 */
+const ZH = {
+  /** 思考展开态 3 行过程文本（会话数据，tuvis 语境） */
+  thinkingSteps: ["读取看板状态快照…", "计算托盘三态防抖窗口…", "生成调整方案"],
+  /** 工具调用行标签（02 定稿 A 段消息流要素，静态；命令见 TOOL_CMD） */
+  toolCallTag: "调用 Bash",
+};
+const EN: typeof ZH = {
+  thinkingSteps: ["Reading the board state snapshot...", "Computing the tray tri-state debounce window...", "Drafting the adjustment plan"],
+  toolCallTag: "Bash call",
+};
+export const COPY = { zh: ZH, en: EN } as const;
 
 /** 子 Agent chip 行（T43 保留项）：头像字母 + 名称 + 状态徽标，静态 + title 悬浮说明（状态色：绿/黄/红） */
 const SUB_AGENTS: { name: string; letter: string; avatarCls: string; statusCls: string; statusKey: string; mark: string }[] = [
@@ -40,6 +54,8 @@ const chip = (active: boolean) =>
 export function RemoteDetail() {
   const { t } = useTranslation();
   const lang = useLang();
+  /* 双机制说明：i18n 的 t 管窗 chrome（既有双语键），COPY 管剩余硬编码中文（T3.7） */
+  const copy = COPY[lang];
   const claude = useDemo((s) => s.sessions.claude);
   const remote = useDemo((s) => s.remote);
   const setRemote = useDemo((s) => s.setRemote);
@@ -141,7 +157,7 @@ export function RemoteDetail() {
         <div className="flex min-h-0 flex-1 flex-col justify-end gap-2.5 overflow-hidden py-2.5">
           {remote.thinkingExpanded ? (
             <div className="space-y-0.5 px-0.5 text-[11px] text-inkdim">
-              {THINKING_STEPS.map((s) => <div key={s}>▶ {s}</div>)}
+              {copy.thinkingSteps.map((s) => <div key={s}>▶ {s}</div>)}
             </div>
           ) : (
             <div className="px-0.5 text-[11px] text-inkdim">▶ {t("demo.phone.thinking")} · 9 {t("demo.phone.seconds")}</div>
@@ -160,8 +176,8 @@ export function RemoteDetail() {
           )}
           <div className="flex items-center gap-2 rounded-[10px] border border-line bg-card px-2.5 py-[7px] text-[11.5px] text-inkdim">
             <span aria-hidden className="text-[10px]">▶</span>
-            <span className="shrink-0">{TOOL_CALL.tag}</span>
-            <span className="truncate font-mono text-[11px] text-ink">{TOOL_CALL.cmd}</span>
+            <span className="shrink-0">{copy.toolCallTag}</span>
+            <span className="truncate font-mono text-[11px] text-ink">{TOOL_CMD}</span>
           </div>
         </div>
 
