@@ -36,13 +36,21 @@ interface NavigateLike {
  * data router 在模块求值时即创建并初始化，此后再 history.replaceState 它不感知（不触发重导航），
  * 深链会坍缩到 /zh；router.navigate 则让 router 自身记下新位置。行为由 boot.integration.test.tsx 锁定。
  * 值只读一次、读后即清（先于 navigate），无论解析/navigate 结果如何都不留脏键，防 404→根→404 死循环。
+ * 存储本身不可用（如 Chrome/Edge「屏蔽所有 Cookie」下访问器抛 SecurityError）则静默放弃恢复，
+ * 不留键、不 navigate，交由 router 兜底（Navigate to /zh）——本函数在 main.tsx render 前的
+ * 模块顶层同步调用，此处若抛出则后续 render 永不执行（整站白屏）。
  */
 export function restoreBootLocation(
   router: NavigateLike,
   opts: { base: string; origin: string },
 ): void {
-  const raw = sessionStorage.getItem(REDIRECT_KEY);
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(REDIRECT_KEY);
+    if (raw) sessionStorage.removeItem(REDIRECT_KEY);
+  } catch {
+    return; // 存储不可用：放弃恢复，交由 router 兜底（Navigate to /zh）
+  }
   if (!raw) return;
-  sessionStorage.removeItem(REDIRECT_KEY);
   router.navigate(resolveBootPath(raw, opts), { replace: true });
 }

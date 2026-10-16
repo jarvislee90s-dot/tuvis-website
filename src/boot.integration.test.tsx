@@ -1,8 +1,9 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
 import { REDIRECT_KEY, restoreBootLocation } from "@/utils/bootPath";
+import { denySessionStorage, stubIntersectionObserver } from "@/test/domStubs";
 
 // ---- 测试环境 realm 桥接（仅本文件）----
 // RR 真实导航时 new AbortController()（= jsdom 版）并把 signal 交给 new Request(url, { signal })；
@@ -47,7 +48,10 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
     // jsdom 不实现 scrollTo，Silent 掉 ScrollManager 回顶的 "Not implemented" 提示（非被测行为）
     window.scrollTo = () => {};
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("主用例：/en/changelog 深链经 navigate 恢复落位，页面挂载 Changelog 内容而非首页/重定向，redirect 键清除防死循环", async () => {
     const router = bootWith(`${ORIGIN}/tuvis-website/en/changelog`);
@@ -86,5 +90,34 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
     expect(router.state.location.pathname).toBe(BASE);
     expect(window.location.pathname).toBe("/tuvis-website");
     expect(sessionStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("存储不可用用例：sessionStorage getter 抛 SecurityError（屏蔽 Cookie 环境）——restore 不抛不 navigate，render 照常经 / 兜底落到 /zh 首页", async () => {
+    // 复刻生产形态：404.html 已跳回站点根、地址栏停在 base 根（屏蔽 Cookie 下读不到键，无法恢复深链）
+    window.history.replaceState(null, "", `${BASE}/`);
+    // /zh 首页 Reveal（whileInView）在 jsdom 无 IO 时会崩进 ErrorBoundary（非被测行为），afterEach 统一 unstub
+    stubIntersectionObserver();
+    const restoreStorage = denySessionStorage();
+    try {
+      const router = createBrowserRouter(routes, { basename: BASE });
+      const navigateSpy = vi.spyOn(router, "navigate");
+
+      // 复刻 main.tsx 序列：render 前的模块顶层同步调用——旧代码裸访问抛错访问器，此处即
+      // SecurityError，后续 createRoot().render 永不执行（整站白屏，首页/深链无一幸免）
+      expect(() =>
+        restoreBootLocation(router, { base: BASE, origin: window.location.origin }),
+      ).not.toThrow();
+      // 存储不可用：放弃恢复、不 navigate，交由 router 兜底（Navigate to /zh）
+      expect(navigateSpy).not.toHaveBeenCalled();
+
+      // 后续 render 不受影响：basename 根匹配 "/" → /zh 兜底重定向，首页正常挂载（h1 出现）
+      render(<RouterProvider router={router} />);
+      const main = await screen.findByRole("main");
+      expect(within(main).getByRole("heading", { level: 1 })).toBeInTheDocument();
+      await waitFor(() => expect(window.location.pathname).toBe(`${BASE}/zh`));
+    } finally {
+      // 还原访问器：防污染本文件其他用例（beforeEach 有 sessionStorage.clear()）
+      restoreStorage();
+    }
   });
 });
