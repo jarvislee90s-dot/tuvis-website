@@ -142,6 +142,7 @@
   "demo.remote.planDesc": "Read-only planning — no file changes",
   "demo.remote.deny": "Deny",
   "demo.remote.submit": "Submit",
+  "demo.remote.submitQa": "Send (submit answer)",
   "demo.remote.submitted": "Submitted",
   "demo.remote.files": "File preview",
   "demo.remote.close": "Close",

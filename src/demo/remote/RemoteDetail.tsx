@@ -75,6 +75,8 @@ export function RemoteDetail() {
 
   const q: QuestionState = remote.question;
   const pickedEmpty = q === null || (q.kind === "single" ? q.picked === null : q.picked.length === 0);
+  /** 提交回显整行；空 picked → 空串 → 整行不渲染（防「已提交：」悬空标签，审查 M5） */
+  const submittedEcho = q !== null && q.submitted ? submittedDisplayText(t("demo.remote.submitted"), q, lang) : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col text-ink">
@@ -245,16 +247,18 @@ export function RemoteDetail() {
               </div>
               <div className="mt-2 flex items-center justify-between text-[11px] text-app-mut">
                 <span>{t("demo.remote.qaHint")}</span>
+                {/* M6：aria 含可见文本「发送」语义（label-in-name），测试与读屏都按此稳定取钮 */}
                 <button type="button" disabled={pickedEmpty} onClick={submitQuestion}
+                  aria-label={t("demo.remote.submitQa")}
                   className="shrink-0 pl-2 font-semibold text-[#1D4ED8] disabled:opacity-40">
                   {t("demo.phone.send")} ↵
                 </button>
               </div>
             </div>
           )}
-          {q !== null && q.submitted && (
+          {submittedEcho !== "" && (
             <div className="rounded-[10px] border border-line bg-card px-2.5 py-[7px] text-[11.5px] text-inkdim">
-              {submittedDisplayText(t("demo.remote.submitted"), q, lang)}
+              {submittedEcho}
             </div>
           )}
         </div>

@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import type { Lang } from "@/i18n";
-import type { Session, SessionState } from "./types";
+import type { Bilingual, Session, SessionState } from "./types";
 import { seedSessions } from "./seed";
 
 /** 消息文本（D10）：种子/脚本消息双语 {zh,en}；用户实时输入无法双语 → {raw}（两种语言都显原文） */
-export type MsgText = { zh: string; en: string } | { raw: string };
+export type MsgText = Bilingual | { raw: string };
 export interface RemoteMsg { role: "user" | "assistant"; text: MsgText; queued?: boolean }
 
 /** 消息显示取值（D10）：双语消息按语言取；{raw} 用户消息两语言同显原文。

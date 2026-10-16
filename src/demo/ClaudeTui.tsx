@@ -84,7 +84,7 @@ const PLAN_OPTIONS = ["Yes, and auto-accept edits", "Yes, and manually approve e
 const SELECT_USER_LINE = "帮我把这道题归到题目领域";
 const SELECT_CHIP = "题目领域";
 const SELECT_QUESTION = "这道题属于哪个领域？";
-/** D9：id = 语言无关的选项身份（picked 只存 id）；title 目前仍为中文，B3-T5 COPY 化时只改 title 不动 id。
+/** D9：id = 语言无关的选项身份（picked 只存 id）；title 目前仍为中文，批次 3 COPY 化（T3.3）时只改 title 不动 id。
  *  约束：id 只增不改（种子/脚本 picked 与它绑死）、不得用显示串或数组下标当 id。 */
 const SELECT_OPTIONS: { id: string; title: string; desc: string }[] = [
   { id: "finance", title: "金融/信用评级", desc: "宏观利率、行业景气与企业信用" },
@@ -115,11 +115,13 @@ export const QA_SINGLE = { question: SELECT_QUESTION, options: SELECT_OPTIONS } 
 
 export type QaKind = "single" | "multi";
 
-/** D9：picked 存 id → 显示时按 id 取显示串（未登记 id 原样回退，防旧种子/脏脚本悬空为 undefined）。
- *  title 尚为中文；B3-T5 COPY 化后在本函数内改按 lang 取 {zh,en}，调用方与 picked 形状不动。 */
+/** D9：picked 存 id → 显示时按 id 取显示串（未登记 id 原样回退 + DEV 告警，防旧种子/脏脚本静默吞）。
+ *  title 尚为中文；批次 3 COPY 化（T3.3）后在本函数内改按 lang 取 {zh,en}，调用方与 picked 形状不动。 */
 export function qaOptionTitle(kind: QaKind, id: string): string {
   const options: readonly { id: string; title: string }[] = kind === "single" ? SELECT_OPTIONS : MULTI_OPTIONS;
-  return options.find((o) => o.id === id)?.title ?? id;
+  const hit = options.find((o) => o.id === id);
+  if (!hit && import.meta.env.DEV) console.warn(`[demo] 未登记的 QA 选项 id：${kind}/${id}——回退原样显示`);
+  return hit?.title ?? id;
 }
 
 /** D9：提交回显 = picked id 列表 → 显示串；join 分隔符按语言（en「, 」/ zh「、」） */
@@ -129,14 +131,15 @@ export function pickedDisplayText(q: { kind: QaKind; picked: string | string[] |
   return ids.map((id) => qaOptionTitle("multi", id)).join(lang === "en" ? ", " : "、");
 }
 
-/** D9：提交回显整行 = 前缀（调用方传 t(...)）+ 语言化分隔冒号 + 显示串；
- *  /en 不落全角「：」（en「: 」/ zh「：」） */
+/** D9：提交回显整行 = 前缀（调用方传 t(...)）+ 语言化分隔冒号 + 显示串；/en 不落全角「：」。
+ *  无可显示项（空 picked）返回空串——调用方据此整行不渲染，防「已提交：」悬空标签 */
 export function submittedDisplayText(
   label: string,
   q: { kind: QaKind; picked: string | string[] | null },
   lang: Lang,
 ): string {
-  return `${label}${lang === "en" ? ": " : "："}${pickedDisplayText(q, lang)}`;
+  const picked = pickedDisplayText(q, lang);
+  return picked === "" ? "" : `${label}${lang === "en" ? ": " : "："}${picked}`;
 }
 
 /** 场景选项行（approval/plan/select/multiselect 四处复用同一组件）；描述行次色、缩进 5 空格对齐标题列。
