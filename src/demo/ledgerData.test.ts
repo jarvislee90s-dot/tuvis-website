@@ -94,15 +94,20 @@ describe("formatUnits 语种化单位（zh 万/亿不动；en K/M/B，D3）", ()
     expect(formatUnits(-17_951_000, "en")).toBe("-17.95 M");
     expect(formatUnits(-4_374_410_324, "en")).toBe("-4.37 B");
   });
-  it("zh 全档回归：逐字等于 formatCN（B18 口径红线）", () => {
-    const VS = [0, 608, 999, 999.5, 1e4, 17_951_000, 1e8, 4_374_410_324, -1_234, -4_374_410_324];
-    for (const v of VS) expect(formatUnits(v, "zh")).toBe(formatCN(v));
-    expect(formatUnits(1e4, "zh")).toBe("1.00万");
-    expect(formatUnits(1e8, "zh")).toBe("1.00亿");
-    expect(formatUnits(-4_374_410_324, "zh")).toBe("-4374410324");   // zh 负数恒落原数分支（现状不变）
+  it("zh 全档回归：字面量逐条冻结（B18 口径红线）", () => {
+    // 逐条字面量冻结——勿改回 formatUnits(v,"zh") === formatCN(v) 自比：同一实现互为镜像，零守护力
+    const CASES = [
+      [0, "0"], [608, "608"], [999, "999"], [999.5, "1000"],
+      [1e4, "1.00万"], [17_951_000, "1795.10万"], [1e8, "1.00亿"], [4_374_410_324, "43.74亿"],
+      [-1_234, "-1234"], [-4_374_410_324, "-4374410324"],   // zh 负数恒落原数分支（现状不变）
+    ] as const;
+    for (const [v, s] of CASES) expect(formatUnits(v, "zh")).toBe(s);
   });
-  it("formatCN 保留为 zh 向后兼容别名", () => {
-    expect(formatCN(608)).toBe(formatUnits(608, "zh"));
-    expect(formatCN(4_374_410_324)).toBe(formatUnits(4_374_410_324, "zh"));
+  it("formatCN 别名：字面量输出（非自比）", () => {
+    expect(formatCN(608)).toBe("608");
+    expect(formatCN(1e4)).toBe("1.00万");
+    expect(formatCN(1e8)).toBe("1.00亿");
+    expect(formatCN(4_374_410_324)).toBe("43.74亿");
+    expect(formatCN(-1_234)).toBe("-1234");
   });
 });
