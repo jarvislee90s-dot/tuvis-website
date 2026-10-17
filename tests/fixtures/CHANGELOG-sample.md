@@ -1,42 +1,49 @@
-# Changelog
+<!--
+  测试 fixture：模拟主仓 CHANGELOG.md（纯中文，单语契约 2026-10-17）。
+  与 CHANGELOG-sample.en.md 同一份契约：版本/日期/分区与条目顺序逐条对齐，
+  分区名「新增/修复/工程」↔ en 文件的 Added/Fixed/Engineering。
+  未译内容只在中文版存在：0.5.9 整版未译（en 文件不写该版本）、
+  0.5.5 的「修复」分区未译（en 同名版本少一个分区）。
+  文件头 HTML 注释块在第一个「## [」版本标题之前，解析时天然丢弃。
+-->
+
+# 更新日志
 
 ## [0.6.0] - 2026-10-15
 
-### Added
+（版本标题下的散记：既不是版本标题也不是条目，不应产生任何 changelog 条目）
+
+### 新增
 
 - 子 Agent chip 支持按名称筛选
-  EN: Sub-agent chips can now be filtered by name
 - 远程审批新增批量模式
   一次勾选多条待审请求，统一放行或驳回
   批量操作会记录单条审计日志
-  EN: Remote approvals gain a batch mode
 - 观察台支持时间轴回放
-  EN: The observatory supports timeline replay,
-    reopening any sub-agent run from its chip
 
-### Fixed
+### 修复
 
 - 修复远程审批超时后状态不同步
-  EN: Fixed approval status drifting out of sync after a timeout
 - 修复观察台在深色模式下时间轴错位
-  EN: Fixed the timeline misaligning in dark mode
+
+### 工程
+
+- 同步脚本改为三源拉取（中文 / 英文 / capabilities）
 
 ## [0.5.9] - 2026-10-12
 
-### Added
+### 新增
 
 - 审批队列支持按提交人分组
-- 子 Agent chip 支持固定到侧栏
-  EN: Sub-agent chips can now be pinned to the sidebar
 - 观察台新增运行时长统计
 
 ## [0.5.5] - 2026-10-10
 
-### Added
+### 新增
 
 - 子 Agent 运行 chip 与观察台
 - 远程审批支持排队
 
-### Fixed
+### 修复
 
 - 完成识别修复：teammate 完成后 chip 永挂

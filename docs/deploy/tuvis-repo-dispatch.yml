@@ -14,6 +14,7 @@ on:
     paths:
       - "docs/user-manual/**"
       - "CHANGELOG.md"
+      - "CHANGELOG.en.md"
       - "docs/capabilities.json"
 
 jobs:
