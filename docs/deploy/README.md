@@ -46,13 +46,15 @@ git tag v0.5.7 && git push origin v0.5.7   # 发版：才更新线上
    - Name：`SITE_DISPATCH_PAT`，Value：刚才的 token
 3. 装触发器：把本仓 `docs/deploy/tuvis-repo-dispatch.yml` 复制到主仓 `.github/workflows/notify-website.yml`，提交。
 
-之后：主仓 main 的 `docs/user-manual/**`、`CHANGELOG.md`、`docs/capabilities.json` 一有推送 → 网站仓用「最新 tag 代码 + 最新主仓文档」自动重建部署。
+之后：主仓 main 的 `docs/user-manual/**`、`CHANGELOG.md`、`CHANGELOG.en.md`、`docs/capabilities.json` 一有推送 → 网站仓用「最新 tag 代码 + 最新主仓文档」自动重建部署。
+
+> 2026-10-17 起更新日志分两份文件：改了**主仓已复制的** trigger 的 `paths`（加 `CHANGELOG.en.md`）后，记得把本仓 `docs/deploy/tuvis-repo-dispatch.yml` 重新复制到主仓 `.github/workflows/notify-website.yml`——否则只改英文日志的推送不会实时触发重建（每日兜底仍在，最长滞后一天）。
 
 ## 四、内容维护口径（只需维护主仓一处）
 
 | 内容 | 主仓真值 | 网站消费 |
 |---|---|---|
-| 更新日志 | `CHANGELOG.md` | 构建时切分为 `src/content/changelog.json`；Hero 徽章版本号同源 |
+| 更新日志 | `CHANGELOG.md`（纯中文）/ `CHANGELOG.en.md`（纯英文） | 构建时分别切分为 `src/content/changelog.json` / `changelog.en.json`；/zh 与 /en 各读各的（不回落、不混排），Hero 徽章版本号同源 |
 | 兼容矩阵 | `docs/capabilities.json`（网站仓内副本已落盘：`src/content/capabilities.json`，含 2026-10-12 列序与 OpenClaw 修正；主仓侧以 `docs/design/p11-ref/capabilities.for-tuvis.json` 为准复制提交后，构建同步自动切换主仓真值） | 构建时拉取覆写 `src/content/capabilities.json` |
 | 用户手册 | `docs/user-manual/{zh,en,img}` | 构建时整棵同步到 `public/manual/` |
 
