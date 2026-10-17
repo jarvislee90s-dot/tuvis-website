@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
 import { stubIntersectionObserver } from "@/test/domStubs";
-import changelog from "@/content/changelog.json";
+import changelogZh from "@/content/changelog.json";
+import changelogEn from "@/content/changelog.en.json";
 import cap from "@/content/capabilities.json";
 import en from "@/i18n/en.json";
 import zh from "@/i18n/zh.json";
@@ -17,15 +18,14 @@ import zh from "@/i18n/zh.json";
  * 字符类 = Han 区 /[\u4e00-\u9fff]/（全角「＋」属 aria-hidden 装饰字形、「…」属英文排版，
  * 均不拦；B3-T6/T3.7 审查裁决，与 copy.parity 的 ②/②b 同源）。
  *
+ * /en/changelog 已并入整页硬红线（2026-10-17 中英分文件后英文产物单语、无跨语言回落）：
+ * 「英文页不显示中文」钉在数据层（scripts/split-changelog.test.mjs 的产物门禁：条目键恰为
+ * ["en"]、零 Han 计数、langViolations 通过），此处只做页级互锁——条目数 = 英文产物条目总数、
+ * 说明行插值锚点（v + 英文产物最老版本号）与指路中文版链接在岗。
+ *
  * 本页例外（豁免须在此登记 + 指向上游依据，不得就地放宽字符类）：
- *   ① /en/changelog —— changelog.json 条目是`{zh, en?}`混合（HEAD 内 14 版 175 条零 en，2026-10-16 上游
- *      发版同步后 15 版 191 条里 26 条有 en），未译条目按产品「诚实降级」口径回落中文原文 + 徽章标注。
- *      故零 Han 断言换成：标题/英文说明在 + 「English in progress」徽章数 = 未译条目数（降级机制在岗）。
- *   ①b /en/changelog section 键 —— 各版本 h3 直渲 changelog.json 的 section 键（如 v0.5.5 的
- *      「Changed（Breaking…）」），键本身是上游数据、未随条目一起英文化，/en 渲染中文小标题属已知缺口
- *      （同源 tuvis#160）。本页整体已由 ① 移出零 Han 断言，此处仅登记，防后续把该页并入硬红线时误判。
  *   ② /en 首页矩阵区——组名/行名取主仓 capabilities.json 的 nameEn ?? name，nameEn 未补时（tuvis#160
- *      缺口 C，HEAD 内 JSON 全缺）该区必然中文。豁免粒度 = 矩阵「数据组卡」容器（CompatMatrix.tsx 的
+ *      缺口 C）该区必然中文。豁免粒度 = 矩阵「数据组卡」容器（CompatMatrix.tsx 的
  *      div.mt-4.space-y-4，正好只包上游 JSON 驱动的组名/行名/备注文本），section 自身的 i18n chrome
  *      （标题/描述/图例/列头/脚注）不在豁免内。豁免随数据自动开关（MATRIX_NAME_EN_GAP）：缺则豁免并
  *      断言「组卡确实含 Han」（防豁免空转），补全则整体并入整页硬红线。剩余盲区仅在缺口支存在 =
@@ -35,15 +35,21 @@ import zh from "@/i18n/zh.json";
 const HAN = /[\u4e00-\u9fff]/;
 const WAIT = { timeout: 3000 };
 
-/** changelog 条目总数 / 未译条数（徽章数 = 后者；本条随数据漂移自动跟随，不写死） */
-const ITEM_COUNT = changelog.reduce(
+/** 英文产物条目总数（页级互锁用；随数据漂移自动跟随，不写死） */
+const EN_ITEM_COUNT = changelogEn.reduce(
   (n, rel) => n + Object.values(rel.sections).reduce((m, items) => m + items.length, 0),
   0,
 );
-const UNTRANSLATED = changelog.reduce(
-  (n, rel) => n + Object.values(rel.sections).reduce((m, items) => m + items.filter((it) => !it.en).length, 0),
-  0,
-);
+/** 英文产物最老版本号（产物新→旧排序，末位即最老）——说明行 {{from}} 插值的锚点，不写死版本号 */
+const EN_OLDEST = changelogEn[changelogEn.length - 1].version;
+
+/** 两版分家比对样本：中文/英文产物各自的首条条目文本（/zh/changelog 护栏用，从数据算不写死） */
+const zhFirstText = Object.values(changelogZh[0].sections)[0][0].zh;
+const enFirstText = Object.values(changelogEn[0].sections)[0][0].en;
+/** 条目文本 → 页面可见文本前缀：markdown 渲染会剥掉加粗与行内代码标记（`**`、反引号等），
+ *  比对前同步剥掉；两侧空白归一（页面文本跨多个文本节点拼接） */
+const visiblePrefix = (raw: string, n = 40): string => raw.slice(0, n).replace(/[*`_]/g, "").replace(/\s+/g, " ");
+const collapseWs = (s: string): string => s.replace(/\s+/g, " ");
 
 /** 矩阵区文本缺口：任一 组/行 缺 nameEn 即该区必然渲染中文（tuvis#160 缺口 C）。
  *  判缺按渲染语义 `nameEn ?? name` 对齐——只认 undefined（JSON 未给键）；空串 nameEn 渲染空串、无 Han，
@@ -99,15 +105,21 @@ describe("B3 总门禁：/en 四路由零 Han（豁免见文件头）+ /zh 护�
     expect(bodyText()).not.toMatch(HAN);
   });
 
-  it("/en/changelog：标题 + 英文说明在，条目数 = 数据全量，徽章数 = 未译条目数（诚实降级在岗）", async () => {
+  it("/en/changelog：整页零 Han；条目数/说明行锚点/指路链接与英文产物数据互锁（豁免已收编，见文件头）", async () => {
     mountAt("/en/changelog");
     await screen.findByRole("heading", { level: 1, name: en["log.title"] }, WAIT);
-    expect(screen.getByText(en["log.enNote"])).toBeInTheDocument();
-    // 页级互锁：整数据集渲染（不因某版 section 结构异常少渲染条目）
-    expect(within(screen.getByRole("main")).getAllByRole("listitem")).toHaveLength(ITEM_COUNT);
-    // 逐条降级标注：徽章数必须恰等于数据里未译条目数（多 = 误标已译条目；少 = 静默冒充英文）
-    expect(screen.queryAllByText(en["log.enProgress"])).toHaveLength(UNTRANSLATED);
-    expect(ITEM_COUNT).toBeGreaterThan(0);
+    // 说明行是「i18n 插值 + 指路链接」拼起来的，不做整串精确匹配，拆成三个数据互锁：
+    // ① 说明行确实渲染：取 i18n 值 {{from}} 之前的字面前缀（避开插值语法），空白归一后比对
+    expect(collapseWs(bodyText())).toContain(collapseWs(en["log.enNote"].split("{{")[0]));
+    // ② {{from}} 插值锚点：正文含 v + 英文产物最老版本号（从数据算，未译版本回填后自动改口）
+    expect(bodyText()).toContain(`v${EN_OLDEST}`);
+    // ③ 指路链接：可访问名 = log.zhLink，href 指向中文页
+    expect(screen.getByRole("link", { name: en["log.zhLink"] })).toHaveAttribute("href", `${BASE}/zh/changelog`);
+    // 页级互锁：整数据集渲染，main 内条目数恰等于英文产物条目总数（不因某版 section 结构异常少渲染）
+    expect(within(screen.getByRole("main")).getAllByRole("listitem")).toHaveLength(EN_ITEM_COUNT);
+    expect(EN_ITEM_COUNT).toBeGreaterThan(0);
+    expectRealPage();
+    expect(bodyText()).not.toMatch(HAN);
   });
 
   it("/en/docs/01-overview：手册 fetch 不可得 → missing 分支零 Han，页签带品牌后缀", async () => {
@@ -147,6 +159,17 @@ describe("B3 总门禁：/en 四路由零 Han（豁免见文件头）+ /zh 护�
     await waitFor(() => expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("兔维斯 Tuvis"), WAIT);
     expect(bodyText()).toContain("兔维斯");
     expect(bodyText()).toContain(zh["matrix.title"]);
+  });
+
+  it("/zh/changelog 护栏：h1 中文标题；中文产物首条在页、英文产物首条不在页（两版彻底分家）", async () => {
+    mountAt("/zh/changelog");
+    await screen.findByRole("heading", { level: 1, name: zh["log.title"] }, WAIT);
+    const text = collapseWs(bodyText());
+    // 中文产物首条条目文本前 40 字符（从数据算）在页面可见文本里——markdown 标记剥除 + 空白归一见文件头助手
+    expect(text).toContain(visiblePrefix(zhFirstText));
+    // 英文产物首条不在页面文本里：/zh 只读中文产物，无跨语言回落（反向同理由 /en 页零 Han 硬红线把守）
+    expect(text).not.toContain(visiblePrefix(enFirstText));
+    // 不对中文页做「零英文」字符类断言：中文条目里合法夹 macOS / codex / GitHub 等英文术语
   });
 
   it("/zh/demo 护栏：用量看板数字走 zh 口径（万/亿 单位在 #ledger 内）", async () => {
