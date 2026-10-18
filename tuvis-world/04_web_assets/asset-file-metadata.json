@@ -1,0 +1,194 @@
+[
+  {
+    "path": "characters/tuvis-coffee-v1.png",
+    "width": 1024,
+    "height": 1536,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      213,
+      47,
+      824,
+      1482
+    ],
+    "bytes": 1803343,
+    "sha256": "732834cd4ee384edae07cf9d19501f9d8be7c2e97e8903a12fae215f748c4f33"
+  },
+  {
+    "path": "characters/tuvis-display-v1.png",
+    "width": 1024,
+    "height": 1536,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      130,
+      51,
+      893,
+      1485
+    ],
+    "bytes": 2053929,
+    "sha256": "382d74dac07954f32c471cbffb1df3baba2203b9134b15ebbb7a5a84ed122010"
+  },
+  {
+    "path": "characters/tuvis-idle.png",
+    "width": 1536,
+    "height": 1536,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      255
+    ],
+    "contentBoundsAlpha160": [
+      491,
+      153,
+      1044,
+      1385
+    ],
+    "bytes": 1095525,
+    "sha256": "ce50326038dbdf9367aa23bec68bc511147adbe6401c9bb5a540376f891ffcae"
+  },
+  {
+    "path": "characters/tuvis-sit-v1.png",
+    "width": 1024,
+    "height": 1536,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      200,
+      36,
+      786,
+      1469
+    ],
+    "bytes": 1847098,
+    "sha256": "beaa6d4080bbb9c659ce8fb93d249e3771bceee8c013e426e1629c78817ac511"
+  },
+  {
+    "path": "equipment/bug-buster-body-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      323,
+      95,
+      1309,
+      991
+    ],
+    "bytes": 1529932,
+    "sha256": "035119166d17be6794dd51b6a301995d9a791eb198618db62be2d0f155d1232e"
+  },
+  {
+    "path": "equipment/bug-buster-cell-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      224,
+      136,
+      1332,
+      863
+    ],
+    "bytes": 1496408,
+    "sha256": "06b0cbb2d433836dc51a772bf70b316ff0ab0104627ab0a6edc160233e69c444"
+  },
+  {
+    "path": "equipment/bug-buster-complete-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      133,
+      56,
+      1444,
+      982
+    ],
+    "bytes": 1916701,
+    "sha256": "d19e1882c48ccd3ddf2f9b586d239cf51c028e6519763bc70aed50ba52348fe5"
+  },
+  {
+    "path": "equipment/bug-buster-emitter-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      75,
+      29,
+      1479,
+      968
+    ],
+    "bytes": 1862137,
+    "sha256": "79c894e135819e6d7ebff73fac134047e4581f6a1ee77a0884e5ad218fe73ae5"
+  },
+  {
+    "path": "equipment/bug-buster-sight-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGBA",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "contentBoundsAlpha160": [
+      104,
+      149,
+      1452,
+      850
+    ],
+    "bytes": 1500420,
+    "sha256": "66e9220f4b709046cc595a8ebfe48135b625e5efdfa4fc55fec80e36f6cc26e0"
+  },
+  {
+    "path": "equipment/equipment-family-reference.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGB",
+    "alphaExtrema": null,
+    "contentBoundsAlpha160": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "bytes": 2179094,
+    "sha256": "657dbaf54cf2dc252a0559691e6f8ae027a943f496512a3316d5029b91bf9e41"
+  },
+  {
+    "path": "scene/workshop-room-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "alphaExtrema": null,
+    "contentBoundsAlpha160": [
+      0,
+      0,
+      1536,
+      1024
+    ],
+    "bytes": 2335296,
+    "sha256": "29212530a6214ab82da294340542cb8d3aad91e63da7d4583c959689c334e214"
+  }
+]
