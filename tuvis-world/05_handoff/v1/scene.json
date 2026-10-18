@@ -840,7 +840,8 @@
         336,
         716
       ],
-      "height": 190
+      "height": 190,
+      "depth": 626
     },
     "coffee": {
       "frame": "coffee",
@@ -935,6 +936,7 @@
     "Scene-pixel coordinates with supplied sourceRect and anchor; atlas frames are not assumed equal.",
     "Door nextSceneId is reserved data; current click shows in-home destination information.",
     "Prepared layout requires visual QA during implementation; it is not implemented gameplay.",
-    "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset."
+    "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset.",
+    "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point."
   ]
 }

@@ -64,6 +64,20 @@ for(const h of scene.hotspots)assert(free(h.approach)&&Object.values(scene.nav.n
 for(const p of scene.props)assert(manifest.frames[p.frame],"Missing prop frame");
 for(const p of Object.values(scene.actions))assert(manifest.frames[p.frame],"Missing action frame");
 assert(content.equipment.length===4 && content.stories.length===3 && content.quest.modules.length===3,"Content counts");
+for(const id of manifest.coreAssets)assert(manifest.assets[id],"Missing core asset: "+id);
+for(const id of [content.heroAsset,content.cityAsset,content.workshopPreviewAsset,scene.background])assert(manifest.assets[id],"Missing page/background asset: "+id);
+assert(manifest.contentPath==="content/world.zh.json" && manifest.scenePath==="scene.json","Data entry paths");
+const modules=new Set(content.quest.modules.map(m=>m.id));
+assert(modules.size===3 && scene.assembly.modules.length===3,"Module ids");
+for(const m of scene.assembly.modules)assert(modules.has(m.id)&&manifest.frames[m.frame],"Missing assembly module/frame");
+for(const f of [scene.assembly.body.frame,scene.assembly.complete.frame,scene.rackDisplay.frame])assert(manifest.frames[f],"Missing assembly/rack frame");
+for(const h of scene.hotspots){
+  if(h.moduleId)assert(modules.has(h.moduleId),"Unknown module at hotspot");
+  if(h.kind==="world")assert(content.world.some(c=>c.id===h.contentId),"Unknown world content");
+  if(h.kind==="door")assert(content.doors.some(c=>c.id===h.contentId),"Unknown door content");
+}
+const desk=scene.props.find(p=>p.frame==="deskChair");
+assert(scene.actions.sit.depth>desk.depth,"Seated depth must render in front of chair");
 for(const a of [...content.equipment,...content.world,...content.stories])assert(manifest.assets[a.asset],"Missing content image");
 const sums=await json("checksums.json");
 for(const [path,sha] of Object.entries(sums.files)){const data=await readFile(safe(path));assert(createHash("sha256").update(data).digest("hex")===sha,"File checksum mismatch: "+path);}

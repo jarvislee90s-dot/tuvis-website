@@ -1,10 +1,14 @@
 # Tuvis World｜网站专区与工坊互动需求说明书
 
-- 版本：v2.0
+- 版本：v2.1
 - 日期：2026-10-19（Asia/Shanghai）
 - 状态：已批准；已纳入用户补充的住宅场景与扩展门要求
 - 项目目录：tuvis-website
 - 交付对象：电脑浏览器用户；在云端沙箱执行实现任务的 Agent。
+
+## 路径约定
+
+所有执行命令均在项目根目录 tuvis-website 下运行；正文中的文件路径均以项目根目录为基准。Markdown 跳转链接使用相对所在文档的链接，保持复制项目后可点击。/zh/world 等是网页路由，不是文件系统绝对路径。manifest 内部资源路径相对资源包根目录，按第7节映射为项目路径和发布 URL。
 
 ## 1. 产品目标与交付结构
 
@@ -54,7 +58,7 @@ flowchart LR
 
 | 编号 | 模块 | 展示内容 | 操作与结果 |
 |---|---|---|---|
-| W-01 | 主视觉 | Tuvis World｜兔维斯世界、导语、兔维斯主图及回路城氛围 | “进入工坊”进入互动页；“认识兔维斯”定位到角色区 |
+| W-01 | 主视觉 | Tuvis World｜兔维斯世界、导语、兔维斯主图及回路城氛围 | “进入兔维斯工坊”进入互动页；“认识兔维斯”定位到角色区 |
 | W-02 | 认识兔维斯 | 人物简介、三个性格标签、HUD 护目镜与胡萝卜核心等特征 | 查看角色图和简洁说明 |
 | W-03 | 装备图鉴 | 四件装备的图片、名称、身份色、功能及代码编辑类比 | 选中卡片，在统一详情区展开说明 |
 | W-04 | 世界设定 | 回路城、发明工坊、居民类型图文 | 查看场景图与介绍；居民按类别展示 |
@@ -137,7 +141,7 @@ flowchart LR
 | 6 | 在特写界面把三个模块装入对应位置 | 卡入反馈、能源环亮起、显示完整成品 |
 | 7 | 展示成品并放到装备架 | 装备架出现 Bug Buster，任务完成 |
 
-三个模块可任意顺序领取，任务栏显示三个模块槽。能源匣完成维修后才可安装；提示明确指出当前所需动作。误操作不丢失模块，已领取或安装的模块不会被重复消耗。
+三个模块可任意顺序领取，任务栏显示三个模块槽。集齐三件并修好能源匣后进入组装；提示明确指出当前所需动作。误操作不丢失模块，已领取或安装的模块不会被重复消耗。组装完成后返回房间，走近装备架完成陈列；组装面板只完成安装，陈列完成事件由到达装备架触发。
 
 特写采用固定三分之四角度，提供整体放大。支持拖拽吸附，也支持“点击零件 → 点击插槽”。归位过程使用平面位移、轻微转角和卡入闪光；结束时过渡到完整成品图。
 
@@ -171,27 +175,27 @@ flowchart LR
 | 互动状态 | Zustand 5 | 移动目标、当前面板、日常动作与任务状态 |
 | 语言资源 | i18next 24、react-i18next | 导航与界面中英键对齐 |
 | 进度存储 | 浏览器 localStorage | 本地主线进度与提示状态 |
-| 开发/构建环境 | Node.js 22、pnpm、仓库锁文件 | 与现站 CI 一致的依赖安装和构建 |
+| 开发/构建环境 | Node.js 22、pnpm 10.20.0、仓库锁文件 | 与现站 CI 一致的依赖安装和构建 |
 | 发布 | 现有 GitHub Actions、GitHub Pages | 发布静态 dist 资源 |
 
 产品运行只加载部署站点提供的代码、图片和内容。新增专区的内容与任务在浏览器本地运行，访客使用普通电脑浏览器即可完成体验。
 
-工程按页面、展示内容、场景数据、导航、场景显示、互动控制和任务状态拆分。建议范围：
+工程按页面、展示内容、场景数据、导航、场景显示、互动控制和任务状态拆分。职责分布：
 
 ~~~text
 src/pages/WorldPage.tsx
 src/pages/WorkshopPage.tsx
 src/world/
-  content/        角色、装备、世界与故事简介
+  types.ts        数据与接口类型
+  content/        图鉴、世界、故事、门与说明面板
   landing/        专题首页图文区块
   scene/          场景显示、导航、物件互动
   quest/          模块领取、维修、组装与存档
-  panels/         图鉴、世界介绍、故事简介和操作说明
-  assets/         类型化素材与场景数据入口
+  assets/         manifest、内容JSON、场景数据与图片加载入口
 public/world/     实际发布的图片与静态数据
 ~~~
 
-专题内容数据单独维护在 src/world/；站点资源路径通过 import.meta.env.BASE_URL 或 Vite 导入机制生成。素材 manifest 使用相对路径，并包含图片尺寸、裁切、脚底锚点、物件地面锚点、热点、停靠点、碰撞与导航数据。
+内容源文件统一为 tuvis-world/05_handoff/v1/content/world.zh.json，导入后发布到 public/world/v1/content/world.zh.json；src/world/ 保存读取、类型与界面代码。首页只加载 manifest 与内容 JSON，进入工坊后再读取 scene.json 和工坊核心图片。站点资源路径通过 import.meta.env.BASE_URL 或 Vite 导入机制生成。素材 manifest 使用相对路径，并包含图片尺寸、裁切、脚底锚点、物件地面锚点、热点、停靠点、碰撞与导航数据。
 
 页面结构复用现有 LangLayout、TopBar 与 Footer。工坊代码在进入工坊页时加载，专题首页可以独立浏览。
 
@@ -216,21 +220,29 @@ public/world/     实际发布的图片与静态数据
 
 ## 7. 素材与展示内容
 
-| 素材 | 使用位置 |
-|---|---|
-| assets/landing/hero.png | 首屏、角色介绍 |
-| assets/landing/city.png | 首屏氛围、世界设定 |
-| assets/landing/workshop-overview.png | 工坊图文介绍 |
-| assets/equipment/family.png | 四装备图鉴 |
-| assets/landing/residents.png | 居民类型图文 |
-| assets/landing/story-perfect-day.png、story-missing-parts.png | 前两张故事卡片 |
-| assets/landing/story-best-weapon.png | 《最厉害的武器》卡片，以橙色 Bug Buster 持装备图配网页底色 |
-| assets/scene/workshop-base.png | 落地住宅工坊底图与入口预览 |
-| assets/characters/tuvis-directions.png、tuvis-actions.png | 四向角色与日常姿态 |
-| assets/props/workshop-props.png | 独立家具与遮挡图层 |
-| assets/equipment/bug-buster-*.png | 主体、三模块与完整装备特写 |
+| 资源 ID | 项目根目录相对路径 | 使用位置 |
+|---|---|---|
+| room | tuvis-world/05_handoff/v1/assets/scene/workshop-base.png | W-06 工坊入口预览；Task 5 背景层（scene.background） |
+| directions | tuvis-world/05_handoff/v1/assets/characters/tuvis-directions.png | Task 5 场内四向站姿与移动；帧 nw、ne、sw、se |
+| actions | tuvis-world/05_handoff/v1/assets/characters/tuvis-actions.png | Task 6 日常动作；帧 sit、coffee、display |
+| props | tuvis-world/05_handoff/v1/assets/props/workshop-props.png | Task 5/6 家具与深度遮挡；帧 deskChair、loungeChair、lowTable |
+| hero | tuvis-world/05_handoff/v1/assets/landing/hero.png | W-01 首屏、W-02 角色介绍（Task 2） |
+| city | tuvis-world/05_handoff/v1/assets/landing/city.png | W-01 城市氛围、W-04 回路城；窗景面板（Task 2/6） |
+| workshop | tuvis-world/05_handoff/v1/assets/landing/workshop-overview.png | W-04 工坊图文介绍（Task 2） |
+| residents | tuvis-world/05_handoff/v1/assets/landing/residents.png | W-04 居民类型；海报详情面板（Task 2/6） |
+| family | tuvis-world/05_handoff/v1/assets/equipment/family.png | W-03 四装备图鉴；按 content.equipment[].sourceRect 裁切（Task 2/6） |
+| storyPerfect | tuvis-world/05_handoff/v1/assets/landing/story-perfect-day.png | W-05《完美的一天，差一点》故事卡片（Task 2） |
+| storyMissing | tuvis-world/05_handoff/v1/assets/landing/story-missing-parts.png | W-05《谁动了我的零件？》故事卡片（Task 2） |
+| storyWeapon | tuvis-world/05_handoff/v1/assets/landing/story-best-weapon.png | W-05《最厉害的武器》故事卡片（Task 2） |
+| gunBody | tuvis-world/05_handoff/v1/assets/equipment/bug-buster-body.png | Task 7 组装主体；scene.assembly.body |
+| gunEmitter | tuvis-world/05_handoff/v1/assets/equipment/bug-buster-emitter.png | Task 7 发射头；模块 emitter |
+| gunSight | tuvis-world/05_handoff/v1/assets/equipment/bug-buster-sight.png | Task 7 瞄准模块；模块 sight |
+| gunCell | tuvis-world/05_handoff/v1/assets/equipment/bug-buster-cell.png | Task 7 能源匣；模块 cell |
+| gunComplete | tuvis-world/05_handoff/v1/assets/equipment/bug-buster-complete.png | Task 7 完成成品；Task 6 装备架陈列（scene.rackDisplay） |
 
-路径以资源包 tuvis-world/05_handoff/v1/ 为基准，具体文件名和裁切由包内 manifest.json 确定。原始素材用于引用与备份，实际发布资产导入 public/world/v1/。
+素材数据入口为 tuvis-world/05_handoff/v1/manifest.json，场景位置为 tuvis-world/05_handoff/v1/scene.json，文案为 tuvis-world/05_handoff/v1/content/world.zh.json。图集 sourceRect 和 anchor 只从 manifest 读取；物件靠近点、摆放、动作高度和组装插槽只从 scene 读取。
+
+项目文件路径 = tuvis-world/05_handoff/v1/ + manifest.assets[id].path。发布文件路径 = public/world/v1/ + 同一 path。浏览器 URL = import.meta.env.BASE_URL + world/v1/ + 同一 path；例如背景 URL 为 /tuvis-website/world/v1/assets/scene/workshop-base.png。
 
 现有世界与中文资料用于初始内容。图片中的概念文字与人物名称，只有与正式设定一致时才进入网页文案。展示文字保持短、明确，并与图中实际内容相符。
 

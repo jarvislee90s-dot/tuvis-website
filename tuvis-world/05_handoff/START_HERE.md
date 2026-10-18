@@ -1,6 +1,6 @@
 # Tuvis World｜云端执行交接
 
-本包是现有 tuvis-website 仓库的资料与资源补充。请在仓库根目录解包，保留目录结构；现有网站代码是执行基础。
+本包是现有 tuvis-website 仓库的资料与资源补充。若上传完整项目，直接在项目根目录执行；若使用 ZIP，在已有仓库根目录解包并保留目录结构。现有网站代码是执行基础。
 
 阅读顺序：
 1. docs/superpowers/specs/2026-10-19-tuvis-world-website-requirements.md — 已批准需求。
@@ -11,8 +11,9 @@
 先执行：
 ~~~bash
 node tuvis-world/05_handoff/v1/tools/verify-pack.mjs
+node tuvis-world/05_handoff/v1/tools/audit-handoff.mjs
 ~~~
-预期输出PASS；随后打开tuvis-world/05_handoff/v1/qa/index.html或查看其中PNG。
+预期输出PASS；随后打开tuvis-world/05_handoff/v1/qa/index.html或查看其中JPEG预览图。
 
 执行要求：
 - 用户已选择由云端Agent实施；能识图即可，不要求生图/建模。
@@ -23,4 +24,4 @@ node tuvis-world/05_handoff/v1/tools/verify-pack.mjs
 - 资源验证通过不等于网页验收通过；运行测试、构建并记录实际桌面浏览器验证。
 - 发布由用户按既有v*流程触发；不要自行推送或打发布tag。
 
-两张额外参考图放在tuvis-world根与03_exploration，供需求中的图片链接使用。实际运行资源只以05_handoff/v1内的manifest与scene数据为准。
+两张额外参考图放在tuvis-world根与03_exploration，供需求中的图片链接使用。实际运行资源只以tuvis-world/05_handoff/v1/manifest.json与tuvis-world/05_handoff/v1/scene.json为准。所有文件/命令路径均相对项目根目录；文档Markdown跳转链接按所在文档解析。

@@ -1,6 +1,6 @@
 Tool: built-in image_gen
 Date: 2026-10-19 Asia/Shanghai
-Reference images: 03_exploration/workshop-isometric-direction-v1.png
+Reference images: tuvis-world/03_exploration/workshop-isometric-direction-v1.png
 Purpose: prepared image resource; no image generation is required by the cloud implementer.
 
 Create ONE transparent production FURNITURE ATLAS for the inventor workshop in reference. Exactly THREE equal-width invisible cells side by side, landscape3:2 around1536x1024. No labels, borders, grid, UI or background; exactly ONE standalone furniture object centered in EACH cell, entirely inside its cell with generous padding. Same orthographic elevated ISOMETRIC camera looking down40 degrees and same warm light direction as reference. Visible top surfaces, coherent axis directions. Bright premium animated-film 3D render, silver-white and graphite hardware, orange upholstery, small cyan accents, warm wood and greenery.

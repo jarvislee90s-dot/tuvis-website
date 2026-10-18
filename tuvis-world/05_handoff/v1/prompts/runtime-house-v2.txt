@@ -1,6 +1,6 @@
 Tool: built-in image_gen
 Date: 2026-10-19 Asia/Shanghai
-Reference images: 03_exploration/workshop-isometric-direction-v1.png
+Reference images: tuvis-world/03_exploration/workshop-isometric-direction-v1.png
 Purpose: prepared image resource; no image generation is required by the cloud implementer.
 
 Production background for Tuvis World 2.5D workshop, REVISED HOUSE SETTING. Preserve reference's approved warm bright premium 3D animation style, fixed elevated ISOMETRIC camera looking down40degrees, two-wall cutaway interior, silver/graphite/cyan tech, orange light and greenery. The workshop is ONE ROOM in Tuvis's larger HOME. It is a grounded architectural room, not a floating platform, rooftop suspended over a city, balcony hanging in space or a standalone dollhouse in dark void.

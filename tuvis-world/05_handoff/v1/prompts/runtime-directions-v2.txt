@@ -1,6 +1,6 @@
 Tool: built-in image_gen
 Date: 2026-10-19 Asia/Shanghai
-Reference images: 01_images/tuvis_hero_3d.png, 03_exploration/workshop-isometric-direction-v1.png
+Reference images: tuvis-world/01_images/tuvis_hero_3d.png, tuvis-world/03_exploration/workshop-isometric-direction-v1.png
 Purpose: prepared image resource; no image generation is required by the cloud implementer.
 
 ONE four-direction GAME SPRITE ATLAS for Tuvis, transparent square1536x1536 style canvas. Exactly 2 rows x 2 equal invisible cells. One complete full-body standing rabbit per cell, all in same scale, ample margin above ears and below feet; no overlap and nothing cropped. Empty transparent 40+pixel margin at each cell edge. No labels/grid/backdrop/shadows/halos/furniture.

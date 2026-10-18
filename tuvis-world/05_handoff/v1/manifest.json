@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.0.0",
+  "packVersion": "1.0.1",
   "assets": {
     "room": {
       "path": "assets/scene/workshop-base.png",
