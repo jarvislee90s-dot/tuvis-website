@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "generated": [
+    {
+      "asset": "room",
+      "prompt": "prompts/runtime-house-v2.txt"
+    },
+    {
+      "asset": "directions",
+      "prompt": "prompts/runtime-directions-v2.txt"
+    },
+    {
+      "asset": "actions",
+      "prompt": "prompts/runtime-actions-v2.txt"
+    },
+    {
+      "asset": "props",
+      "prompt": "prompts/runtime-props-v1.txt"
+    }
+  ],
+  "reused": [
+    {
+      "asset": "hero",
+      "source": "01_images/tuvis_hero_3d.png"
+    },
+    {
+      "asset": "city",
+      "source": "01_images/circuitown_scene_concept.png"
+    },
+    {
+      "asset": "workshop",
+      "source": "01_images/tuvis_workshop_concept.png"
+    },
+    {
+      "asset": "residents",
+      "source": "02_references/resident_lineup_exploration.png"
+    },
+    {
+      "asset": "family",
+      "source": "02_references/equipment_family_concept.png"
+    },
+    {
+      "asset": "storyPerfect",
+      "source": "01_images/story_cover_perfect_day.png"
+    },
+    {
+      "asset": "storyMissing",
+      "source": "01_images/story_cover_missing_parts.png"
+    },
+    {
+      "asset": "storyWeapon",
+      "source": "04_web_assets/characters/tuvis-display-v1.png",
+      "prompt": "prompts/reused-story-weapon.txt"
+    },
+    {
+      "asset": "gunBody",
+      "source": "04_web_assets/equipment/bug-buster-body-v1.png",
+      "prompt": "prompts/reused-gun-body.txt"
+    },
+    {
+      "asset": "gunEmitter",
+      "source": "04_web_assets/equipment/bug-buster-emitter-v1.png",
+      "prompt": "prompts/reused-gun-emitter.txt"
+    },
+    {
+      "asset": "gunSight",
+      "source": "04_web_assets/equipment/bug-buster-sight-v1.png",
+      "prompt": "prompts/reused-gun-sight.txt"
+    },
+    {
+      "asset": "gunCell",
+      "source": "04_web_assets/equipment/bug-buster-cell-v1.png",
+      "prompt": "prompts/reused-gun-cell.txt"
+    },
+    {
+      "asset": "gunComplete",
+      "source": "04_web_assets/equipment/bug-buster-complete-v1.png",
+      "prompt": "prompts/reused-gun-complete.txt"
+    }
+  ],
+  "notes": [
+    "Source paths are provenance relative to the original tuvis-world material folder, not runtime dependencies. Packaged manifest assets contain the actual files.",
+    "The original user-supplied concept art did not include every original generation prompt; no prompts are invented for those assets."
+  ]
+}

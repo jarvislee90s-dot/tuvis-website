@@ -2,7 +2,7 @@
 
 - 版本：v2.0
 - 日期：2026-10-19（Asia/Shanghai）
-- 状态：需求审阅稿
+- 状态：已批准；已纳入用户补充的住宅场景与扩展门要求
 - 项目目录：tuvis-website
 - 交付对象：电脑浏览器用户；在云端沙箱执行实现任务的 Agent。
 
@@ -84,7 +84,9 @@ flowchart LR
 
 视觉基准为[斜俯视工坊方向图](../../../tuvis-world/03_exploration/workshop-isometric-direction-v1.png)的镜头、画风与空间气质。运行素材由干净背景、独立角色、物件与前景遮挡层组成。
 
-房间采用固定斜俯视镜头；家具顶面、地面前后关系、角色脚底与投影保持同一透视。外围采用建筑剖面与城市环境延伸：可见相邻建筑、管线、植被、走廊或露台片段及远景。
+房间采用固定斜俯视镜头；家具顶面、地面前后关系、角色脚底与投影保持同一透视。外围采用住宅剖面与地面环境延伸：可见庭院步道、相邻住宅、管线、植被与远景。
+
+工坊是兔维斯家中的一个房间，建筑与周围地面、庭院和住宅结构相连。场景保留两处门/门洞，表现家中其他空间的存在，并作为后续场景扩展位置。本期点击门时展示去向说明，活动范围保持在工坊内。
 
 可见范围、可走范围、可交互范围分别定义。房间内的通行边界由墙体、栏杆、花槽、设备和地面结构表现，并与实际碰撞边界对齐。外围环境提供世界延伸感，角色沿房间内的合法通道活动。
 
@@ -117,6 +119,7 @@ flowchart LR
 | 咖啡机 | 持杯/喝咖啡的日常动作 |
 | 装备架 | 陈列成品、再次查看和展示 Bug Buster |
 | 书架/阅读角 | 打开与专题首页一致的故事简介 |
+| 通往家中其他区域的门 | 展示去向说明，保留后续场景连接数据 |
 
 世界观介绍可继续展开阅读；领取任务物件和日常探索保持顺畅。所有物件均有可到达的靠近点，热点名称在悬停或选中时可见。
 
@@ -215,18 +218,19 @@ public/world/     实际发布的图片与静态数据
 
 | 素材 | 使用位置 |
 |---|---|
-| 01_images/tuvis_hero_3d.png | 首屏、角色介绍 |
-| 01_images/circuitown_scene_concept.png | 首屏氛围、世界设定 |
-| 01_images/tuvis_workshop_concept.png | 工坊介绍和初始入口展示 |
-| 02_references/equipment_family_concept.png | 四装备图鉴 |
-| 02_references/resident_lineup_exploration.png | 居民类型图文 |
-| story_cover_perfect_day.png、story_cover_missing_parts.png | 前两张故事卡片 |
-| 04_web_assets/characters/tuvis-display-v1.png | 《最厉害的武器》卡片，以橙色 Bug Buster 持装备图配网页底色 |
-| 03_exploration/workshop-isometric-direction-v1.png | 工坊视觉基准和入口预览 |
-| 04_web_assets/equipment/ 中主体、三模块及完整图 | Bug Buster 组装特写 |
-| 专门准备的斜俯视背景、角色、遮挡层 | 工坊运行场景 |
+| assets/landing/hero.png | 首屏、角色介绍 |
+| assets/landing/city.png | 首屏氛围、世界设定 |
+| assets/landing/workshop-overview.png | 工坊图文介绍 |
+| assets/equipment/family.png | 四装备图鉴 |
+| assets/landing/residents.png | 居民类型图文 |
+| assets/landing/story-perfect-day.png、story-missing-parts.png | 前两张故事卡片 |
+| assets/landing/story-best-weapon.png | 《最厉害的武器》卡片，以橙色 Bug Buster 持装备图配网页底色 |
+| assets/scene/workshop-base.png | 落地住宅工坊底图与入口预览 |
+| assets/characters/tuvis-directions.png、tuvis-actions.png | 四向角色与日常姿态 |
+| assets/props/workshop-props.png | 独立家具与遮挡图层 |
+| assets/equipment/bug-buster-*.png | 主体、三模块与完整装备特写 |
 
-路径以素材资料目录 tuvis-world/ 为基准。原始素材用于引用与备份，实际发布资产集中管理在 public/world/ 或经 Vite 导入。
+路径以资源包 tuvis-world/05_handoff/v1/ 为基准，具体文件名和裁切由包内 manifest.json 确定。原始素材用于引用与备份，实际发布资产导入 public/world/v1/。
 
 现有世界与中文资料用于初始内容。图片中的概念文字与人物名称，只有与正式设定一致时才进入网页文案。展示文字保持短、明确，并与图中实际内容相符。
 

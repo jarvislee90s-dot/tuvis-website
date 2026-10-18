@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "title": "Tuvis World｜兔维斯世界",
+  "intro": "欢迎来到兔维斯的世界。这里有他的发明工坊、常用装备，以及一些刚刚开始发生的小故事。",
+  "heroAsset": "hero",
+  "cityAsset": "city",
+  "workshopPreviewAsset": "room",
+  "character": {
+    "name": "兔维斯",
+    "subtitle": "机灵的年轻发明家与问题解决者",
+    "intro": "兔维斯聪明、机灵、略带俏皮，喜欢研究工具、改进流程，也总能在麻烦出现时找到更聪明的办法。",
+    "tags": [
+      "聪明机灵",
+      "科技发明家",
+      "问题解决者"
+    ],
+    "features": [
+      {
+        "title": "HUD 护目镜",
+        "text": "帮助兔维斯观察和分析周围的信息。"
+      },
+      {
+        "title": "胡萝卜核心",
+        "text": "嵌入装甲的能源核心，也是兔维斯最鲜明的标志。"
+      },
+      {
+        "title": "工坊装甲",
+        "text": "兼顾灵活与防护，适合发明、维修和行动。"
+      }
+    ]
+  },
+  "equipment": [
+    {
+      "id": "diff-radar",
+      "name": "差异探测雷达",
+      "english": "Diff Radar",
+      "color": "#e84d4d",
+      "sourceRect": [
+        0,
+        0,
+        627,
+        627
+      ],
+      "asset": "family",
+      "description": "扫描、审查、发现异常并追踪线索。",
+      "analogy": "就像查看代码差异和审查修改，找出别人忽略的小细节。"
+    },
+    {
+      "id": "bug-buster",
+      "name": "Bug 清除脉冲炮",
+      "english": "Bug Buster",
+      "color": "#ff9d28",
+      "sourceRect": [
+        627,
+        0,
+        627,
+        627
+      ],
+      "asset": "family",
+      "description": "锁定、隔离并处理异常。看起来最有气势，但兔维斯仍会先想清楚问题。",
+      "analogy": "对应 Debug：找到问题，隔离错误，再让系统恢复正常。"
+    },
+    {
+      "id": "code-weaver",
+      "name": "代码编织终端",
+      "english": "Code Weaver",
+      "color": "#3298ff",
+      "sourceRect": [
+        0,
+        627,
+        627,
+        627
+      ],
+      "asset": "family",
+      "description": "编写控制逻辑、构建设计，是兔维斯最常用的日常工具。",
+      "analogy": "就像编码与构建，把想法组织成能够运行的结构。"
+    },
+    {
+      "id": "merge-prism",
+      "name": "代码融合棱镜",
+      "english": "Merge Prism",
+      "color": "#32c77b",
+      "sourceRect": [
+        627,
+        627,
+        627,
+        627
+      ],
+      "asset": "family",
+      "description": "连接、整合和修复分离的模块。",
+      "analogy": "就像合并修改与整合补丁，把各自有用的部分连接起来。"
+    }
+  ],
+  "world": [
+    {
+      "id": "city",
+      "title": "回路城",
+      "asset": "city",
+      "text": "一座明亮、热闹而充满奇思妙想的未来城市。不同的居民与发明在这里相遇，每一天都可能发生新的故事。"
+    },
+    {
+      "id": "workshop",
+      "title": "兔维斯的工坊",
+      "asset": "workshop",
+      "text": "这里是兔维斯家中的发明工作间。窗外连接着回路城，门后还有他的其他生活空间。"
+    },
+    {
+      "id": "residents",
+      "title": "回路城的居民",
+      "asset": "residents",
+      "text": "进化动物、智能机械生命与其他智慧居民共同生活在这里。不同的身体与专长，让这座城市拥有各式各样的生活。"
+    },
+    {
+      "id": "home",
+      "title": "工坊里的休息角",
+      "asset": "room",
+      "text": "发明也需要休息。坐一会儿，喝点东西，灵感有时会自己跑回来。"
+    }
+  ],
+  "doors": [
+    {
+      "id": "hall",
+      "title": "家中走廊",
+      "text": "门后通往兔维斯家中的走廊。今天先在工坊里逛逛，其他空间会在后续逐步开放。"
+    },
+    {
+      "id": "rooms",
+      "title": "家中其他房间",
+      "text": "工坊只是家中的一个房间。这扇门为后续的生活空间与新故事留了位置。"
+    }
+  ],
+  "stories": [
+    {
+      "id": "perfect-day",
+      "title": "完美的一天，差一点",
+      "asset": "storyPerfect",
+      "summary": "兔维斯试图用一整套自动化系统让今天变得完美无缺，却因为一个小小的基础错误，让工坊热闹得超出预期。",
+      "status": "故事简介"
+    },
+    {
+      "id": "missing-parts",
+      "title": "谁动了我的零件？",
+      "asset": "storyMissing",
+      "summary": "当工坊里的重要零件接连消失，兔维斯开始了一场意外温柔的追查。",
+      "status": "故事预告"
+    },
+    {
+      "id": "best-weapon",
+      "title": "最厉害的武器",
+      "asset": "storyWeapon",
+      "summary": "面对一台失控的大型清洁机器，兔维斯发现最强大的答案，未必来自最大的火力。",
+      "status": "故事预告"
+    }
+  ],
+  "quest": {
+    "title": "让 Bug Buster 重新上线",
+    "modules": [
+      {
+        "id": "sight",
+        "label": "瞄准模块",
+        "source": "工具箱"
+      },
+      {
+        "id": "cell",
+        "label": "能源匣",
+        "source": "居民海报附近的收纳盒"
+      },
+      {
+        "id": "emitter",
+        "label": "脉冲发射头",
+        "source": "窗边储物位置"
+      }
+    ],
+    "instructions": [
+      "找齐三个模块",
+      "在工作台修好能源匣接口",
+      "装配 Bug Buster",
+      "把成品放到装备架"
+    ]
+  },
+  "ui": {
+    "enter": "进入兔维斯工坊",
+    "back": "返回兔维斯世界",
+    "help": "操作说明",
+    "helpLines": [
+      "点击地面移动",
+      "点击物件，兔维斯会走近并互动"
+    ],
+    "assemblyHelp": "拖动零件到高亮插槽；也可以先点零件，再点插槽。",
+    "outside": "先在工坊里逛逛吧。",
+    "unreachable": "这里暂时过不去，换个位置试试。",
+    "repairNeeded": "先到工作台检查能源匣接口。",
+    "reset": "重玩主线",
+    "resetConfirm": "这会清除本地主线进度，重新开始组装。",
+    "languageNote": "世界内容当前提供中文。"
+  }
+}

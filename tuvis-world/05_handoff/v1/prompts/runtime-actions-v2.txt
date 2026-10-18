@@ -1,0 +1,16 @@
+Tool: built-in image_gen
+Date: 2026-10-19 Asia/Shanghai
+Reference images: 01_images/tuvis_hero_3d.png, 03_exploration/workshop-isometric-direction-v1.png, 03_exploration/bug-buster-closeup-v1.png
+Purpose: prepared image resource; no image generation is required by the cloud implementer.
+
+ONE transparent Tuvis ACTION ATLAS, landscape3:2 around1536x1024, 3 separate equal-width invisible cells side by side. ONE full-body rabbit per cell, no visible borders, no labels, no overlap. All poses viewed from the SAME elevated isometric camera looking DOWN40degrees as workshop ref2, with tops of head/shoulders visible. Whole ear tips and feet inside each cell, transparent safety margins.
+
+Same identity ref1: grey-white long-eared rabbit, one ear upright/one floppy, cyan HUD goggles, brown eyes, silver-white partial armor over graphite suit, green carrot-shaped FRONT chest core with TWO dark teal fixed leaves. Back armor has a small cyan round service panel, not a green chest core. NO fur collar. Same proportions, lighting and equipment across poses.
+
+CRITICAL ANATOMY: HEAD, NECK, CHEST, PELVIS, KNEES AND FEET must all follow the SAME facing direction in each pose. Neck straight and natural, NO head turned backward, NO head looking over shoulder, NO twisted torso. If a sprite faces away, show back of its head and goggle strap, not a front face on a back torso.
+
+LEFT cell: sitting on an INVISIBLE desk chair facing NORTHWEST/upper-left away from camera, as if looking toward the left-wall workbench. Show rear-left three-quarter of head AND back armor; head faces same upper-left as chest and bent knees. Hands rest naturally on thighs. No chair drawn. Do not rotate head back toward camera; face mostly hidden is correct.
+MIDDLE cell: standing facing SOUTHWEST/lower-left, BOTH nose and chest toward lower-left, holding a plain white coffee mug near mouth in two hands. Natural calm expression, full ears and feet.
+RIGHT cell: standing facing SOUTHEAST/lower-right, BOTH nose/chest/pelvis toward lower-right, proudly presenting short chunky orange Bug Buster from ref3 across body, not firing; broad hexagonal orange emitter visible. Keep device and rabbit inside same right cell.
+
+No ground, cast shadows, halos, fog, backdrop, stool, chair, furniture or other characters. Truly transparent alpha between cutouts. This is usable game sprite art, not front-facing poster art.

@@ -1,0 +1,287 @@
+[
+  {
+    "path": "assets/characters/tuvis-actions.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      72,
+      36,
+      1496,
+      984
+    ]
+  },
+  {
+    "path": "assets/characters/tuvis-directions.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ],
+    "bounds": [
+      225,
+      14,
+      1030,
+      1228
+    ]
+  },
+  {
+    "path": "assets/equipment/bug-buster-body.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      323,
+      95,
+      1309,
+      991
+    ]
+  },
+  {
+    "path": "assets/equipment/bug-buster-cell.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      224,
+      136,
+      1332,
+      863
+    ]
+  },
+  {
+    "path": "assets/equipment/bug-buster-complete.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      133,
+      56,
+      1444,
+      982
+    ]
+  },
+  {
+    "path": "assets/equipment/bug-buster-emitter.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      75,
+      29,
+      1479,
+      968
+    ]
+  },
+  {
+    "path": "assets/equipment/bug-buster-sight.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      104,
+      149,
+      1452,
+      850
+    ]
+  },
+  {
+    "path": "assets/equipment/family.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1254,
+      1254
+    ]
+  },
+  {
+    "path": "assets/landing/city.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1672,
+      941
+    ]
+  },
+  {
+    "path": "assets/landing/hero.png",
+    "size": [
+      1536,
+      1536
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      255
+    ],
+    "bounds": [
+      491,
+      153,
+      1044,
+      1385
+    ]
+  },
+  {
+    "path": "assets/landing/residents.png",
+    "size": [
+      1448,
+      1086
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1448,
+      1086
+    ]
+  },
+  {
+    "path": "assets/landing/story-best-weapon.png",
+    "size": [
+      1024,
+      1536
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      130,
+      51,
+      893,
+      1485
+    ]
+  },
+  {
+    "path": "assets/landing/story-missing-parts.png",
+    "size": [
+      1122,
+      1402
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1122,
+      1402
+    ]
+  },
+  {
+    "path": "assets/landing/story-perfect-day.png",
+    "size": [
+      1122,
+      1402
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1122,
+      1402
+    ]
+  },
+  {
+    "path": "assets/landing/workshop-overview.png",
+    "size": [
+      1672,
+      941
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1672,
+      941
+    ]
+  },
+  {
+    "path": "assets/props/workshop-props.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGBA",
+    "alpha": [
+      0,
+      254
+    ],
+    "bounds": [
+      47,
+      200,
+      1502,
+      797
+    ]
+  },
+  {
+    "path": "assets/scene/workshop-base.png",
+    "size": [
+      1536,
+      1024
+    ],
+    "mode": "RGB",
+    "alpha": null,
+    "bounds": [
+      0,
+      0,
+      1536,
+      1024
+    ]
+  }
+]
