@@ -330,5 +330,13 @@
   "demo.fp.render": "Rendered",
   "demo.fp.min": "min ago",
   "demo.pill.question": "New question",
-  "demo.pill.multi": "Multi-question"
+  "demo.pill.multi": "Multi-question",
+  "nav.world": "Tuvis World",
+  "world.close": "Close",
+  "world.contentLanguageNote": "World content is currently provided in Chinese.",
+  "world.loading": "Loading Tuvis World…",
+  "world.loadError": "Failed to load content.",
+  "world.retry": "Retry",
+  "world.back": "Back to Tuvis World",
+  "world.workshopLoading": "Preparing the workshop…"
 }

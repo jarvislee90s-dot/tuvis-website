@@ -1,0 +1,942 @@
+{
+  "schemaVersion": 1,
+  "id": "tuvis-workshop",
+  "size": [
+    1536,
+    1024
+  ],
+  "background": "room",
+  "walkable": [
+    [
+      390,
+      645
+    ],
+    [
+      580,
+      550
+    ],
+    [
+      650,
+      440
+    ],
+    [
+      780,
+      465
+    ],
+    [
+      980,
+      530
+    ],
+    [
+      1060,
+      565
+    ],
+    [
+      1120,
+      555
+    ],
+    [
+      1320,
+      660
+    ],
+    [
+      1280,
+      715
+    ],
+    [
+      1000,
+      790
+    ],
+    [
+      780,
+      805
+    ],
+    [
+      510,
+      720
+    ]
+  ],
+  "obstacles": [
+    [
+      [
+        473,
+        614
+      ],
+      [
+        520,
+        590
+      ],
+      [
+        567,
+        614
+      ],
+      [
+        520,
+        638
+      ]
+    ],
+    [
+      [
+        995,
+        714
+      ],
+      [
+        1070,
+        677
+      ],
+      [
+        1145,
+        714
+      ],
+      [
+        1070,
+        751
+      ]
+    ],
+    [
+      [
+        802,
+        738
+      ],
+      [
+        855,
+        713
+      ],
+      [
+        908,
+        738
+      ],
+      [
+        855,
+        763
+      ]
+    ]
+  ],
+  "footRadius": 12,
+  "speed": 190,
+  "spawn": [
+    790,
+    630
+  ],
+  "actorHeight": 190,
+  "nav": {
+    "nodes": {
+      "spawn": [
+        790,
+        630
+      ],
+      "center": [
+        800,
+        680
+      ],
+      "west": [
+        610,
+        625
+      ],
+      "toolbox": [
+        415,
+        650
+      ],
+      "workbench": [
+        600,
+        570
+      ],
+      "coffee": [
+        750,
+        490
+      ],
+      "posters": [
+        920,
+        550
+      ],
+      "books": [
+        925,
+        565
+      ],
+      "window": [
+        650,
+        530
+      ],
+      "rack": [
+        1190,
+        650
+      ],
+      "doorHall": [
+        1080,
+        585
+      ],
+      "doorSide": [
+        1280,
+        675
+      ],
+      "chair": [
+        480,
+        680
+      ],
+      "lounge": [
+        1180,
+        710
+      ],
+      "table": [
+        870,
+        785
+      ],
+      "rearPass": [
+        1030,
+        625
+      ],
+      "frontPass": [
+        955,
+        765
+      ],
+      "leftPass": [
+        650,
+        720
+      ]
+    },
+    "edges": [
+      [
+        "spawn",
+        "center"
+      ],
+      [
+        "spawn",
+        "west"
+      ],
+      [
+        "spawn",
+        "workbench"
+      ],
+      [
+        "spawn",
+        "coffee"
+      ],
+      [
+        "spawn",
+        "posters"
+      ],
+      [
+        "spawn",
+        "books"
+      ],
+      [
+        "spawn",
+        "window"
+      ],
+      [
+        "spawn",
+        "rack"
+      ],
+      [
+        "spawn",
+        "doorHall"
+      ],
+      [
+        "spawn",
+        "doorSide"
+      ],
+      [
+        "spawn",
+        "chair"
+      ],
+      [
+        "spawn",
+        "rearPass"
+      ],
+      [
+        "spawn",
+        "leftPass"
+      ],
+      [
+        "center",
+        "west"
+      ],
+      [
+        "center",
+        "toolbox"
+      ],
+      [
+        "center",
+        "workbench"
+      ],
+      [
+        "center",
+        "coffee"
+      ],
+      [
+        "center",
+        "posters"
+      ],
+      [
+        "center",
+        "books"
+      ],
+      [
+        "center",
+        "window"
+      ],
+      [
+        "center",
+        "rack"
+      ],
+      [
+        "center",
+        "doorHall"
+      ],
+      [
+        "center",
+        "chair"
+      ],
+      [
+        "center",
+        "rearPass"
+      ],
+      [
+        "center",
+        "leftPass"
+      ],
+      [
+        "west",
+        "workbench"
+      ],
+      [
+        "west",
+        "coffee"
+      ],
+      [
+        "west",
+        "posters"
+      ],
+      [
+        "west",
+        "books"
+      ],
+      [
+        "west",
+        "window"
+      ],
+      [
+        "west",
+        "rack"
+      ],
+      [
+        "west",
+        "doorHall"
+      ],
+      [
+        "west",
+        "doorSide"
+      ],
+      [
+        "west",
+        "chair"
+      ],
+      [
+        "west",
+        "rearPass"
+      ],
+      [
+        "west",
+        "leftPass"
+      ],
+      [
+        "toolbox",
+        "rack"
+      ],
+      [
+        "toolbox",
+        "chair"
+      ],
+      [
+        "toolbox",
+        "table"
+      ],
+      [
+        "toolbox",
+        "leftPass"
+      ],
+      [
+        "workbench",
+        "coffee"
+      ],
+      [
+        "workbench",
+        "posters"
+      ],
+      [
+        "workbench",
+        "books"
+      ],
+      [
+        "workbench",
+        "window"
+      ],
+      [
+        "workbench",
+        "rack"
+      ],
+      [
+        "workbench",
+        "doorHall"
+      ],
+      [
+        "workbench",
+        "doorSide"
+      ],
+      [
+        "workbench",
+        "rearPass"
+      ],
+      [
+        "workbench",
+        "leftPass"
+      ],
+      [
+        "coffee",
+        "posters"
+      ],
+      [
+        "coffee",
+        "books"
+      ],
+      [
+        "coffee",
+        "window"
+      ],
+      [
+        "coffee",
+        "rack"
+      ],
+      [
+        "coffee",
+        "doorHall"
+      ],
+      [
+        "coffee",
+        "doorSide"
+      ],
+      [
+        "coffee",
+        "lounge"
+      ],
+      [
+        "coffee",
+        "rearPass"
+      ],
+      [
+        "coffee",
+        "frontPass"
+      ],
+      [
+        "coffee",
+        "leftPass"
+      ],
+      [
+        "posters",
+        "books"
+      ],
+      [
+        "posters",
+        "window"
+      ],
+      [
+        "posters",
+        "rack"
+      ],
+      [
+        "posters",
+        "doorHall"
+      ],
+      [
+        "posters",
+        "doorSide"
+      ],
+      [
+        "posters",
+        "chair"
+      ],
+      [
+        "posters",
+        "lounge"
+      ],
+      [
+        "posters",
+        "rearPass"
+      ],
+      [
+        "posters",
+        "frontPass"
+      ],
+      [
+        "posters",
+        "leftPass"
+      ],
+      [
+        "books",
+        "window"
+      ],
+      [
+        "books",
+        "rack"
+      ],
+      [
+        "books",
+        "doorHall"
+      ],
+      [
+        "books",
+        "doorSide"
+      ],
+      [
+        "books",
+        "chair"
+      ],
+      [
+        "books",
+        "lounge"
+      ],
+      [
+        "books",
+        "rearPass"
+      ],
+      [
+        "books",
+        "frontPass"
+      ],
+      [
+        "books",
+        "leftPass"
+      ],
+      [
+        "window",
+        "rack"
+      ],
+      [
+        "window",
+        "doorHall"
+      ],
+      [
+        "window",
+        "doorSide"
+      ],
+      [
+        "window",
+        "rearPass"
+      ],
+      [
+        "window",
+        "leftPass"
+      ],
+      [
+        "rack",
+        "doorHall"
+      ],
+      [
+        "rack",
+        "doorSide"
+      ],
+      [
+        "rack",
+        "chair"
+      ],
+      [
+        "rack",
+        "lounge"
+      ],
+      [
+        "rack",
+        "rearPass"
+      ],
+      [
+        "doorHall",
+        "doorSide"
+      ],
+      [
+        "doorHall",
+        "chair"
+      ],
+      [
+        "doorHall",
+        "lounge"
+      ],
+      [
+        "doorHall",
+        "rearPass"
+      ],
+      [
+        "doorHall",
+        "leftPass"
+      ],
+      [
+        "doorSide",
+        "lounge"
+      ],
+      [
+        "doorSide",
+        "rearPass"
+      ],
+      [
+        "chair",
+        "table"
+      ],
+      [
+        "chair",
+        "rearPass"
+      ],
+      [
+        "chair",
+        "leftPass"
+      ],
+      [
+        "lounge",
+        "rearPass"
+      ],
+      [
+        "table",
+        "frontPass"
+      ],
+      [
+        "table",
+        "leftPass"
+      ],
+      [
+        "rearPass",
+        "leftPass"
+      ]
+    ]
+  },
+  "props": [
+    {
+      "id": "desk-chair",
+      "frame": "deskChair",
+      "position": [
+        520,
+        625
+      ],
+      "width": 145,
+      "depth": 625
+    },
+    {
+      "id": "lounge-chair",
+      "frame": "loungeChair",
+      "position": [
+        1080,
+        745
+      ],
+      "width": 205,
+      "depth": 745
+    },
+    {
+      "id": "low-table",
+      "frame": "lowTable",
+      "position": [
+        860,
+        750
+      ],
+      "width": 155,
+      "depth": 750
+    }
+  ],
+  "hotspots": [
+    {
+      "id": "workbench",
+      "label": "工作台",
+      "rect": [
+        170,
+        343,
+        430,
+        195
+      ],
+      "approach": [
+        600,
+        570
+      ],
+      "kind": "workbench"
+    },
+    {
+      "id": "toolbox",
+      "label": "工具箱",
+      "rect": [
+        218,
+        544,
+        144,
+        94
+      ],
+      "approach": [
+        415,
+        650
+      ],
+      "kind": "equipment",
+      "moduleId": "sight"
+    },
+    {
+      "id": "window",
+      "label": "回路城",
+      "rect": [
+        180,
+        166,
+        409,
+        175
+      ],
+      "approach": [
+        650,
+        530
+      ],
+      "kind": "world",
+      "contentId": "city",
+      "moduleId": "emitter"
+    },
+    {
+      "id": "posters",
+      "label": "居民海报",
+      "rect": [
+        794,
+        94,
+        219,
+        229
+      ],
+      "approach": [
+        920,
+        550
+      ],
+      "kind": "world",
+      "contentId": "residents",
+      "moduleId": "cell"
+    },
+    {
+      "id": "coffee",
+      "label": "咖啡机",
+      "rect": [
+        687,
+        220,
+        120,
+        100
+      ],
+      "approach": [
+        750,
+        490
+      ],
+      "kind": "coffee"
+    },
+    {
+      "id": "books",
+      "label": "故事书架",
+      "rect": [
+        846,
+        333,
+        151,
+        145
+      ],
+      "approach": [
+        925,
+        565
+      ],
+      "kind": "stories"
+    },
+    {
+      "id": "rack",
+      "label": "装备架",
+      "rect": [
+        1154,
+        333,
+        143,
+        256
+      ],
+      "approach": [
+        1190,
+        650
+      ],
+      "kind": "rack"
+    },
+    {
+      "id": "chair",
+      "label": "坐一会儿",
+      "rect": [
+        443,
+        422,
+        155,
+        210
+      ],
+      "approach": [
+        480,
+        680
+      ],
+      "kind": "sit"
+    },
+    {
+      "id": "lounge",
+      "label": "休息角",
+      "rect": [
+        973,
+        551,
+        215,
+        195
+      ],
+      "approach": [
+        1180,
+        710
+      ],
+      "kind": "world",
+      "contentId": "home"
+    },
+    {
+      "id": "table",
+      "label": "休息桌",
+      "rect": [
+        788,
+        599,
+        154,
+        159
+      ],
+      "approach": [
+        870,
+        785
+      ],
+      "kind": "coffee"
+    },
+    {
+      "id": "door-hall",
+      "label": "家中走廊",
+      "rect": [
+        1032,
+        208,
+        116,
+        312
+      ],
+      "approach": [
+        1080,
+        585
+      ],
+      "kind": "door",
+      "contentId": "hall",
+      "nextSceneId": "home-hall"
+    },
+    {
+      "id": "door-side",
+      "label": "家中其他房间",
+      "rect": [
+        1340,
+        348,
+        132,
+        299
+      ],
+      "approach": [
+        1280,
+        675
+      ],
+      "kind": "door",
+      "contentId": "rooms",
+      "nextSceneId": "home-rooms"
+    }
+  ],
+  "actions": {
+    "sit": {
+      "frame": "sit",
+      "seatPosition": [
+        510,
+        520
+      ],
+      "seatAnchorSource": [
+        336,
+        716
+      ],
+      "height": 190,
+      "depth": 626
+    },
+    "coffee": {
+      "frame": "coffee",
+      "height": 200
+    },
+    "display": {
+      "frame": "display",
+      "height": 200
+    }
+  },
+  "rackDisplay": {
+    "frame": "gunComplete",
+    "rect": [
+      1175,
+      360,
+      108,
+      77
+    ]
+  },
+  "assembly": {
+    "size": [
+      1100,
+      720
+    ],
+    "body": {
+      "frame": "gunBody",
+      "rect": [
+        440,
+        180,
+        520,
+        473
+      ]
+    },
+    "modules": [
+      {
+        "id": "emitter",
+        "frame": "gunEmitter",
+        "rect": [
+          70,
+          185,
+          450,
+          301
+        ],
+        "socket": [
+          500,
+          345
+        ],
+        "snapRadius": 65
+      },
+      {
+        "id": "sight",
+        "frame": "gunSight",
+        "rect": [
+          630,
+          90,
+          240,
+          125
+        ],
+        "socket": [
+          730,
+          185
+        ],
+        "snapRadius": 55
+      },
+      {
+        "id": "cell",
+        "frame": "gunCell",
+        "rect": [
+          861,
+          445,
+          160,
+          105
+        ],
+        "socket": [
+          895,
+          500
+        ],
+        "snapRadius": 55
+      }
+    ],
+    "complete": {
+      "frame": "gunComplete",
+      "rect": [
+        120,
+        65,
+        900,
+        636
+      ]
+    }
+  },
+  "layoutNotes": [
+    "Scene-pixel coordinates with supplied sourceRect and anchor; atlas frames are not assumed equal.",
+    "Door nextSceneId is reserved data; current click shows in-home destination information.",
+    "Prepared layout requires visual QA during implementation; it is not implemented gameplay.",
+    "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset.",
+    "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point."
+  ]
+}

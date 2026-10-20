@@ -11,6 +11,7 @@ export function TopBar() {
   const zh = lang ?? "zh";
   const links = [
     { to: `/${zh}`, key: "nav.home" },
+    { to: `/${zh}/world`, key: "nav.world" },
     { to: `/${zh}#product`, key: "nav.product" },
     { to: `/${zh}#features`, key: "nav.features" },
     { to: "demo", key: "nav.demo" },

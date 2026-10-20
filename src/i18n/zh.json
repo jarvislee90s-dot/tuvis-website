@@ -330,5 +330,13 @@
   "demo.fp.render": "渲染",
   "demo.fp.min": "分钟前",
   "demo.pill.question": "新问题",
-  "demo.pill.multi": "多选题"
+  "demo.pill.multi": "多选题",
+  "nav.world": "兔维斯世界",
+  "world.close": "关闭",
+  "world.contentLanguageNote": "世界内容当前提供中文。",
+  "world.loading": "正在加载兔维斯世界…",
+  "world.loadError": "内容加载失败。",
+  "world.retry": "重试",
+  "world.back": "返回兔维斯世界",
+  "world.workshopLoading": "正在准备工作坊…"
 }

@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "packVersion": "1.0.1",
+  "assets": {
+    "room": {
+      "path": "assets/scene/workshop-base.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": false,
+      "sha256": "fc89405024da2d57672c96516b7789d9c25c630aa17aa4f321c96ab27d825533"
+    },
+    "directions": {
+      "path": "assets/characters/tuvis-directions.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "sha256": "64d41fa29b700412afb5aaf7324e2cd9f4a005b6da4f3cbb41104b0502e58903"
+    },
+    "actions": {
+      "path": "assets/characters/tuvis-actions.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "b02e2fe26a75cc37fbe2c044a2d59cfa27f1f65ed85ee63106e5e23a775356ac"
+    },
+    "props": {
+      "path": "assets/props/workshop-props.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "075ae2b13f694438164ace68b4da5dca972e7e05c32c0c567868c872c46fd16b"
+    },
+    "hero": {
+      "path": "assets/landing/hero.png",
+      "width": 1536,
+      "height": 1536,
+      "alpha": true,
+      "sha256": "ce50326038dbdf9367aa23bec68bc511147adbe6401c9bb5a540376f891ffcae"
+    },
+    "city": {
+      "path": "assets/landing/city.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "081449caf8d64d8139965473ccae2c6e680f9240f7f20f2d867170ac39e07f03"
+    },
+    "workshop": {
+      "path": "assets/landing/workshop-overview.png",
+      "width": 1672,
+      "height": 941,
+      "alpha": false,
+      "sha256": "cc5cafb57acbd1827dc5fc78416fd332bad3e9902e684038dc708cefd5eb0868"
+    },
+    "residents": {
+      "path": "assets/landing/residents.png",
+      "width": 1448,
+      "height": 1086,
+      "alpha": false,
+      "sha256": "a7fedec7ca32e72d05a3fc787562c517bd9fa6759d2494335871c52c74d4c40f"
+    },
+    "family": {
+      "path": "assets/equipment/family.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": false,
+      "sha256": "657dbaf54cf2dc252a0559691e6f8ae027a943f496512a3316d5029b91bf9e41"
+    },
+    "storyPerfect": {
+      "path": "assets/landing/story-perfect-day.png",
+      "width": 1122,
+      "height": 1402,
+      "alpha": false,
+      "sha256": "599c1674b62500eca26708fa5456616d0616f850918e1c9e8c4f6d894617b3dc"
+    },
+    "storyMissing": {
+      "path": "assets/landing/story-missing-parts.png",
+      "width": 1122,
+      "height": 1402,
+      "alpha": false,
+      "sha256": "86b2014221d2cfd9e45f0036bd5a2d4514ba11329f4a9541f59a9b7f8eb9c6e7"
+    },
+    "storyWeapon": {
+      "path": "assets/landing/story-best-weapon.png",
+      "width": 1024,
+      "height": 1536,
+      "alpha": true,
+      "sha256": "382d74dac07954f32c471cbffb1df3baba2203b9134b15ebbb7a5a84ed122010"
+    },
+    "gunBody": {
+      "path": "assets/equipment/bug-buster-body.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "035119166d17be6794dd51b6a301995d9a791eb198618db62be2d0f155d1232e"
+    },
+    "gunEmitter": {
+      "path": "assets/equipment/bug-buster-emitter.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "79c894e135819e6d7ebff73fac134047e4581f6a1ee77a0884e5ad218fe73ae5"
+    },
+    "gunSight": {
+      "path": "assets/equipment/bug-buster-sight.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "66e9220f4b709046cc595a8ebfe48135b625e5efdfa4fc55fec80e36f6cc26e0"
+    },
+    "gunCell": {
+      "path": "assets/equipment/bug-buster-cell.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "06b0cbb2d433836dc51a772bf70b316ff0ab0104627ab0a6edc160233e69c444"
+    },
+    "gunComplete": {
+      "path": "assets/equipment/bug-buster-complete.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "d19e1882c48ccd3ddf2f9b586d239cf51c028e6519763bc70aed50ba52348fe5"
+    }
+  },
+  "frames": {
+    "nw": {
+      "asset": "directions",
+      "sourceRect": [
+        224,
+        4,
+        297,
+        648
+      ],
+      "anchor": [
+        0.4006734006734007,
+        0.9876543209876543
+      ]
+    },
+    "ne": {
+      "asset": "directions",
+      "sourceRect": [
+        736,
+        15,
+        302,
+        637
+      ],
+      "anchor": [
+        0.5927152317880795,
+        0.989010989010989
+      ]
+    },
+    "sw": {
+      "asset": "directions",
+      "sourceRect": [
+        215,
+        652,
+        289,
+        586
+      ],
+      "anchor": [
+        0.698961937716263,
+        0.9829351535836177
+      ]
+    },
+    "se": {
+      "asset": "directions",
+      "sourceRect": [
+        757,
+        652,
+        283,
+        586
+      ],
+      "anchor": [
+        0.3286219081272085,
+        0.9829351535836177
+      ]
+    },
+    "sit": {
+      "asset": "actions",
+      "sourceRect": [
+        62,
+        93,
+        422,
+        797
+      ],
+      "anchor": [
+        0.35545023696682465,
+        0.9874529485570891
+      ]
+    },
+    "coffee": {
+      "asset": "actions",
+      "sourceRect": [
+        567,
+        26,
+        396,
+        968
+      ],
+      "anchor": [
+        0.5833333333333334,
+        0.9896694214876033
+      ]
+    },
+    "display": {
+      "asset": "actions",
+      "sourceRect": [
+        1033,
+        44,
+        473,
+        945
+      ],
+      "anchor": [
+        0.5465116279069767,
+        0.9894179894179894
+      ]
+    },
+    "deskChair": {
+      "asset": "props",
+      "sourceRect": [
+        37,
+        236,
+        413,
+        571
+      ],
+      "anchor": [
+        0.5024213075060533,
+        0.9824868651488616
+      ]
+    },
+    "loungeChair": {
+      "asset": "props",
+      "sourceRect": [
+        450,
+        190,
+        610,
+        613
+      ],
+      "anchor": [
+        0.5204918032786885,
+        0.9836867862969005
+      ]
+    },
+    "lowTable": {
+      "asset": "props",
+      "sourceRect": [
+        1082,
+        274,
+        430,
+        496
+      ],
+      "anchor": [
+        0.4197674418604651,
+        0.9798387096774194
+      ]
+    },
+    "gunBody": {
+      "asset": "gunBody",
+      "sourceRect": [
+        313,
+        85,
+        1006,
+        916
+      ],
+      "anchor": [
+        0.4671968190854871,
+        0.9890829694323144
+      ]
+    },
+    "gunEmitter": {
+      "asset": "gunEmitter",
+      "sourceRect": [
+        65,
+        19,
+        1424,
+        959
+      ],
+      "anchor": [
+        0.2889747191011236,
+        0.9895724713242962
+      ]
+    },
+    "gunSight": {
+      "asset": "gunSight",
+      "sourceRect": [
+        94,
+        139,
+        1368,
+        721
+      ],
+      "anchor": [
+        0.4766081871345029,
+        0.986130374479889
+      ]
+    },
+    "gunCell": {
+      "asset": "gunCell",
+      "sourceRect": [
+        214,
+        126,
+        1128,
+        747
+      ],
+      "anchor": [
+        0.5057624113475178,
+        0.9866131191432396
+      ]
+    },
+    "gunComplete": {
+      "asset": "gunComplete",
+      "sourceRect": [
+        123,
+        46,
+        1331,
+        946
+      ],
+      "anchor": [
+        0.6577761081893313,
+        0.9894291754756871
+      ]
+    }
+  },
+  "coreAssets": [
+    "room",
+    "directions",
+    "actions",
+    "props"
+  ],
+  "contentPath": "content/world.zh.json",
+  "scenePath": "scene.json",
+  "notes": [
+    "All sprite frames are static poses, not walking frame animations.",
+    "Use sourceRect crop and anchor exactly; do not divide atlases into assumed equal cells.",
+    "All cloud-required pictures are included; no image generation or 3D modeling step is needed."
+  ]
+}
