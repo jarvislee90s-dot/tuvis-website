@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useStore, type StoreApi } from "zustand";
 import { loadWorldData, preloadCoreAssets } from "@/world/assets/loadWorldData";
+import { isMusicMuted, setMusicMuted, startWorkshopMusic, stopWorkshopMusic } from "@/world/audio/workshopAudio";
 import { INITIAL_QUEST } from "@/world/quest/quest";
 import { readQuest, writeQuest } from "@/world/quest/persistence";
 import { createRuntimeStore, RuntimeStoreContext, type RuntimeState } from "@/world/scene/runtimeStore";
@@ -58,6 +59,18 @@ export function WorkshopRuntime({
   const helpSeen = useStore(store, (state) => state.quest.helpSeen);
   const [confirmReset, setConfirmReset] = useState(false);
   const resetCancelRef = useRef<HTMLButtonElement>(null);
+  const [musicMuted, setMusicMutedState] = useState(isMusicMuted);
+
+  useEffect(() => {
+    startWorkshopMusic();
+    return () => stopWorkshopMusic();
+  }, []);
+
+  const toggleMusic = () => {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    setMusicMutedState(next);
+  };
 
   useEffect(() => {
     if (!confirmReset) return;
@@ -111,6 +124,14 @@ export function WorkshopRuntime({
             <h1 className="world-h1">{bundle.content.quest.title}</h1>
           </div>
           <div className="world-workshop-tools">
+            <button
+              type="button"
+              className="world-btn world-btn-small"
+              aria-pressed={!musicMuted}
+              onClick={toggleMusic}
+            >
+              {musicMuted ? t("world.musicOff") : t("world.musicOn")}
+            </button>
             <button
               type="button"
               className="world-btn world-btn-small"

@@ -27,6 +27,7 @@
 | 视口 / DPR | 1280×800、1600×900，DPR 1（无真实系统缩放） |
 | 自动化脚本 | `scripts/qa-cdp.mjs`（只读四路由探针）、`scripts/qa-world-interactions.mjs`（真实鼠标交互） |
 | 截图 | `docs/qa/screenshots/`（`Page.captureScreenshot`） |
+| 背景音乐 | Sappheiros – Universe（CC BY 3.0，经 BreakingCopyright）；工坊右上角「音乐：开/关」，默认开启、循环播放；来源与署名见 `public/world/audio/README.md` |
 
 复验命令：
 
@@ -188,6 +189,7 @@ PASS rack: display pose — "display"
 10. **刷新与重玩**：完成后刷新，确认装备架成品与任务状态恢复；“重玩主线”→取消不改变进度，确认后清主线且只清本功能存档。
 11. **缩放**：在 1280 与 1600 宽度、以及浏览器运行中调整窗口后点击同一场景点，角色落点一致（自动化已覆盖两视口，人工复核运行中缩放）。
 12. **加载失败**：断网或拦截核心图，确认错误提示与重试；核心图未就绪时不应出现可玩场景。
+13. **背景音乐**：进入工坊后音乐自动循环播放；点击「音乐：开/关」切换，刷新后状态保持；帮助面板内可见音乐署名（Sappheiros – Universe，CC BY 3.0）。
 
 ## 8. 决策 / 偏差
 

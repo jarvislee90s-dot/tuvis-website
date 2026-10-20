@@ -395,5 +395,8 @@
   "world.assemblySocket": "插槽",
   "world.rackNeedModules": "先找齐三个模块。",
   "world.rackNeedAssembly": "先在工作台完成组装。",
-  "world.rackPlaced": "Bug Buster 已陈列在装备架上。"
+  "world.rackPlaced": "Bug Buster 已陈列在装备架上。",
+  "world.musicOn": "音乐：开",
+  "world.musicOff": "音乐：关",
+  "world.musicCredit": "背景音乐：Sappheiros – Universe（BreakingCopyright）"
 }

@@ -19,6 +19,7 @@
 | C5 收口 | 验收记录、截图索引、README、偏差记录、PR 说明、全仓命名/沙箱路径清理 |
 | C6 终验 | 英文界面剩余任务栏动作/工作台任务说明/标题/CTA/重玩对话框/组装帮助迁入 i18n；只读探针补 CTA、hero tag、H2、返回链接与重玩按钮断言；QA 截图改为面板关闭、角色到达、完成文案出现后捕获；取消探针按预计到达时间轮询 |
 | 本地启停 | `start-dev.command` / `stop-dev.command` 双击启停；`scripts/dev-start.sh` / `dev-stop.sh` 命令行等价；自动打开 `/zh/world`，PID/日志写 `.dev-server.pid` / `.dev-server.log` |
+| 背景音乐 | 工坊背景音乐（Sappheiros – Universe，CC BY 3.0，经 BreakingCopyright）+ 右上角开关 + 帮助面板署名；静音状态持久化 |
 
 ## 行为承诺
 

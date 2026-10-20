@@ -282,7 +282,10 @@ export const DOM_PROBE = `(() => {
     helpBanner: q(".world-help-banner").length,
     questBar: q(".world-questbar").length,
     questBarLabel: document.querySelector(".world-questbar")?.getAttribute("aria-label") ?? null,
-    helpButton: q(".world-workshop-tools button")[0]?.textContent.trim() ?? null,
+    helpButton: q(".world-workshop-tools button").map((node) => node.textContent.trim())
+      .find((t) => t === "Help" || t === "操作说明") ?? null,
+    musicButton: q(".world-workshop-tools button").map((node) => node.textContent.trim())
+      .find((t) => t === "Music: On" || t === "音乐：开") ?? null,
     helpBannerText: q(".world-help-banner")[0]?.innerText.replace(/\\s+/g, " ").trim() ?? null,
     gotItButton: Array.from(document.querySelectorAll(".world-help-banner button")).map((node) =>
       node.textContent.trim(),
@@ -348,6 +351,7 @@ export function checksForRoute(route, probe, failures, externalRequests = []) {
     if (route.lang === "en") {
       expect("English language note", probe.languageNote.length === 1, probe.languageNote);
       expect("English quest bar label", probe.questBarLabel === "Quest progress", probe.questBarLabel);
+      expect("English music button", probe.musicButton === "Music: On", probe.musicButton);
       expect("English help button", probe.helpButton === "Help", probe.helpButton);
       expect("English back link", Boolean(probe.backLink?.includes("Back to Tuvis World")), probe.backLink);
       expect("English replay button", probe.toolButtons.includes("Replay story"), probe.toolButtons);
@@ -363,6 +367,7 @@ export function checksForRoute(route, probe, failures, externalRequests = []) {
     } else {
       expect("no language note on zh", probe.languageNote.length === 0, probe.languageNote);
       expect("Chinese quest bar label", probe.questBarLabel === "任务进度", probe.questBarLabel);
+      expect("Chinese music button", probe.musicButton === "音乐：开", probe.musicButton);
       expect("Chinese help button", probe.helpButton === "操作说明", probe.helpButton);
       expect(
         "Chinese help banner",

@@ -395,5 +395,8 @@
   "world.assemblySocket": "Socket",
   "world.rackNeedModules": "Collect all three modules first.",
   "world.rackNeedAssembly": "Finish assembling at the workbench first.",
-  "world.rackPlaced": "Bug Buster is now displayed on the rack."
+  "world.rackPlaced": "Bug Buster is now displayed on the rack.",
+  "world.musicOn": "Music: On",
+  "world.musicOff": "Music: Off",
+  "world.musicCredit": "Background music: Sappheiros – Universe (BreakingCopyright)"
 }

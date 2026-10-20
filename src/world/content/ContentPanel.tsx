@@ -127,6 +127,17 @@ export function ContentPanel({ overlay, bundle, onClose }: ContentPanelProps) {
       <ul className="world-panel-list">
         <li>{t("world.workshopHint1")}</li>
         <li>{t("world.workshopHint2")}</li>
+        <li className="world-panel-note">
+          {t("world.musicCredit")}{" "}
+          <a
+            className="world-panel-link"
+            href="https://creativecommons.org/licenses/by/3.0/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            CC BY 3.0
+          </a>
+        </li>
       </ul>
     );
   }

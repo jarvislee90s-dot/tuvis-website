@@ -563,6 +563,7 @@
 .world-panel-stack { display: grid; gap: 12px; }
 .world-panel-stack .world-swatch { width: 100%; min-height: 8px; height: 8px; }
 .world-panel-note { color: var(--ink); font-size: 0.9rem; }
+.world-panel-note a { color: var(--hud); }
 .world-panel-image { width: 100%; border-radius: 14px; }
 
 .world-panel-list { display: grid; gap: 14px; }

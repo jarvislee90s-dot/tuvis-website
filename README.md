@@ -13,6 +13,7 @@
 - 素材与坐标唯一来源：`tuvis-world/05_handoff/v1/`（manifest / scene / content）。`node scripts/import-world-pack.mjs` 校验 SHA-256 后复制到 `public/world/v1/`，运行时不依赖生图、模型 API 或额外服务。
 - 世界正文按中文交付；`/en` 路径保留英文导航与界面，并标注内容语言。界面文案由 `src/i18n/` 提供，中英键集保持 parity。
 - 验收记录与截图：`docs/qa/tuvis-world-desktop.md`、`docs/qa/screenshots/`。浏览器复验脚本：`node scripts/qa-cdp.mjs`（只读四路由探针）与 `node scripts/qa-world-interactions.mjs`（真实鼠标主链路、取消、双输入、缩放、深链接）。两者需要先启动 `pnpm preview --host 127.0.0.1 --port 4173` 与带 `--remote-debugging-port=9222` 的 Chrome。
+- 背景音乐：Sappheiros – Universe（CC BY 3.0，经 BreakingCopyright）；工坊右上角可开关，来源与署名见 `public/world/audio/README.md`。
 
 ## 本地开发
 
