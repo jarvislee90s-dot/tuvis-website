@@ -169,6 +169,13 @@
       "height": 320,
       "alpha": true,
       "sha256": "5e8abbb7c4af48dce8d7b774d57de6faf923514004a44fce7f994d5d0c50de85"
+    },
+    "tuvis2dFireSe": {
+      "path": "assets/characters/2.5d/tuvis2d-fire-se.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "c0e8891e378ca18cdf5123eccd1d8722368895c7742a6c3701637628b0a3d5d5"
     }
   },
   "frames": {

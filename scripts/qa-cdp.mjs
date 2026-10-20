@@ -293,17 +293,10 @@ export const DOM_PROBE = `(() => {
     backLink: document.querySelector(".world-back-link")?.textContent.replace(/\\s+/g, " ").trim() ?? null,
     toolButtons: q(".world-workshop-tools button").map((node) => node.textContent.trim()),
     languageNote: q(".world-lang-note").map((node) => node.textContent.trim()),
-    helpBanner: q(".world-help-banner").length,
-    questBar: q(".world-questbar").length,
-    questBarLabel: document.querySelector(".world-questbar")?.getAttribute("aria-label") ?? null,
-    helpButton: q(".world-workshop-tools button").map((node) => node.textContent.trim())
-      .find((t) => t === "Help" || t === "操作说明") ?? null,
+    questCard: q(".world-quest-card").length,
+    questCardText: q(".world-quest-card")[0]?.innerText.replace(/\\s+/g, " ").trim() ?? null,
     musicButton: q(".world-workshop-tools button").map((node) => node.textContent.trim())
       .find((t) => t === "Music: On" || t === "音乐：开") ?? null,
-    helpBannerText: q(".world-help-banner")[0]?.innerText.replace(/\\s+/g, " ").trim() ?? null,
-    gotItButton: Array.from(document.querySelectorAll(".world-help-banner button")).map((node) =>
-      node.textContent.trim(),
-    )[0] ?? null,
     kickers: q(".world-kicker").map((node) => node.textContent.trim()),
     viewIntroButtons: q(".world-story-card button").map((node) => node.textContent.trim()),
     workshopDesc: q(".world-workshop-grid .world-section-intro")[0]?.textContent.trim() ?? null,
@@ -349,11 +342,11 @@ export function checksForRoute(route, probe, failures, externalRequests = []) {
         ),
         probe.headings,
       );
-      expect("English view-intro buttons", probe.viewIntroButtons.every((label) => label === "Read summary"), probe.viewIntroButtons);
+      expect("English view-intro buttons", probe.viewIntroButtons.every((label) => label === "Story teaser"), probe.viewIntroButtons);
       expect("English workshop description", probe.workshopDesc?.startsWith("Click the floor"), probe.workshopDesc);
     } else {
       expect("Chinese section labels", probe.kickers.includes("W-02 · 认识兔维斯"), probe.kickers);
-      expect("Chinese view-intro buttons", probe.viewIntroButtons.every((label) => label === "查看简介"), probe.viewIntroButtons);
+      expect("Chinese view-intro buttons", probe.viewIntroButtons.every((label) => label === "故事预告"), probe.viewIntroButtons);
     }
   } else {
     expect("workshop stage present", probe.worldStage === 1, probe.worldStage);
@@ -368,33 +361,26 @@ export function checksForRoute(route, probe, failures, externalRequests = []) {
       probe.actorGeometry,
     );
     expect("twelve hotspots", probe.hotspots.length === 12, probe.hotspots.length);
-    expect("quest bar present", probe.questBar === 1, probe.questBar);
-    expect("help banner present", probe.helpBanner === 1, probe.helpBanner);
+    expect("quest objective card present", probe.questCard === 1, probe.questCard);
     if (route.lang === "en") {
       expect("English language note", probe.languageNote.length === 1, probe.languageNote);
-      expect("English quest bar label", probe.questBarLabel === "Quest progress", probe.questBarLabel);
       expect("English music button", probe.musicButton === "Music: On", probe.musicButton);
-      expect("English help button", probe.helpButton === "Help", probe.helpButton);
       expect("English back link", Boolean(probe.backLink?.includes("Back to Tuvis World")), probe.backLink);
       expect("English replay button", probe.toolButtons.includes("Replay story"), probe.toolButtons);
-      // Assembly help sits behind the workbench/assembly overlay; it is checked
-      // in interactive QA / manual review rather than faked as a read-only probe.
+      // The quest card carries the (Chinese) world copy on both locales.
       expect(
-        "English help banner",
-        Boolean(probe.helpBannerText?.includes("Click the floor to move")) &&
-          probe.helpBannerText?.includes("Best experienced on a desktop browser") &&
-          probe.gotItButton === "Got it",
-        { text: probe.helpBannerText, gotIt: probe.gotItButton },
+        "English quest objective card",
+        Boolean(probe.questCardText?.includes("让 Bug Buster 重新上线")) &&
+          Boolean(probe.questCardText?.includes("点击地面移动")),
+        { text: probe.questCardText },
       );
     } else {
       expect("no language note on zh", probe.languageNote.length === 0, probe.languageNote);
-      expect("Chinese quest bar label", probe.questBarLabel === "任务进度", probe.questBarLabel);
       expect("Chinese music button", probe.musicButton === "音乐：开", probe.musicButton);
-      expect("Chinese help button", probe.helpButton === "操作说明", probe.helpButton);
       expect(
-        "Chinese help banner",
-        Boolean(probe.helpBannerText?.includes("点击地面移动")) && probe.gotItButton === "知道了",
-        { text: probe.helpBannerText, gotIt: probe.gotItButton },
+        "Chinese quest objective card",
+        Boolean(probe.questCardText?.includes("点击地面移动")),
+        { text: probe.questCardText },
       );
     }
   }

@@ -196,7 +196,7 @@ async function waitAtLeast(send, ms) {
 async function waitForQuestAction(send, text, timeoutMs = 30_000) {
   return waitFor(
     send,
-    `(document.querySelector(".world-questbar")?.innerText ?? "").includes(${JSON.stringify(text)})`,
+    `(document.querySelector(".world-quest-card")?.innerText ?? "").includes(${JSON.stringify(text)})`,
     { timeoutMs },
   );
 }
@@ -240,13 +240,6 @@ async function readActorPosition(send) {
   );
 }
 
-async function dismissHelp(send) {
-  const banner = await evaluate(send, `Boolean(document.querySelector(".world-help-banner"))`);
-  if (!banner) return;
-  await clickButton(send, "知道了");
-  await waitFor(send, `!document.querySelector(".world-help-banner")`);
-}
-
 async function screenshot(send, name) {
   const { data } = await send("Page.captureScreenshot", { format: "png", fromSurface: true });
   const file = path.join(SHOT_DIR, name);
@@ -261,9 +254,9 @@ async function screenshot(send, name) {
  * yields the module directly.
  */
 async function collectModules(send, order) {
-  const labels = { sight: "瞄准模块", cell: "能源匣", emitter: "脉冲发射头" };
-  const hotspots = { sight: "toolbox", cell: "lounge", emitter: "books" };
-  const concealed = { sight: true, cell: false, emitter: false };
+  const labels = { body: "Bug Buster 机身", sight: "瞄准模块", cell: "能源匣", emitter: "脉冲发射头" };
+  const hotspots = { body: "window", sight: "toolbox", cell: "lounge", emitter: "rack" };
+  const concealed = { body: false, sight: true, cell: false, emitter: false };
   for (const id of order) {
     if (concealed[id]) {
       const partVisible = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
@@ -286,8 +279,12 @@ async function collectModules(send, order) {
     );
     const quest = await readQuest(send);
     record(`pickup ${id}: stored`, Boolean(quest?.quest?.collected?.includes(id)), quest?.quest?.collected);
-    const status = await evaluate(send, `document.querySelector(".world-questbar")?.innerText ?? ""`);
-    record(`pickup ${id}: quest bar updated`, status.includes(labels[id]) && status.includes("已领取"), status.replace(/\s+/g, " ").slice(0, 80));
+    const status = await evaluate(send, `document.querySelector(".world-quest-card")?.innerText ?? ""`);
+    record(
+      `pickup ${id}: quest bar updated`,
+      status.includes(labels[id]) && (status.includes("已领取") || status.includes("已安装")),
+      status.replace(/\s+/g, " ").slice(0, 80),
+    );
     await closeDialog(send);
     const partAfter = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
     record(`pickup ${id}: floating part removed`, !partAfter, partAfter);
@@ -300,7 +297,6 @@ async function collectModules(send, order) {
  */
 async function runContentWithoutPickup(send, url) {
   await clearStorageAndReload(send, url);
-  await dismissHelp(send);
   const before = await readQuest(send);
   // The energy cell floats on the lower sofa; the upper lounge area must
   // still open the plain content panel without collecting it.
@@ -323,35 +319,13 @@ async function runContentWithoutPickup(send, url) {
   await closeDialog(send);
 }
 
-/** Clicking the character itself must play the jump strip and then settle. */
-async function runJumpProbe(send) {
-  const actor = await centerOf(send, ".world-actor div[data-sprite-anim]");
-  await mouseClick(send, actor.x, actor.y);
-  await waitFor(send, `Boolean(document.querySelector('.world-actor [data-sprite-anim="tuvis2d-jump-se"]'))`, { timeoutMs: 5_000 });
-  record("actor click: jump strip plays", true, "tuvis2d-jump-se");
-  await waitFor(
-    send,
-    `(() => {
-      const anim = document.querySelector(".world-actor div[data-sprite-anim]")?.getAttribute("data-sprite-anim");
-      return Boolean(anim) && anim !== "tuvis2d-jump-se";
-    })()`,
-    { timeoutMs: 10_000 },
-  );
-  record("actor click: returns to idle", true);
-}
-
 async function repairAndOpenAssembly(send) {
+  // The repair minigame was removed: with all three modules the workbench
+  // opens the assembly grid directly.
   await clickHotspot(send, "workbench");
-  const repairHeading = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
-  record("workbench: repair panel opens", repairHeading.includes("能源匣维修"), repairHeading.replace(/\s+/g, " ").slice(0, 60));
+  const taskHeading = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
+  record("workbench: assembly opens directly", taskHeading.includes("组装 Bug Buster"), taskHeading.replace(/\s+/g, " ").slice(0, 60));
 
-  await clickSelector(send, '[aria-label="松动接口"]');
-  await clickButton(send, "执行检查");
-  await waitFor(send, `document.body.innerText.includes("接口已复位，供能检查通过。")`);
-  record("workbench: repair completes", true, "接口已复位，供能检查通过。");
-  await screenshot(send, "workbench-repair.png");
-
-  await clickButton(send, "进入组装");
   await waitFor(send, `Boolean(document.querySelector("[data-assembly-stage]"))`, { timeoutMs: 15_000 });
   await waitFor(send, `document.querySelectorAll(".world-assembly-piece").length === 3`, { timeoutMs: 15_000 });
   record(
@@ -476,22 +450,37 @@ async function installByDrag(send, id, label, wrongCellKey) {
 async function finishAssemblyAndRack(send, shotName) {
   await waitFor(send, `document.body.innerText.includes("Bug Buster 组装完成")`);
   const assembled = await readQuest(send);
-  record("assembly: all three installed", assembled?.quest?.installed?.length === 3, assembled?.quest?.installed);
+  record("assembly: all three installed", assembled?.quest?.installed?.length === 4, assembled?.quest?.installed);
 
   await clickButton(send, "返回工坊");
   await waitForDialogGone(send);
-  // Closing the finished panel announces the completion back in the workshop.
-  await waitFor(send, `document.body.innerText.includes("主线任务已完成")`, { timeoutMs: 10_000 });
-  record("assembly close: completion banner", true, "主线任务已完成，请继续探索兔维斯世界。");
+  // Closing the finished panel turns the quest card into the try-weapon prompt.
+  await waitFor(send, `document.querySelector(".world-quest-card").innerText.includes("试试武器")`, { timeoutMs: 10_000 });
+  record("assembly close: card prompts try weapon", true, "试试武器");
 
   // The rack has no dialog: arrival places the weapon and switches to the display pose.
   const rack = await centerOf(send, '.world-hotspot[data-hotspot="rack"]');
   await mouseClick(send, rack.x, rack.y);
   await waitFor(send, `Boolean(document.querySelector(".world-rack-display"))`, { timeoutMs: 30_000 });
   await waitForMoveEnd(send);
-  await waitForQuestAction(send, "主线完成");
-  const questBar = await evaluate(send, `document.querySelector(".world-questbar")?.innerText ?? ""`);
-  record("rack: quest completes", questBar.includes("主线完成"), questBar.replace(/\s+/g, " ").slice(0, 80));
+  // The rack display must sit on the rack furniture (right side), not collapse
+  // into the stage corner — guards against lost positioning regression.
+  const rackPos = await evaluate(send, `(() => {
+    const st = document.querySelector(".world-stage").getBoundingClientRect();
+    const el = document.querySelector("[data-workbench-display]");
+    const rk = document.querySelector(".world-rack-display");
+    const rel = (el2) => { const r = el2.getBoundingClientRect();
+      return Math.round((r.left - st.left + r.width / 2) / st.width * 1536); };
+    return { workbenchX: el ? rel(el) : null, rackX: rk ? rel(rk) : null };
+  })()`);
+  record(
+    "displays anchored on furniture",
+    rackPos.workbenchX > 250 && rackPos.workbenchX < 500 && rackPos.rackX > 1050,
+    rackPos,
+  );
+  await waitForQuestAction(send, "试试武器");
+  const questCard = await evaluate(send, `document.querySelector(".world-quest-card")?.innerText ?? ""`);
+  record("rack: card still prompts try weapon", questCard.includes("试试武器"), questCard.replace(/\s+/g, " ").slice(0, 90));
   const pose = await readActorPosition(send);
   record("rack: display pose", pose?.frame === "display", pose?.frame);
   // Capture only after the panel is gone, the actor has arrived and the
@@ -500,9 +489,85 @@ async function finishAssemblyAndRack(send, shotName) {
   const stored = await readQuest(send);
   record(
     "rack: persisted completion",
-    stored?.schemaVersion === 1 && stored?.quest?.displayedOnRack === true && stored?.quest?.installed?.length === 3,
+    stored?.schemaVersion === 1 && stored?.quest?.displayedOnRack === true && stored?.quest?.installed?.length === 4,
     stored,
   );
+}
+
+/**
+ * Completed-state extras: the gun sits on the workbench desk, the floating
+ * "试用 Bug Buster" hotspot plays the fire strip on arrival, and clicking the
+ * desk shows the desktop-gun panel with its own try button.
+ */
+async function runTryBusterProbes(send) {
+  const deskGun = await evaluate(send, `Boolean(document.querySelector("[data-workbench-display]"))`);
+  record("workbench: desktop gun displayed", deskGun, deskGun);
+
+  // Direct hotspot: click "试用 Bug Buster", walk, auto-play the fire strip.
+  const tryButton = await centerOf(send, "[data-try-buster]");
+  await mouseClick(send, tryButton.x, tryButton.y);
+  await waitForMoveStart(send);
+  // The fire strip plays on arrival: start listening during the walk so the
+  // short one-shot window cannot slip past waitForMoveEnd.
+  const fireSeen = waitFor(
+    send,
+    `Boolean(document.querySelector('.world-actor [data-sprite-anim="tuvis2d-fire-se"]'))`,
+    { timeoutMs: 30_000 },
+  ).then(() => true).catch(() => false);
+  await waitForMoveEnd(send);
+  if (!(await fireSeen)) throw new Error("fire strip never played after try-buster arrival");
+  record("try buster: fire strip plays", true, "tuvis2d-fire-se");
+  await waitFor(
+    send,
+    `(() => {
+      const anim = document.querySelector(".world-actor div[data-sprite-anim]")?.getAttribute("data-sprite-anim");
+      return Boolean(anim) && anim !== "tuvis2d-fire-se";
+    })()`,
+    { timeoutMs: 10_000 },
+  );
+  record("try buster: returns to idle", true);
+
+  // Desk click: the desktop-gun panel with its own try button.
+  const desk = await centerOf(send, '[data-hotspot="workbench"]');
+  await mouseClick(send, desk.x, desk.y);
+  await waitFor(send, `Boolean(document.querySelector("[data-workbench-gun-panel]"))`, { timeoutMs: 20_000 });
+  record("workbench: desktop-gun panel opens", true, "data-workbench-gun-panel");
+  const panelFire = waitFor(
+    send,
+    `Boolean(document.querySelector('.world-actor [data-sprite-anim="tuvis2d-fire-se"]'))`,
+    { timeoutMs: 30_000 },
+  ).then(() => true).catch(() => false);
+  // Scope to the panel: the scene has its own identically-labelled button.
+  const panelBtn = await evaluate(send, `(() => {
+    const b = document.querySelector('[data-workbench-gun-panel] [data-try-buster-confirm]');
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, disabled: b.disabled };
+  })()`);
+  if (!panelBtn || panelBtn.disabled) throw new Error(`panel try button missing: ${JSON.stringify(panelBtn)}`);
+  await mouseClick(send, panelBtn.x, panelBtn.y);
+  await waitForDialogGone(send);
+  if (!(await panelFire)) throw new Error("fire strip never played from panel try button");
+  record("workbench panel: try button plays fire", true, "tuvis2d-fire-se");
+  await waitFor(send, `document.querySelector(".world-quest-card").innerText.includes("主线任务已完成")`, { timeoutMs: 10_000 });
+  record("try weapon: card flips to completion", true, "主线任务已完成");
+}
+
+/** Clicking the character opens the emote menu; picking one plays the strip. */
+async function runEmoteProbe(send) {
+  const actor = await centerOf(send, "[data-actor-hit]");
+  await mouseClick(send, actor.x, actor.y);
+  await waitFor(send, `Boolean(document.querySelector(".world-emote-menu"))`, { timeoutMs: 5_000 });
+  record("emote: menu opens on character click", true);
+  const option = await centerOf(send, '.world-emote-menu button');
+  await mouseClick(send, option.x, option.y);
+  await waitFor(send, `!document.querySelector(".world-emote-menu")`, { timeoutMs: 5_000 });
+  record("emote: menu closes after picking", true);
+  const anim = await evaluate(
+    send,
+    `document.querySelector(".world-actor div[data-sprite-anim]")?.getAttribute("data-sprite-anim") ?? null`,
+  );
+  record("emote: an action strip plays", Boolean(anim), anim);
 }
 
 async function runMainChain(send, url) {
@@ -510,10 +575,7 @@ async function runMainChain(send, url) {
   await waitForDialogGone(send);
   const initial = await screenshot(send, "workshop-zh-1280.png");
   record("workshop: initial screenshot", true, path.basename(initial));
-  await dismissHelp(send);
-  await runJumpProbe(send);
-
-  await collectModules(send, ["sight", "cell", "emitter"]);
+  await collectModules(send, ["body", "sight", "cell", "emitter"]);
   await repairAndOpenAssembly(send);
 
   await installByClick(send, "sight", "瞄准模块", "assembly-selected.png");
@@ -542,7 +604,6 @@ async function runMainChain(send, url) {
 
 async function runCancelProbe(send, url) {
   await clearStorageAndReload(send, url);
-  await dismissHelp(send);
   const before = await readQuest(send);
 
   const box = await centerOf(send, '.world-hotspot[data-hotspot="toolbox"]');
@@ -556,7 +617,7 @@ async function runCancelProbe(send, url) {
 
   const dialogs = await evaluate(send, dialogCount);
   const after = await readQuest(send);
-  const questBar = await evaluate(send, `document.querySelector(".world-questbar")?.innerText ?? ""`);
+  const questBar = await evaluate(send, `document.querySelector(".world-quest-card")?.innerText ?? ""`);
   const moving = await evaluate(send, `Boolean(document.querySelector(".world-actor.is-moving"))`);
   record("cancel: no dialog after blur", dialogs === 0, dialogs);
   record("cancel: quest unchanged", JSON.stringify(after) === JSON.stringify(before), { before, after });
@@ -566,9 +627,8 @@ async function runCancelProbe(send, url) {
 
 async function runDragChain(send, url) {
   await clearStorageAndReload(send, url);
-  await dismissHelp(send);
   // Different collection order: any module order must work.
-  await collectModules(send, ["cell", "emitter", "sight"]);
+  await collectModules(send, ["cell", "emitter", "body", "sight"]);
   await repairAndOpenAssembly(send);
   await installByDrag(send, "cell", "能源匣", "0-0");
   await installByDrag(send, "sight", "瞄准模块");
@@ -647,7 +707,8 @@ async function runZoomProbe(page, url) {
   const at1600 = await clickScenePoint(page.send, point);
   const dx = Math.abs(at1280.position[0] - at1600.position[0]);
   const dy = Math.abs(at1280.position[1] - at1600.position[1]);
-  record("zoom: stage rescaled", Math.abs(at1280.rect.width - at1600.rect.width) > 50, {
+  // The canvas is full content width, so both viewports render it equally wide.
+  record("zoom: stage fills content width", at1280.rect.width === at1600.rect.width, {
     width1280: at1280.rect.width,
     width1600: at1600.rect.width,
   });
@@ -713,9 +774,11 @@ async function main() {
     record("workshop: initial load", true, url);
 
     await runContentWithoutPickup(page.send, url);
+    await runEmoteProbe(page.send);
     await runMainChain(page.send, url);
     await runCancelProbe(page.send, url);
     await runDragChain(page.send, url);
+    await runTryBusterProbes(page.send);
     await runZoomProbe(page, url);
     await runDeepLinks(browser, base);
   } finally {

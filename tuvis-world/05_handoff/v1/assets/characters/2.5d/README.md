@@ -12,8 +12,9 @@
 | tuvis2d-jump-se.png | jump SE | 4 × 256×320 | `tuvis-jump-se.png` |
 | tuvis2d-pickup-se.png | pickup SE | 4 × 256×320 | `tuvis-pickup-se.png` |
 | tuvis2d-celebrate-se.png | celebrate SE | 4 × 256×320 | `tuvis-celebrate-se.png` |
+| tuvis2d-fire-se.png | fire SE（试用开火） | 4 × 543×724 | `FIRE, facing SE (front-right).png` |
 
-未入库（暂不启用，留在下载目录）：FIRE SE（4×543×724，可选庆祝）、WAVE SW（4×543×724）、
+WAVE SW（4×543×724）、
 CODE SW（4×543×724，打字坐姿）、REVIEW SW（6×362×724，UUID 命名文件）。
 
 弃用：`tuvis-walk-se.png `（尾随空格）经逐帧实测为**另一张 SE 朝向**条带（角色仅 58% 大小），SW 由 SE 大条带运行时镜像承担，该文件不入库。

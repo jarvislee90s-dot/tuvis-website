@@ -110,6 +110,8 @@ export type MotionTarget = {
   hotspotId?: string;
   /** Arrive as a pickup run (collect the floating part) when true. */
   pickup?: boolean;
+  /** Arrive as a "try the Bug Buster" run: play the fire animation only. */
+  tryFire?: boolean;
 };
 
 export type MotionState = {
@@ -128,7 +130,7 @@ export function advanceMotion(
   motion: MotionState,
   elapsedMs: number,
   scene: SceneDefinition,
-): { motion: MotionState; arrived?: { token: number; hotspotId?: string; pickup?: boolean } } {
+): { motion: MotionState; arrived?: { token: number; hotspotId?: string; pickup?: boolean; tryFire?: boolean } } {
   const target = motion.target;
   if (!target) return { motion };
 
@@ -143,8 +145,14 @@ export function advanceMotion(
   }
   if (path.length === 0) {
     return {
-      motion: { position, direction, target: null },
-      arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup },
+      // Back views have no idle animation, so arrivals settle front-facing
+      // (same horizontal side the character was moving toward).
+      motion: {
+        position,
+        direction: direction === "nw" ? "sw" : direction === "ne" ? "se" : direction,
+        target: null,
+      },
+      arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup, tryFire: target.tryFire },
     };
   }
 
@@ -174,11 +182,11 @@ export function advanceMotion(
   return {
     motion: {
       position,
-      direction,
+      direction: path.length === 0 ? (direction === "nw" ? "sw" : direction === "ne" ? "se" : direction) : direction,
       target: path.length > 0 ? { ...target, path } : null,
     },
     ...(path.length === 0
-      ? { arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup } }
+      ? { arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup, tryFire: target.tryFire } }
       : {}),
   };
 }

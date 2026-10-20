@@ -108,14 +108,14 @@ afterEach(() => {
 });
 
 describe("workshop flow", () => {
-  it("collects three modules, repairs, assembles, displays, restores and replays", async () => {
+  it("collects four modules, assembles, displays, restores and replays", async () => {
     const storage = memoryStorage();
     const storeRef: StoreRef = { current: null };
     const { unmount } = renderRuntime(storage, storeRef);
     const store = await waitForStore(storeRef);
 
     // Only the visible parts float: the concealed toolbox module has none.
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
     expect(document.querySelector('[data-pickup-part="sight"]')).toBeNull();
 
     // Pickup 1: walking up to the toolbox opens the box and grants the module.
@@ -125,30 +125,36 @@ describe("workshop flow", () => {
     expect(store.getState().action?.kind).toBe("pickup");
     await closePickup("瞄准模块");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
-    // The concealed module never had a floating part; the visible two remain.
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
+    // The concealed module never had a floating part; the visible three remain.
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
 
     // Pickup 2: the floating part on the lounge sofa collects on arrival.
     await visit(store, "lounge", true);
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "cell" }));
     await closePickup("能源匣");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(1);
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
 
-    // Pickup 3: the floating part on the bookshelf (stories kind) collects too.
-    await visit(store, "books", true);
+    // Pickup 3: the floating part on the equipment rack's top shelf collects too.
+    await visit(store, "rack", true);
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "emitter" }));
     await closePickup("脉冲发射头");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
-    expect(store.getState().quest.collected).toHaveLength(3);
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(1);
+
+    // Pickup 4: the body on the shelf under the window seats itself on the
+    // workbench the moment it is picked up.
+    await visit(store, "window", true);
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "body" }));
+    await closePickup("Bug Buster 机身");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(store.getState().quest.collected).toHaveLength(4);
+    expect(store.getState().quest.installed).toEqual(["body"]);
     expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(0);
 
+    // The repair step is gone: with the full set in hand the workbench goes
+    // straight to the assembly close-up.
     await visit(store, "workbench");
-    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "repair" }));
-    fireEvent.click(screen.getByRole("button", { name: "松动接口" }));
-    fireEvent.click(screen.getByRole("button", { name: "执行检查" }));
-    await waitFor(() => expect(store.getState().quest.cellRepaired).toBe(true));
-    fireEvent.click(screen.getByRole("button", { name: "进入组装" }));
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "assembly" }));
 
     // Select a tray piece (pointerdown), then lock it into its own socket.
@@ -170,27 +176,60 @@ describe("workshop flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "返回工坊" }));
     await waitFor(() => expect(store.getState().overlay).toBeNull());
 
-    // Closing the finished assembly celebrates and posts the completion banner.
-    await waitFor(() => expect(store.getState().notice).toBe("questDone"));
+    // Closing the finished assembly celebrates without the old banner: the
+    // quest card asks for a test fire and the completion line waits for it.
+    expect(store.getState().notice).toBeNull();
+    expect(screen.queryByText("主线任务已完成，请继续探索兔维斯世界。")).not.toBeInTheDocument();
+    await waitFor(() => expect(store.getState().action?.kind).toBe("celebrate"));
+
+    // The assembled gun now sits on the workbench desk with a try-it button.
+    expect(document.querySelector("[data-workbench-display]")).not.toBeNull();
+    expect(document.querySelector("[data-try-buster]")).not.toBeNull();
+    // The card prompts the test fire above and below the slot list.
+    expect(screen.getAllByText("试试武器")).toHaveLength(2);
+
+    // Test-firing walks to the try spot and plays only the fire animation.
+    fireEvent.click(screen.getByRole("button", { name: "试用 Bug Buster" }));
+    await waitFor(() => expect(store.getState().motion.target?.tryFire).toBe(true));
+    act(() =>
+      store.getState().arrive(store.getState().motion.target!.token, "workbench", false, true),
+    );
+    await waitFor(() => expect(store.getState().action?.kind).toBe("fire"));
+    await waitFor(() => expect(store.getState().pendingArrival).toBeNull());
+    expect(store.getState().overlay).toBeNull();
+    // The shot marks the weapon as tried, which completes the card...
+    expect(store.getState().quest.weaponTried).toBe(true);
     expect(screen.getByText("主线任务已完成，请继续探索兔维斯世界。")).toBeInTheDocument();
-    expect(document.querySelector("p.world-scene-notice.is-success")).not.toBeNull();
-    expect(store.getState().action?.kind).toBe("celebrate");
+    expect(screen.queryByText("试试武器")).not.toBeInTheDocument();
+    // ...and hides the desk copy while the fire animation plays.
+    expect(document.querySelector("[data-workbench-display]")).toBeNull();
 
     await visit(store, "rack");
     await waitFor(() => expect(isComplete(store.getState().quest)).toBe(true));
     expect(store.getState().pose).toBe("display");
-    expect(screen.getByAltText("Bug Buster")).toBeInTheDocument();
+    // The finished gun is rendered twice once it is racked: the desk copy
+    // (workbench display) and the rack showcase. The 2 s fire window (real
+    // timers here) keeps the desk copy hidden until it ends.
+    await waitFor(() => expect(screen.getAllByAltText("Bug Buster")).toHaveLength(2), {
+      timeout: 3000,
+    });
 
     const saved = JSON.parse(storage.map.get(QUEST_STORAGE_KEY)!);
     expect(saved.schemaVersion).toBe(1);
     expect(saved.quest.displayedOnRack).toBe(true);
+    // The run never repaired the cell, and the save must keep it that way.
+    expect(saved.quest.cellRepaired).toBe(false);
+    // The test fire was recorded in the save too.
+    expect(saved.quest.weaponTried).toBe(true);
+    // All four pieces are in the save: the seated body plus the three installs.
+    expect(saved.quest.installed).toHaveLength(4);
 
     unmount();
     const restoredRef: StoreRef = { current: null };
     renderRuntime(storage, restoredRef);
     const restored = await waitForStore(restoredRef);
     expect(isComplete(restored.getState().quest)).toBe(true);
-    expect(restored.getState().quest.installed).toHaveLength(3);
+    expect(restored.getState().quest.installed).toHaveLength(4);
 
     const resetButton = screen.getByRole("button", { name: "重玩主线" });
     resetButton.focus();
@@ -225,6 +264,7 @@ describe("workshop flow", () => {
         { type: "COLLECT", moduleId: "sight" },
         { type: "COLLECT", moduleId: "cell" },
         { type: "COLLECT", moduleId: "emitter" },
+        { type: "COLLECT", moduleId: "body" },
         { type: "REPAIR_CELL" },
         { type: "INSTALL", moduleId: "sight" },
         { type: "INSTALL", moduleId: "cell" },
@@ -307,8 +347,8 @@ describe("workshop flow", () => {
     expect(document.querySelector('[data-pickup-part="cell"]')).toBeNull();
   });
 
-  // The pickupHidden toolbox module never floats; the world-kind lounge and
-  // stories-kind bookshelf parts do.
+  // The pickupHidden toolbox module never floats; the world-kind window and
+  // lounge plus the rack-kind shelf-top parts do.
   it("renders floating parts only for visible pending modules", async () => {
     const storeRef: StoreRef = { current: null };
     renderRuntime(memoryStorage(), storeRef);
@@ -317,6 +357,67 @@ describe("workshop flow", () => {
     expect(document.querySelector('[data-pickup-part="sight"]')).toBeNull();
     expect(document.querySelector('[data-pickup-part="cell"]')).not.toBeNull();
     expect(document.querySelector('[data-pickup-part="emitter"]')).not.toBeNull();
+    expect(document.querySelector('[data-pickup-part="body"]')).not.toBeNull();
+
+    // The floating box shrank to 77x53 scene pixels.
+    const part = document.querySelector('[data-pickup-part="cell"]') as HTMLElement;
+    expect(part.style.width).toBe(`${(77 / bundle.scene.size[0]) * 100}%`);
+    expect(part.style.height).toBe(`${(53 / bundle.scene.size[1]) * 100}%`);
+  });
+
+  // The finished gun on the desk: the floating try button walks over and
+  // fires without opening any panel; a plain arrival opens the showcase.
+  it("fires the assembled buster from the try button and shows it off on plain arrivals", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    const store = await waitForStore(storeRef);
+
+    // Nothing sits on the desk and no try button exists before assembly.
+    expect(document.querySelector("[data-workbench-display]")).toBeNull();
+    expect(document.querySelector("[data-try-buster]")).toBeNull();
+
+    act(() => {
+      for (const moduleId of MODULE_IDS) {
+        store.getState().dispatchQuest({ type: "COLLECT", moduleId });
+      }
+      for (const moduleId of MODULE_IDS) {
+        store.getState().dispatchQuest({ type: "INSTALL", moduleId });
+      }
+    });
+
+    // Once installed, the desk shows the finished gun plus a try-it button.
+    await waitFor(() => expect(document.querySelector("[data-workbench-display]")).not.toBeNull());
+    expect(document.querySelector("[data-try-buster]")).not.toBeNull();
+
+    // Trying it walks to the try spot (not the bench approach) carrying the
+    // fire flag...
+    fireEvent.click(screen.getByRole("button", { name: "试用 Bug Buster" }));
+    await waitFor(() => expect(store.getState().motion.target?.tryFire).toBe(true));
+    const tryWalk = store.getState().motion.target!;
+    expect(tryWalk.hotspotId).toBe("workbench");
+    expect(tryWalk.path[tryWalk.path.length - 1]).toEqual(bundle.scene.trySpot);
+
+    // ...and the arrival short-circuits to the fire animation: no panel opens.
+    act(() =>
+      store.getState().arrive(store.getState().motion.target!.token, "workbench", false, true),
+    );
+    await waitFor(() => expect(store.getState().action?.kind).toBe("fire"));
+    await waitFor(() => expect(store.getState().pendingArrival).toBeNull());
+    expect(store.getState().overlay).toBeNull();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // A plain arrival at the bench instead opens the finished-gun showcase.
+    await visit(store, "workbench");
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "workbenchGun" }));
+    const dialog = await screen.findByRole("dialog", { name: "Bug 清除脉冲炮" });
+    expect(within(dialog).getByText("桌面上的成品")).toBeInTheDocument();
+
+    // Its try button closes the panel and replays the fire animation.
+    const fireId = store.getState().action?.id ?? 0;
+    fireEvent.click(within(dialog).getByRole("button", { name: "试用 Bug Buster" }));
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    await waitFor(() => expect(store.getState().action?.kind).toBe("fire"));
+    expect(store.getState().action?.id ?? 0).toBeGreaterThan(fireId);
   });
 
   // Kills panels that focus their close button but never restore the trigger.
@@ -381,7 +482,9 @@ describe("workshop flow", () => {
     expect(document.querySelector(".world-actor.is-moving")).toBeNull();
     await screen.findByRole("dialog");
 
-    const helpButton = screen.getByRole("button", { name: "操作说明" });
+    // The top-bar help button is gone (how-to lines live in the quest card);
+    // the music button now hosts the focus-restore contract.
+    const helpButton = screen.getByRole("button", { name: "音乐：开" });
     helpButton.focus();
     act(() => store.getState().setOverlay(null));
     act(() => store.getState().setOverlay({ kind: "help" }));

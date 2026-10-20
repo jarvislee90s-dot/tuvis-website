@@ -113,7 +113,7 @@
     ]
   ],
   "footRadius": 12,
-  "speed": 190,
+  "speed": 228,
   "spawn": [
     790,
     630
@@ -192,6 +192,10 @@
       "leftPass": [
         650,
         720
+      ],
+      "trySpot": [
+        430,
+        635
       ]
     },
     "edges": [
@@ -602,6 +606,10 @@
       [
         "rearPass",
         "leftPass"
+      ],
+      [
+        "toolbox",
+        "trySpot"
       ]
     ]
   },
@@ -684,7 +692,12 @@
         530
       ],
       "kind": "world",
-      "contentId": "city"
+      "contentId": "city",
+      "moduleId": "body",
+      "pickupAnchor": [
+        600,
+        335
+      ]
     },
     {
       "id": "posters",
@@ -730,8 +743,7 @@
         925,
         565
       ],
-      "kind": "stories",
-      "moduleId": "emitter"
+      "kind": "stories"
     },
     {
       "id": "rack",
@@ -746,7 +758,12 @@
         1190,
         650
       ],
-      "kind": "rack"
+      "kind": "rack",
+      "moduleId": "emitter",
+      "pickupAnchor": [
+        1226,
+        375
+      ]
     },
     {
       "id": "chair",
@@ -778,7 +795,11 @@
       ],
       "kind": "world",
       "contentId": "home",
-      "moduleId": "cell"
+      "moduleId": "cell",
+      "pickupAnchor": [
+        1075,
+        650
+      ]
     },
     {
       "id": "table",
@@ -962,6 +983,21 @@
     "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset.",
     "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point.",
     "assembly.grid: 九宫格组装布局，cells 为 [row, col]；瞄具上中、枪头中左、机身正中、能量管右下。",
-    "零件分布 v2：机身在工作台（预置）；瞄准模块在工具箱内（pickupHidden，到达即开出）；能源匣在沙发上；脉冲发射头在书架上。"
+    "零件分布 v2：机身在工作台（预置）；瞄准模块在工具箱内（pickupHidden，到达即开出）；能源匣在沙发上；脉冲发射头在书架上。",
+    "零件分布 v3：瞄准模块=工具箱抽屉（隐藏）、能源匣=沙发座位、脉冲发射头=货架顶（装备架热点，pickupAnchor 定位）；workbenchDisplay=完成后工作台桌面成品小图；维修步骤已移除。",
+    "零件分布 v4：四个组件全部可拾取——机身=窗下柜子（新）、瞄准模块=工具箱（隐藏）、能源匣=沙发座、发射头=货架顶；trySpot=试用开火站位（工作椅左侧）。"
+  ],
+  "workbenchDisplay": {
+    "frame": "gunComplete",
+    "rect": [
+      305,
+      360,
+      150,
+      106
+    ]
+  },
+  "trySpot": [
+    430,
+    635
   ]
 }

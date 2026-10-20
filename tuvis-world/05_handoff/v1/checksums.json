@@ -3,7 +3,7 @@
   "files": {
     ".DS_Store": "394f8d1b6b3f8ffa2308eebe5e00e44f7800fd7408cb0755cbeb3f54c356f577",
     "README.md": "4ad263cb0edb50c6ab3af4271c8be26f0b806fb9c376dbbdb62f6d040299125f",
-    "asset-provenance.json": "0e7c6d35b0255aed766ded5ff425adeb95ab40ab2689593159745012b06bc6c6",
+    "asset-provenance.json": "6d813f7995a39a9f39d218ab3f0d6b5095a12d53e66fe7e7c953260f22fb63cc",
     "assets/.DS_Store": "4465d0d5666fff1bd326abed39a96e2b92041f8aceb62bcc13748fc01959550d",
     "assets/characters/tuvis-actions.png": "b02e2fe26a75cc37fbe2c044a2d59cfa27f1f65ed85ee63106e5e23a775356ac",
     "assets/characters/tuvis-directions.png": "64d41fa29b700412afb5aaf7324e2cd9f4a005b6da4f3cbb41104b0502e58903",
@@ -22,9 +22,9 @@
     "assets/landing/workshop-overview.png": "cc5cafb57acbd1827dc5fc78416fd332bad3e9902e684038dc708cefd5eb0868",
     "assets/props/workshop-props.png": "075ae2b13f694438164ace68b4da5dca972e7e05c32c0c567868c872c46fd16b",
     "assets/scene/workshop-base.png": "fc89405024da2d57672c96516b7789d9c25c630aa17aa4f321c96ab27d825533",
-    "content/world.zh.json": "3d572ac43070ea93a35db82cccf517c622ca38afb9213fce67bde4e610cf0971",
+    "content/world.zh.json": "b18a7f9a35702229e7d92505e6c602008f5d92524218a237afc94a85eff408c8",
     "file-metadata.json": "d52c3e09a9e6850022dc2db09e18b6c2f71ab5a127ab5a566e06638f588bea90",
-    "manifest.json": "a1ec784b7829a8c374f452f483d5e516c5cf8d4901fe25bfd2460b1344d7c71a",
+    "manifest.json": "8bdd7a2b0cfc8f7a8a3b49e67917cbc0c168d03941cb145b83f5060bea219595",
     "prompts/reused-gun-body.txt": "c435a0fee476bacc05898981eae408f5230ad12555a5276b57b6d30855fe628d",
     "prompts/reused-gun-cell.txt": "2f4568b3d373e95814edca3b91a072b6754b6addefc944ef9c070b9c1583139c",
     "prompts/reused-gun-complete.txt": "a84f2f1cbda379a7f575595675c1f179171110aaa157b2ace205f1ecc86aa8a8",
@@ -45,9 +45,9 @@
     "qa/workshop-occlusion-front.jpg": "b706c7112d36cc326b77a8c193730bc912964bbf38f8cb55b0eb929ac7d33985",
     "qa/workshop-sitting.jpg": "cb73daf2981bc413d9924e07fac1242b0e166159abede2b77832245983302c16",
     "qa/workshop-standing.jpg": "254d6028da55f02643ddf00aefa482694caea5793584d542a074e12329c12beb",
-    "scene.json": "6a29aec3a1dafd7d1da726f71876b4d4e52a2884cd642f16abce9f79b5b6d094",
-    "tools/audit-handoff.mjs": "75becfa11e3fa10484e0787adcf540857ee6d60d8e61b89261f2ec8e511f6dda",
-    "tools/verify-pack.mjs": "3d2fea2cea072610d08d34755cf037e0435f622f5b885ba6cfedcac425cf9789",
+    "scene.json": "0c750954b6424e988ec718d4be57821f1cd89a6c02162f46a87f4018c5baaf66",
+    "tools/audit-handoff.mjs": "b96615ae7bb843b1b8c3858d36ee78633f154a89b3dd7e59c462aacf275a1ce3",
+    "tools/verify-pack.mjs": "343b5cad6ff69feacae5923b611cd88a24f691ef908c08a129c1b5e7116ea73b",
     "assets/characters/2.5d/tuvis2d-idle-sw.png": "248b94a097a3d5d729a87180019e27fb4da86aab778347540611bcf83cacd082",
     "assets/characters/2.5d/tuvis2d-walk-se.png": "c11363f4814c310d20d7d45e8f6b1cec9f392e42f7bcdbe277b6052e9cdf0421",
     "assets/characters/2.5d/tuvis2d-walk-nw.png": "da9eea3cf0b6be4809eb045f76bd7b0264c92c4022ffb3304deb479c105227d3",
@@ -55,6 +55,7 @@
     "assets/characters/2.5d/tuvis2d-jump-se.png": "76bc08ac372794ea370de4342c6f85e540b11b1265f3c053ea9e0fce14223668",
     "assets/characters/2.5d/tuvis2d-pickup-se.png": "d5da240fc66fd88f956d9b89dd96df0096e600907c455e00ac09ea242e1807fe",
     "assets/characters/2.5d/tuvis2d-celebrate-se.png": "5e8abbb7c4af48dce8d7b774d57de6faf923514004a44fce7f994d5d0c50de85",
-    "prompts/runtime-tuvis2d-frames-v1.txt": "1d82c28766d29b8a484bcbb7474cdcae5722df1b2323110aeff1ec9a68191c8e"
+    "prompts/runtime-tuvis2d-frames-v1.txt": "1d82c28766d29b8a484bcbb7474cdcae5722df1b2323110aeff1ec9a68191c8e",
+    "assets/characters/2.5d/tuvis2d-fire-se.png": "c0e8891e378ca18cdf5123eccd1d8722368895c7742a6c3701637628b0a3d5d5"
   }
 }

@@ -352,10 +352,12 @@
 
 .world-setting-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 32px;
   margin-top: 32px;
 }
+
+.world-setting-card > img { width: 100%; height: auto; }
 
 .world-setting-card {
   overflow: hidden;
@@ -401,9 +403,8 @@
 
 .world-story-card > img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  object-position: top center;
+  height: auto;
+  object-fit: contain;
 }
 
 .world-story-body {
@@ -636,8 +637,6 @@
 .world-workshop-head .world-back-link { margin-bottom: 0; }
 .world-workshop-page { padding-top: 14px; }
 .world-workshop-page .world-h1 { font-size: clamp(1.5rem, 2.4vw, 2.15rem); }
-.world-workshop-page .world-help-banner { margin-top: 10px; padding: 8px 14px; }
-.world-workshop-page .world-questbar { margin-top: 12px; padding: 9px 14px; }
 
 .world-scene-wrap {
   display: flex;
@@ -649,7 +648,8 @@
 .world-stage {
   position: relative;
   isolation: isolate; /* keep sprite/hotspot z-indexes below fixed modals */
-  width: min(100%, calc((100vh - 300px) * 1.5));
+  /* Full content width: the canvas aligns with the tool bars above. */
+  width: 100%;
   overflow: hidden;
   border-radius: 22px;
   border: 1px solid var(--world-line);
@@ -722,43 +722,97 @@
   font-size: 0.86rem;
 }
 
-/* ---------- quest bar / workbench / rack ---------- */
+/* ---------- quest objective card / workbench / rack ---------- */
 
-.world-questbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 18px;
-  margin-top: 20px;
-  padding: 12px 16px;
-  border: 1px solid var(--world-line);
-  border-radius: 16px;
-  background: var(--world-soft);
-  box-shadow: var(--sh-soft);
+/* The in-canvas objective card replaces the old top quest bar. */
+.world-quest-card {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1200;
+  width: min(212px, 44%);
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(231, 221, 199, 0.72);
+  background: rgba(255, 253, 248, 0.66);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 10px 26px rgba(20, 24, 20, 0.18);
+  text-align: left;
 }
 
-.world-questbar-title { font-weight: 800; font-size: 0.95rem; }
+.world-quest-card.is-collapsed {
+  width: auto;
+  padding: 6px 13px;
+  font-weight: 700;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
 
-.world-questbar-slots {
+.world-quest-card-head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 0.76rem;
+}
+
+.world-quest-card-collapse {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.world-quest-card-slots {
+  display: grid;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
+  font-size: 0.7rem;
 }
 
-.world-questbar-slots li {
-  white-space: nowrap;
-  display: inline-flex;
+.world-quest-card-slots li {
+  display: flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 0.8rem;
   color: var(--ink-dim);
-  background: #f8f4ea;
+}
+
+.world-quest-card-slots li.is-collected { color: #1d7a4d; }
+.world-quest-card-slots li.is-installed { color: #1d7a4d; }
+
+.world-quest-card-action { margin: 0; font-size: 0.7rem; font-weight: 650; }
+
+.world-quest-card-done {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1d7a4d;
+}
+
+.world-quest-card-help {
+  margin: 0;
+  padding: 6px 0 0;
+  border-top: 1px dashed rgba(231, 221, 199, 0.72);
+  color: var(--ink-dim);
+  font-size: 0.64rem;
+  display: grid;
+  gap: 2px;
+}
+
+.world-rack-display {
+  position: absolute;
+  z-index: 360;
+  overflow: hidden;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 5px rgba(20, 24, 20, 0.24));
 }
 
 .world-slot-dot {
@@ -769,66 +823,67 @@
   background: transparent;
 }
 
-.world-questbar-slots li.is-collected { color: var(--ink); border-color: rgba(240, 138, 29, 0.5); }
-.world-questbar-slots li.is-collected .world-slot-dot { border-color: var(--world-orange); background: var(--world-orange); }
-.world-questbar-slots li.is-installed { border-color: rgba(50, 199, 123, 0.6); }
-.world-questbar-slots li.is-installed .world-slot-dot { border-color: #32c77b; background: #32c77b; }
-.world-questbar-slots small { font-size: 0.68rem; color: var(--ink-dim); }
+.world-quest-card-slots li.is-collected .world-slot-dot { border-color: #32c77b; background: #32c77b; }
+.world-quest-card-slots li.is-installed .world-slot-dot { border-color: #32c77b; background: #32c77b; }
 
-.world-questbar-action {
-  flex: 1 1 240px;
-  word-break: keep-all;
-  font-size: 0.83rem;
-  color: var(--ink-dim);
-  text-align: right;
-}
+/* ---------- emote menu (click the character) ---------- */
 
-.world-workbench-card { width: min(620px, 100%); }
-
-.world-module-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 0;
-  list-style: none;
-}
-
-.world-module-list li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  border-radius: 10px;
-  background: #f6f0e3;
-  padding: 9px 13px;
-  font-size: 0.88rem;
-}
-
-.world-module-list li.is-collected { background: rgba(50, 199, 123, 0.12); }
-.world-module-list span { color: var(--ink-dim); font-size: 0.8rem; }
-
-.world-repair {
-  margin: 12px 0 16px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #1b2428;
-  padding: 8px;
-}
-
-.world-repair svg { display: block; width: 100%; height: auto; }
-.world-repair-port { cursor: pointer; }
-
-.world-repair-status.is-ok { color: var(--status-ok); font-weight: 650; }
-
-.world-modal-body .world-btn { margin-top: 8px; }
-.world-modal-body .world-btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
-
-.world-rack-display {
+.world-emote-menu {
   position: absolute;
-  z-index: 360;
-  overflow: hidden;
-  pointer-events: none;
-  filter: drop-shadow(0 4px 5px rgba(20, 24, 20, 0.24));
+  z-index: 1300;
+  translate: -50% -100%;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(231, 221, 199, 0.9);
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 10px 26px rgba(20, 24, 20, 0.26);
+}
+
+.world-emote-menu button {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  text-align: left;
+}
+
+.world-emote-menu button:hover,
+.world-emote-menu button:focus-visible {
+  background: rgba(240, 138, 29, 0.16);
+  outline: none;
+}
+
+/* ---------- try-the-bug-buster hotspot button ---------- */
+
+.world-try-button {
+  position: absolute;
+  z-index: 1100;
+  translate: -50% 0;
+  border: 1px solid rgba(255, 214, 120, 0.9);
+  border-radius: 999px;
+  background: rgba(20, 28, 32, 0.78);
+  color: #ffd678;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  animation: world-part-float 1.6s ease-in-out infinite;
+}
+
+.world-try-button:hover,
+.world-try-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 14px rgba(255, 214, 120, 0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-try-button { animation: none; }
 }
 
 /* ---------- assembly close-up (nine-grid) ---------- */
@@ -1014,6 +1069,21 @@
 .world-assembly-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .world-assembly-actions .world-btn { margin-top: 0; }
 
+/* ---------- equipment gallery (image + text rows) ---------- */
+
+.world-equipment-gallery { gap: 18px; }
+
+.world-equipment-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.world-equipment-row strong { font-size: 0.95rem; }
+.world-equipment-row p { margin: 4px 0 0; font-size: 0.86rem; line-height: 1.6; }
+.world-equipment-row .world-panel-note { color: var(--ink-dim); }
+
 /* ---------- pickup panel ---------- */
 
 .world-pickup-card { width: min(520px, 100%); }
@@ -1096,31 +1166,6 @@
 
 .world-workshop-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .world-workshop-tools .world-btn { margin-top: 0; }
-
-.world-help-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-  border: 1px solid rgba(13, 143, 176, 0.28);
-  border-radius: 14px;
-  background: rgba(13, 143, 176, 0.08);
-  padding: 12px 16px;
-}
-
-.world-help-banner ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 20px;
-  margin: 0;
-  padding-left: 18px;
-  color: #0a6078;
-  font-size: 0.88rem;
-}
-
-.world-help-banner .world-btn { margin-top: 0; }
 
 .world-modal-body + .world-assembly-actions { margin-top: 18px; }
 

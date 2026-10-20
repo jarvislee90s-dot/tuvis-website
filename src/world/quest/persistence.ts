@@ -23,18 +23,18 @@ function uniqueModuleIds(value: unknown): QuestState["collected"] {
 export function sanitizeQuest(value: unknown): QuestState {
   if (!isRecord(value)) return INITIAL_QUEST;
   const collected = uniqueModuleIds(value.collected);
-  const cellRepaired = value.cellRepaired === true && collected.includes("cell");
-  const canHaveInstalled =
-    cellRepaired && MODULE_IDS.every((id) => collected.includes(id));
+  // The repair gate is gone: collected modules may be installed directly.
+  const canHaveInstalled = MODULE_IDS.every((id) => collected.includes(id));
   const installed = canHaveInstalled ? uniqueModuleIds(value.installed) : [];
   const displayedOnRack =
     value.displayedOnRack === true && MODULE_IDS.every((id) => installed.includes(id));
   return {
     collected,
-    cellRepaired,
+    cellRepaired: value.cellRepaired === true && collected.includes("cell"),
     installed,
     displayedOnRack,
     helpSeen: value.helpSeen === true,
+    weaponTried: value.weaponTried === true,
   };
 }
 

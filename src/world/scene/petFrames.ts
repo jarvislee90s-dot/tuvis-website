@@ -1,7 +1,7 @@
 import { assetUrl } from "../assets/loadWorldData";
 import type { Direction } from "../types";
 
-export type ActionAnim = "jump" | "pickup" | "celebrate";
+export type ActionAnim = "jump" | "pickup" | "celebrate" | "fire";
 
 export type SpriteAnimDef = {
   src: string;
@@ -84,6 +84,7 @@ export const SPRITE_ASSET_IDS = [
   "tuvis2dJumpSe",
   "tuvis2dPickupSe",
   "tuvis2dCelebrateSe",
+  "tuvis2dFireSe",
 ] as const;
 
 export function idleAnim(direction: Direction): SpriteAnimDef {
@@ -123,6 +124,19 @@ export function actionAnim(kind: ActionAnim): SpriteAnimDef {
       return compact("tuvis2d-pickup-se.png", { charH: 0.753, feetY: 0.931, centerX: 0.496 }, { fps: 7 });
     case "celebrate":
       return compact("tuvis2d-celebrate-se.png", { charH: 0.803, feetY: 0.925, centerX: 0.496 }, { fps: 6 });
+    case "fire":
+      // The fire strip uses the large 543x724 cell with the character nearly
+      // filling it (measured charH 0.939, ground 0.960).
+      return {
+        src: assetUrl(`${STRIP}/tuvis2d-fire-se.png`),
+        frameWidth: 543,
+        frameHeight: 724,
+        frames: 4,
+        displayHeight: Math.round(TARGET_CHAR_PX / 0.939),
+        anchor: [0.499, 0.96],
+        fps: 8,
+        loop: true, // the test fire keeps firing for the whole 2s window
+      };
   }
 }
 
@@ -131,4 +145,5 @@ export const ACTION_DURATIONS: Record<ActionAnim, number> = {
   jump: 4 * 1000 / 8,
   pickup: 4 * 1000 / 7,
   celebrate: 4 * 1000 / 6,
+  fire: 2000,
 };

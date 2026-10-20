@@ -135,7 +135,7 @@
       "title": "完美的一天，差一点",
       "asset": "storyPerfect",
       "summary": "兔维斯试图用一整套自动化系统让今天变得完美无缺，却因为一个小小的基础错误，让工坊热闹得超出预期。",
-      "status": "故事简介"
+      "status": "故事预告"
     },
     {
       "id": "missing-parts",
@@ -155,6 +155,15 @@
   "quest": {
     "title": "让 Bug Buster 重新上线",
     "modules": [
+      {
+        "id": "body",
+        "label": "Bug Buster 机身",
+        "english": "Bug Buster Body",
+        "color": "#7c8aa0",
+        "description": "Bug Buster 的主机体，枪管、握把和能量回路都在它上面。把它搬回工作台，其他组件才有落脚的地方。",
+        "analogy": "相当于编辑器的主进程：界面再花哨，没它什么都跑不起来。",
+        "source": "窗下的柜子"
+      },
       {
         "id": "sight",
         "label": "瞄准模块",
@@ -176,7 +185,7 @@
       {
         "id": "emitter",
         "label": "脉冲发射头",
-        "source": "书架上",
+        "source": "货架顶上",
         "english": "Pulse Emitter",
         "color": "#ff9d28",
         "description": "炮身的脉冲发射头，把充好的能量聚成一发清理脉冲，专门驱散定位到的 Bug。",
@@ -184,9 +193,8 @@
       }
     ],
     "instructions": [
-      "找齐三个模块",
-      "在工作台修好能源匣接口",
-      "装配 Bug Buster",
+      "找齐四个组件",
+      "在工作台组装 Bug Buster",
       "把成品放到装备架"
     ]
   },
@@ -196,7 +204,8 @@
     "help": "操作说明",
     "helpLines": [
       "点击地面移动",
-      "点击物件，兔维斯会走近并互动"
+      "点击物件，兔维斯会走近并互动",
+      "点击兔维斯，可以让它做动作"
     ],
     "assemblyHelp": "把零件拖进九宫格里它自己的位置，也可以先点零件再点它的格子；放对会变绿锁定，全部放对自动组装。",
     "outside": "先在工坊里逛逛吧。",

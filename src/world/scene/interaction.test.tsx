@@ -4,7 +4,6 @@ import "@/i18n";
 import { bundle, scene } from "../testFixtures";
 import type { QuestState } from "../quest/quest";
 import { INITIAL_QUEST, MODULE_IDS, questReducer } from "../quest/quest";
-import { QuestBar } from "../quest/QuestBar";
 import { WorkbenchPanel } from "../quest/WorkbenchPanel";
 import { createRuntimeStore } from "./runtimeStore";
 import { resolveHotspot } from "./interaction";
@@ -20,10 +19,12 @@ function repaired(): QuestState {
   return questReducer(allCollected(), { type: "REPAIR_CELL" });
 }
 
+// Installing no longer waits for a repair: the tray opens once every module
+// is in hand. `repaired()` stays for the retained repair-mode panel tests.
 function installedAll(): QuestState {
   return MODULE_IDS.reduce(
     (state, moduleId) => questReducer(state, { type: "INSTALL", moduleId }),
-    repaired(),
+    allCollected(),
   );
 }
 
@@ -51,17 +52,34 @@ describe("resolveHotspot", () => {
     expect(result.action).toBeUndefined();
   });
 
-  // The window and posters lost their moduleIds in the redistribution: even a
-  // pickup-flagged arrival can only open their content.
-  it("keeps the window and posters as pure content hotspots with no module", () => {
-    expect(scene.hotspots.find((h) => h.id === "window")?.moduleId).toBeUndefined();
-    expect(scene.hotspots.find((h) => h.id === "posters")?.moduleId).toBeUndefined();
-    expect(resolveHotspot("window", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
+  // The window carries the body in the fifth redistribution: a plain arrival
+  // still just opens the city content; only the floating-part pickup collects.
+  it("collects the body only on a pickup arrival at the window", () => {
+    const windowHotspot = scene.hotspots.find((h) => h.id === "window");
+    expect(windowHotspot?.moduleId).toBe("body");
+    expect(windowHotspot?.pickupAnchor).toEqual([600, 335]); // the shelf under the window
+    expect(resolveHotspot("window", bundle, INITIAL_QUEST)).toEqual({
       overlay: { kind: "world", id: "city" },
     });
+    expect(resolveHotspot("window", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
+      overlay: { kind: "pickup", moduleId: "body" },
+      questEvent: { type: "COLLECT", moduleId: "body" },
+      action: "pickup",
+    });
+  });
+
+  it("keeps the posters a pure content hotspot with no module", () => {
+    expect(scene.hotspots.find((h) => h.id === "posters")?.moduleId).toBeUndefined();
     expect(resolveHotspot("posters", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
       overlay: { kind: "world", id: "residents" },
     });
+  });
+
+  // The visible parts moved with their furniture: rack green frame, lounge
+  // sofa corner, window shelf (asserted above).
+  it("anchors the floating parts at their remapped pickup anchors", () => {
+    expect(scene.hotspots.find((h) => h.id === "rack")?.pickupAnchor).toEqual([1226, 375]);
+    expect(scene.hotspots.find((h) => h.id === "lounge")?.pickupAnchor).toEqual([1075, 650]);
   });
 
   it("collects the sight module only on a pickup arrival at the toolbox", () => {
@@ -85,15 +103,33 @@ describe("resolveHotspot", () => {
     expect(result.action).toBe("pickup");
   });
 
-  it("opens the stories shelf on a normal arrival without collecting the emitter", () => {
+  it("opens the stories shelf on a plain arrival", () => {
     const result = resolveHotspot("books", bundle, INITIAL_QUEST);
     expect(result.overlay).toEqual({ kind: "stories" });
     expect(result.questEvent).toBeUndefined();
     expect(result.action).toBeUndefined();
   });
 
-  it("collects the emitter module only on a pickup arrival at the bookshelf", () => {
-    const result = resolveHotspot("books", bundle, INITIAL_QUEST, { pickup: true });
+  // The stories shelf went back to pure content in the v3 redistribution:
+  // the emitter now floats on the equipment rack's top shelf.
+  it("keeps the stories shelf a pure content hotspot with no module", () => {
+    expect(scene.hotspots.find((h) => h.id === "books")?.moduleId).toBeUndefined();
+    expect(resolveHotspot("books", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
+      overlay: { kind: "stories" },
+    });
+  });
+
+  it("hints at the missing modules on a plain arrival at the rack", () => {
+    const result = resolveHotspot("rack", bundle, INITIAL_QUEST);
+    expect(result.overlay).toBeNull();
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
+    // The hint text now counts the body as a component to find.
+    expect(result.message).toBe("让 Bug Buster 重新上线：先找齐四个组件。");
+  });
+
+  it("collects the emitter module only on a pickup arrival at the rack", () => {
+    const result = resolveHotspot("rack", bundle, INITIAL_QUEST, { pickup: true });
     expect(result.overlay).toEqual({ kind: "pickup", moduleId: "emitter" });
     expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "emitter" });
     expect(result.action).toBe("pickup");
@@ -115,10 +151,16 @@ describe("resolveHotspot", () => {
     expect(resolveHotspot("lounge", bundle, withCell, { pickup: true }).questEvent).toBeUndefined();
 
     const withEmitter = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "emitter" });
-    expect(resolveHotspot("books", bundle, withEmitter, { pickup: true }).overlay).toEqual({
-      kind: "stories",
+    const rackAgain = resolveHotspot("rack", bundle, withEmitter, { pickup: true });
+    expect(rackAgain.overlay).toBeNull();
+    expect(rackAgain.questEvent).toBeUndefined();
+
+    const withBody = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "body" });
+    expect(resolveHotspot("window", bundle, withBody, { pickup: true }).overlay).toEqual({
+      kind: "world",
+      id: "city",
     });
-    expect(resolveHotspot("books", bundle, withEmitter, { pickup: true }).questEvent).toBeUndefined();
+    expect(resolveHotspot("window", bundle, withBody, { pickup: true }).questEvent).toBeUndefined();
   });
 
   it("shows door destinations without starting another scene", () => {
@@ -143,11 +185,17 @@ describe("resolveHotspot", () => {
     expect(resolveHotspot("table", bundle, INITIAL_QUEST).pose).toBe("coffee");
   });
 
-  it("switches the workbench from task to repair to assembly", () => {
+  // The repair stop was removed: task board until the set is complete, then
+  // the assembly close-up, then the finished-gun showcase on the desk.
+  it("switches the workbench from task to assembly to the finished-gun showcase", () => {
     expect(resolveHotspot("workbench", bundle, INITIAL_QUEST).overlay).toEqual({ kind: "task" });
     const collected = allCollected();
-    expect(resolveHotspot("workbench", bundle, collected).overlay).toEqual({ kind: "repair" });
-    expect(resolveHotspot("workbench", bundle, repaired()).overlay).toEqual({ kind: "assembly" });
+    expect(resolveHotspot("workbench", bundle, collected).overlay).toEqual({ kind: "assembly" });
+    const oneInstalled = questReducer(collected, { type: "INSTALL", moduleId: "sight" });
+    expect(resolveHotspot("workbench", bundle, oneInstalled).overlay).toEqual({ kind: "assembly" });
+    expect(resolveHotspot("workbench", bundle, installedAll()).overlay).toEqual({
+      kind: "workbenchGun",
+    });
   });
 
   it("places the finished weapon on the rack only after all installs", () => {
@@ -175,17 +223,6 @@ describe("daily poses", () => {
   });
 });
 
-describe("QuestBar", () => {
-  it("shows three slots and the current action", () => {
-    const { rerender } = render(<QuestBar bundle={bundle} quest={INITIAL_QUEST} />);
-    expect(screen.getByText("瞄准模块")).toBeInTheDocument();
-    expect(screen.getByText("能源匣")).toBeInTheDocument();
-    expect(screen.getByText("脉冲发射头")).toBeInTheDocument();
-    expect(screen.getByText(/还需寻找/)).toBeInTheDocument();
-    rerender(<QuestBar bundle={bundle} quest={installedAll()} />);
-    expect(screen.getByText(/到装备架陈列/)).toBeInTheDocument();
-  });
-});
 
 describe("WorkbenchPanel", () => {
   it("lists missing modules in task mode", () => {
@@ -201,7 +238,9 @@ describe("WorkbenchPanel", () => {
     );
     expect(screen.getByText("在工具箱里寻找")).toBeInTheDocument();
     expect(screen.getByText("在沙发上寻找")).toBeInTheDocument();
-    expect(screen.getByText("在书架上寻找")).toBeInTheDocument();
+    // The emitter's hint follows the pack data: it now sits on the rack's
+    // top shelf, no longer on the stories bookshelf.
+    expect(screen.getByText("在货架顶上寻找")).toBeInTheDocument();
   });
 
   it("repairs after selecting the loose interface", () => {

@@ -59,11 +59,38 @@ export function ContentPanel({ overlay, bundle, onClose }: ContentPanelProps) {
         <p className="world-panel-note">{equipment.analogy}</p>
       </div>
     ) : (
-      <ul className="world-panel-list">
+      <ul className="world-panel-list world-equipment-gallery">
         {content.equipment.map((item) => (
-          <li key={item.id}>
-            <strong>{item.name}</strong>
-            <span>{item.description}</span>
+          <li key={item.id} className="world-equipment-row">
+            {(() => {
+              const asset = bundle.manifest.assets[item.asset];
+              if (!asset) return null;
+              const [sx, sy, sw, sh] = item.sourceRect;
+              return (
+                <span className="world-crop" style={{ display: "block", width: 96, aspectRatio: `${sw} / ${sh}` }}>
+                  <img
+                    src={assetUrl(asset.path)}
+                    alt={item.name}
+                    draggable={false}
+                    style={{
+                      position: "absolute",
+                      width: `${(asset.width / sw) * 100}%`,
+                      height: `${(asset.height / sh) * 100}%`,
+                      left: `${(-sx / sw) * 100}%`,
+                      top: `${(-sy / sh) * 100}%`,
+                      maxWidth: "none",
+                    }}
+                  />
+                </span>
+              );
+            })()}
+            <div>
+              <strong style={{ color: item.color }}>
+                {item.name} · {item.english}
+              </strong>
+              <p>{item.description}</p>
+              <p className="world-panel-note">{item.analogy}</p>
+            </div>
           </li>
         ))}
       </ul>

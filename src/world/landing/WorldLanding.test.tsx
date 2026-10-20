@@ -38,8 +38,11 @@ describe("WorldLanding", () => {
     for (const link of links) expect(link).toHaveAttribute("href", "/zh/world/workshop");
   });
 
-  it("expands a story summary in a dialog and restores focus on close", () => {
-    const trigger = screen.getAllByRole("button", { name: "查看简介" })[0];
+  it("expands a story teaser in a dialog and restores focus on close", () => {
+    // The story buttons went from "查看简介" to the teaser wording.
+    const triggers = screen.getAllByRole("button", { name: "故事预告" });
+    expect(triggers).toHaveLength(bundle.content.stories.length);
+    const trigger = triggers[0];
     trigger.focus();
     fireEvent.click(trigger);
     const dialog = screen.getByRole("dialog");
@@ -50,7 +53,7 @@ describe("WorldLanding", () => {
   });
 
   it("closes the dialog with Escape", () => {
-    fireEvent.click(screen.getAllByRole("button", { name: "查看简介" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: "故事预告" })[1]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

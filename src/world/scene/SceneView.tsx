@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
 import type { ContentOverlay, Hotspot, Point, SceneDefinition, WorldBundle, WorldManifest } from "../types";
@@ -7,11 +7,13 @@ import { ContentPanel } from "../content/ContentPanel";
 import { AssemblyPanel } from "../quest/AssemblyPanel";
 import { FrameArt } from "../quest/FrameArt";
 import { PickupPanel } from "../quest/PickupPanel";
-import { QuestBar } from "../quest/QuestBar";
+import { QuestCard } from "../quest/QuestCard";
+import { WorkbenchGunPanel } from "../quest/WorkbenchGunPanel";
 import { WorkbenchPanel } from "../quest/WorkbenchPanel";
+import { MODULE_IDS } from "../quest/quest";
 import { toScenePoint } from "./geometry";
 import { resolveHotspot } from "./interaction";
-import { ACTION_DURATIONS, actionAnim, idleAnim, walkAnim } from "./petFrames";
+import { ACTION_DURATIONS, actionAnim, idleAnim, walkAnim, type ActionAnim } from "./petFrames";
 import { Sprite } from "./Sprite";
 import { useRuntimeStore, type Pose } from "./runtimeStore";
 import { useSceneLoop } from "./useSceneLoop";
@@ -83,7 +85,10 @@ function pendingPickups(bundle: WorldBundle, collected: readonly string[]): Hots
       hotspot.moduleId !== undefined &&
       !hotspot.pickupHidden &&
       !collected.includes(hotspot.moduleId) &&
-      (hotspot.kind === "equipment" || hotspot.kind === "world" || hotspot.kind === "stories"),
+      (hotspot.kind === "equipment" ||
+        hotspot.kind === "world" ||
+        hotspot.kind === "stories" ||
+        hotspot.kind === "rack"),
   );
 }
 
@@ -105,6 +110,13 @@ export function SceneView({ bundle }: SceneViewProps) {
   useEffect(() => {
     if (!pendingArrival) return;
     const current = store.getState();
+    // "Try the Bug Buster" arrivals only play the fire animation.
+    if (pendingArrival.tryFire) {
+      current.clearArrival();
+      current.triggerAction("fire");
+      current.dispatchQuest({ type: "TRY_WEAPON" });
+      return;
+    }
     if (pendingArrival.hotspotId) {
       const result = resolveHotspot(pendingArrival.hotspotId, bundle, current.quest, {
         pickup: pendingArrival.pickup,
@@ -149,10 +161,10 @@ export function SceneView({ bundle }: SceneViewProps) {
         state.quest.installed.includes(id as "sight"),
       );
       if (done) {
-        // Celebrating behind the fullscreen modal is invisible; celebrate and
-        // announce completion when the finished assembly panel closes.
+        // Celebrating behind the fullscreen modal is invisible; celebrate when
+        // the finished assembly panel closes. The quest card now prompts the
+        // test fire; the completion line appears after the first shot.
         state.triggerAction("celebrate");
-        state.setNotice("questDone");
       }
     }
     state.setOverlay(null);
@@ -177,14 +189,29 @@ export function SceneView({ bundle }: SceneViewProps) {
     store.getState().requestMove(point);
   };
 
-  // Clicking the character itself plays a jump instead of walking.
+  // Clicking the character opens a small emote menu instead of walking.
+  const [emoteMenu, setEmoteMenu] = useState(false);
   const onActorActivate = (event: { stopPropagation(): void }) => {
     event.stopPropagation();
     const state = store.getState();
     if (state.action || state.overlay !== null) return;
     state.setPose(state.motion.direction);
-    state.triggerAction("jump");
+    state.cancelMovement();
+    setEmoteMenu(true);
   };
+
+  const playEmote = (kind: ActionAnim) => {
+    setEmoteMenu(false);
+    const state = store.getState();
+    state.triggerAction(kind);
+    if (kind === "fire") state.dispatchQuest({ type: "TRY_WEAPON" });
+  };
+  const assembled = quest.installed.length === MODULE_IDS.length;
+  const emoteOptions: Array<{ kind: ActionAnim; label: string }> = [
+    { kind: "jump", label: t("world.emoteJump") },
+    { kind: "celebrate", label: t("world.emoteCelebrate") },
+  ];
+  if (assembled) emoteOptions.push({ kind: "fire", label: t("world.emoteFire") });
 
   // Walk/idle strips per direction; actions are SE-only (SW mirrors).
   const oldPose = pose === "sit" || pose === "coffee" || pose === "display";
@@ -201,11 +228,15 @@ export function SceneView({ bundle }: SceneViewProps) {
     ? `${action.kind}-${action.id}`
     : `${moving ? "walk" : "idle"}-${motion.direction}`;
 
+  // Any walk dismisses the emote menu.
+  useEffect(() => {
+    if (moving) setEmoteMenu(false);
+  }, [moving]);
+
   const pickups = pendingPickups(bundle, quest.collected);
 
   return (
     <>
-      <QuestBar bundle={bundle} quest={quest} />
       <section className="world-scene-wrap" aria-label="工坊场景">
       <div
         ref={stageRef}
@@ -257,6 +288,40 @@ export function SceneView({ bundle }: SceneViewProps) {
           </div>
         ) : null}
 
+        {quest.installed.length === MODULE_IDS.length && action?.kind !== "fire"
+          ? (() => {
+              const wbFrame = manifest.frames[scene.workbenchDisplay.frame];
+              const wbAsset = wbFrame ? manifest.assets[wbFrame.asset] : undefined;
+              if (!wbFrame || !wbAsset) return null;
+              const [bx, by, bw, bh] = scene.workbenchDisplay.rect;
+              return (
+                <div
+                  className="world-rack-display"
+                  data-workbench-display
+                  style={{
+                    left: `${(bx / scene.size[0]) * 100}%`,
+                    top: `${(by / scene.size[1]) * 100}%`,
+                    width: `${(bw / scene.size[0]) * 100}%`,
+                    height: `${(bh / scene.size[1]) * 100}%`,
+                  }}
+                >
+                  <img
+                    src={assetUrl(wbAsset.path)}
+                    alt="Bug Buster"
+                    style={{
+                      position: "absolute",
+                      width: `${(wbAsset.width / wbFrame.sourceRect[2]) * 100}%`,
+                      height: `${(wbAsset.height / wbFrame.sourceRect[3]) * 100}%`,
+                      left: `${(-wbFrame.sourceRect[0] / wbFrame.sourceRect[2]) * 100}%`,
+                      top: `${(-wbFrame.sourceRect[1] / wbFrame.sourceRect[3]) * 100}%`,
+                      maxWidth: "none",
+                    }}
+                  />
+                </div>
+              );
+            })()
+          : null}
+
         <span
           className="world-actor-shadow"
           aria-hidden="true"
@@ -292,22 +357,60 @@ export function SceneView({ bundle }: SceneViewProps) {
               position={character.position}
               depth={0}
               stage={scene.size}
-              onClick={onActorActivate}
             />
           )}
         </div>
 
+        <div
+          data-actor-hit
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: `${(character.position[0] / scene.size[0]) * 100}%`,
+            top: `${(character.position[1] / scene.size[1]) * 100}%`,
+            width: `${(70 / scene.size[0]) * 100}%`,
+            height: `${(170 / scene.size[1]) * 100}%`,
+            translate: "-50% -97%",
+            zIndex: 1100,
+            cursor: "pointer",
+          }}
+          onClick={onActorActivate}
+        />
+
+        {emoteMenu && !action ? (
+          <div
+            className="world-emote-menu"
+            style={{
+              left: `${(character.position[0] / scene.size[0]) * 100}%`,
+              top: `${((character.position[1] - animDef.displayHeight - 6) / scene.size[1]) * 100}%`,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {emoteOptions.map((option) => (
+              <button key={option.kind} type="button" onClick={() => playEmote(option.kind)}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         {pickups.map((hotspot) => {
           const [x, y, width, height] = hotspot.rect;
-          const centerX = x + width / 2;
-          // Sit the part ON the object: anchored just above the hotspot's
-          // bottom edge (where the toolbox / sill / storage box actually is),
-          // small enough that the surrounding hotspot stays clickable.
-          const boxW = 110;
-          const boxH = 76;
-          const centerY = y + height - 24 - boxH / 2;
-          const moduleDef = scene.assembly.modules.find((module) => module.id === hotspot.moduleId);
-          if (!moduleDef || !hotspot.moduleId) return null;
+          // The body is the pre-seated grid piece, not an assembly module —
+          // its artwork lives on scene.assembly.body.
+          const moduleFrameId =
+            hotspot.moduleId === "body"
+              ? scene.assembly.body.frame
+              : scene.assembly.modules.find((module) => module.id === hotspot.moduleId)?.frame;
+          if (!moduleFrameId || !hotspot.moduleId) return null;
+          const boxW = 77;
+          const boxH = 53;
+          // Explicit pickupAnchor wins; otherwise sit the part just above the
+          // hotspot's bottom edge (where the object body actually is).
+          const centerX = hotspot.pickupAnchor ? hotspot.pickupAnchor[0] : x + width / 2;
+          const centerY = hotspot.pickupAnchor
+            ? hotspot.pickupAnchor[1]
+            : y + height - 24 - boxH / 2;
           return (
             <button
               key={`pickup-${hotspot.id}`}
@@ -317,7 +420,7 @@ export function SceneView({ bundle }: SceneViewProps) {
               aria-label={t("world.pickupHint", { label: labelFor(hotspot.moduleId) })}
               style={{
                 left: `${((centerX - boxW / 2) / scene.size[0]) * 100}%`,
-                top: `${(centerY / scene.size[1]) * 100}%`,
+                top: `${((centerY - boxH / 2) / scene.size[1]) * 100}%`,
                 width: `${(boxW / scene.size[0]) * 100}%`,
                 height: `${(boxH / scene.size[1]) * 100}%`,
               }}
@@ -326,10 +429,33 @@ export function SceneView({ bundle }: SceneViewProps) {
                 store.getState().requestMove(hotspot.approach, hotspot.id, true);
               }}
             >
-              <FrameArt bundle={bundle} frameId={moduleDef.frame} alt="" fit={88} />
+              <FrameArt bundle={bundle} frameId={moduleFrameId} alt="" fit={88} />
             </button>
           );
         })}
+
+        {(() => {
+          const workbench = scene.hotspots.find((h) => h.kind === "workbench");
+          if (!workbench || quest.installed.length !== MODULE_IDS.length) return null;
+          const [wx, wy, ww] = workbench.rect;
+          return (
+            <button
+              type="button"
+              className="world-try-button"
+              data-try-buster
+              style={{
+                left: `${((wx + ww / 2 - 70) / scene.size[0]) * 100}%`,
+                top: `${((wy - 26) / scene.size[1]) * 100}%`,
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                store.getState().requestMove(scene.trySpot, workbench.id, false, true);
+              }}
+            >
+              {t("world.tryBugBuster")}
+            </button>
+          );
+        })()}
 
         {scene.hotspots.map((hotspot) => {
           const [x, y, width, height] = hotspot.rect;
@@ -355,6 +481,8 @@ export function SceneView({ bundle }: SceneViewProps) {
             </button>
           );
         })}
+
+        <QuestCard bundle={bundle} quest={quest} />
       </div>
       {notice ? (
         <p className={`world-scene-notice${notice === "questDone" ? " is-success" : ""}`} role="status">
@@ -373,6 +501,19 @@ export function SceneView({ bundle }: SceneViewProps) {
 
       {overlay?.kind === "pickup" ? (
         <PickupPanel bundle={bundle} moduleId={overlay.moduleId} onClose={closeOverlay} />
+      ) : null}
+
+      {overlay?.kind === "workbenchGun" ? (
+        <WorkbenchGunPanel
+          bundle={bundle}
+          onTry={() => {
+            const s = store.getState();
+            s.setOverlay(null);
+            s.triggerAction("fire");
+            s.dispatchQuest({ type: "TRY_WEAPON" });
+          }}
+          onClose={closeOverlay}
+        />
       ) : null}
 
       {overlay && (overlay.kind === "task" || overlay.kind === "repair") ? (

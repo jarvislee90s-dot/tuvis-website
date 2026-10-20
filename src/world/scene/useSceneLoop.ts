@@ -30,7 +30,7 @@ export function useSceneLoop(
         if (result.arrived) {
           store
             .getState()
-            .arrive(result.arrived.token, result.arrived.hotspotId, result.arrived.pickup);
+            .arrive(result.arrived.token, result.arrived.hotspotId, result.arrived.pickup, result.arrived.tryFire);
         }
       }
       frame = requestAnimationFrame(tick);

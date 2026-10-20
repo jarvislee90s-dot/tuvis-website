@@ -37,7 +37,11 @@ const LABEL_OF: Record<(typeof MODULE_IDS)[number], string> = {
   sight: "瞄准模块",
   cell: "能源匣",
   emitter: "脉冲发射头",
+  body: "Bug Buster 机身",
 };
+/** The three tray-draggable grid modules; the body is pre-seated by its
+ * pickup, so it never shows up as a loose tray piece. */
+const GRID_MODULES = MODULE_IDS.filter((id) => id !== "body");
 
 function repaired(): QuestState {
   let state = INITIAL_QUEST;
@@ -154,8 +158,11 @@ describe("AssemblyPanel", () => {
     const body = document.querySelector('[data-assembly-cell="1-1"]') as HTMLElement;
     expect(body).toHaveClass("is-installed", "is-body");
     expect(screen.getByAltText("机身")).toBeInTheDocument();
+    // The seated body has no socket of its own and no loose tray piece.
+    expect(body.querySelector("[data-assembly-socket]")).toBeNull();
+    expect(screen.queryByRole("button", { name: "零件：Bug Buster 机身" })).not.toBeInTheDocument();
 
-    for (const id of MODULE_IDS) {
+    for (const id of GRID_MODULES) {
       const cell = document.querySelector(`[data-assembly-cell="${CELL_OF[id]}"]`) as HTMLElement;
       expect(cell).toHaveClass("is-target");
       expect(cell).not.toHaveClass("is-installed");
@@ -299,7 +306,7 @@ describe("AssemblyPanel", () => {
     const { onEvent } = renderPanel(repaired(), { onClose });
     await act(async () => undefined); // let preloadAssets settle
 
-    for (const id of MODULE_IDS) {
+    for (const id of GRID_MODULES) {
       selectPiece(LABEL_OF[id]);
       fireEvent.click(screen.getByRole("button", { name: `插槽：${LABEL_OF[id]}` }));
     }

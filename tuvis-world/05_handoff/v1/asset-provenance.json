@@ -44,6 +44,10 @@
     {
       "asset": "tuvis2dCelebrateSe",
       "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dFireSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
     }
   ],
   "reused": [

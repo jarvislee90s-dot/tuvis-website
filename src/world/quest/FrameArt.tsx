@@ -1,8 +1,8 @@
-import type { WorldBundle } from "../types";
+import type { WorldContentBundle } from "../types";
 import { assetUrl } from "../assets/loadWorldData";
 
 type FrameArtProps = {
-  bundle: WorldBundle;
+  bundle: WorldContentBundle;
   frameId: string;
   alt: string;
   /** Width of the fitted artwork inside its box, as a percentage. */

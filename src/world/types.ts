@@ -7,7 +7,7 @@
 export type Point = readonly [number, number];
 export type Rect = readonly [number, number, number, number];
 export type Direction = "nw" | "ne" | "sw" | "se";
-export type ModuleId = "sight" | "cell" | "emitter";
+export type ModuleId = "sight" | "cell" | "emitter" | "body";
 
 export type ContentOverlay =
   | { kind: "equipment"; id?: string }
@@ -20,6 +20,7 @@ export type Overlay =
   | null
   | ContentOverlay
   | { kind: "task" | "repair" | "assembly" }
+  | { kind: "workbenchGun" }
   | { kind: "pickup"; moduleId: ModuleId };
 
 export type AssetDefinition = {
@@ -76,6 +77,8 @@ export type Hotspot = {
   moduleId?: ModuleId;
   /** The module is concealed (in a box): no floating part, arrival opens it. */
   pickupHidden?: boolean;
+  /** Floating-part position in scene coords (defaults to the rect bottom). */
+  pickupAnchor?: Point;
   nextSceneId?: string;
 };
 
@@ -124,6 +127,10 @@ export type SceneDefinition = {
   hotspots: Hotspot[];
   actions: Record<string, SceneAction>;
   rackDisplay: { frame: string; rect: Rect };
+  /** The assembled gun shown on the workbench desk once all modules are in. */
+  workbenchDisplay: { frame: string; rect: Rect };
+  /** Where the character stands to try-fire (left of the desk chair). */
+  trySpot: Point;
   assembly: {
     size: Point;
     body: { frame: string; rect: Rect };

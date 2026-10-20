@@ -60,6 +60,7 @@
 | tuvis2dJumpSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-jump-se.png | Task 11 角色 2.5D 动画；点击角色跳跃四帧条 |
 | tuvis2dPickupSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-pickup-se.png | Task 11 角色 2.5D 动画；拾取零件四帧条 |
 | tuvis2dCelebrateSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-celebrate-se.png | Task 11 角色 2.5D 动画；组装完成庆祝四帧条 |
+| tuvis2dFireSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-fire-se.png | Task 11 角色 2.5D 动画；试用 Bug Buster 开火四帧条（SE） |
 | actions | tuvis-world/05_handoff/v1/assets/characters/tuvis-actions.png | Task 6 日常动作；帧 sit、coffee、display |
 | props | tuvis-world/05_handoff/v1/assets/props/workshop-props.png | Task 5/6 家具与深度遮挡；帧 deskChair、loungeChair、lowTable |
 | hero | tuvis-world/05_handoff/v1/assets/landing/hero.png | W-01 首屏、W-02 角色介绍（Task 2） |

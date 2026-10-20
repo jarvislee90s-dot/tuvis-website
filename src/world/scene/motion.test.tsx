@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { bundle, scene } from "../testFixtures";
 import type { Point } from "../types";
+import { MODULE_IDS } from "../quest/quest";
 import { advanceMotion, findPath, type MotionState } from "./navigation";
 import { isSegmentClear } from "./geometry";
 import { ACTION_DURATIONS } from "./petFrames";
@@ -28,7 +29,8 @@ describe("advanceMotion", () => {
       result.motion.position[0] - start[0],
       result.motion.position[1] - start[1],
     );
-    expect(travelled).toBeLessThanOrEqual(19.01);
+    // The walk speed is 228 px/s (scene.json): 100 ms of budget = 22.8 px.
+    expect(travelled).toBeLessThanOrEqual(22.81);
     expect(result.arrived).toBeUndefined();
     expect(isSegmentClear(start, result.motion.position, scene)).toBe(true);
   });
@@ -46,6 +48,36 @@ describe("advanceMotion", () => {
     expect(first.motion.position).toEqual(end);
     const second = advanceMotion(first.motion, 100, scene);
     expect(second.arrived).toBeUndefined();
+  });
+
+  // Back views have no idle animation, so arrivals settle front-facing.
+  it("turns back-view walks front-facing on arrival", () => {
+    expect(isSegmentClear([790, 630], [786, 626], scene)).toBe(true);
+    const northWest = advanceMotion(
+      {
+        position: [790, 630],
+        direction: "nw",
+        target: { token: 1, path: [[790, 630], [786, 626]] },
+      },
+      100,
+      scene,
+    );
+    expect(northWest.arrived?.token).toBe(1);
+    expect(northWest.motion.direction).toBe("sw");
+    expect(northWest.motion.target).toBeNull();
+
+    expect(isSegmentClear([790, 630], [794, 626], scene)).toBe(true);
+    const northEast = advanceMotion(
+      {
+        position: [790, 630],
+        direction: "ne",
+        target: { token: 2, path: [[790, 630], [794, 626]] },
+      },
+      100,
+      scene,
+    );
+    expect(northEast.arrived?.token).toBe(2);
+    expect(northEast.motion.direction).toBe("se");
   });
 
   it("cancels when a segment is no longer legal", () => {
@@ -270,19 +302,70 @@ describe("character presentation", () => {
     expect(spriteOf(container)!.style.transform).toContain("scaleX(-1)");
   });
 
-  // Clicking the character plays a jump instead of starting a walk.
-  it("plays a jump when the character is clicked and does not retrigger mid-air", () => {
+  // Clicking the character opens an emote menu on a dedicated hit layer; the
+  // sprite itself stopped taking clicks.
+  it("opens the emote menu from the actor hit layer and plays the chosen jump once", () => {
     const { store, container } = renderScene();
-    const sprite = spriteOf(container)!;
-    expect(sprite).not.toBeNull();
+    const hit = container.querySelector("[data-actor-hit]") as HTMLElement;
+    expect(hit).not.toBeNull();
+    expect(hit.style.zIndex).toBe("1100");
 
-    fireEvent.click(sprite);
+    // The sprite no longer receives clicks of its own.
+    fireEvent.click(spriteOf(container)!);
+    expect(store.getState().action).toBeNull();
+    expect(document.querySelector(".world-emote-menu")).toBeNull();
+
+    fireEvent.click(hit);
+    expect(document.querySelector(".world-emote-menu")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "跳一跳" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "庆祝一下" })).toBeInTheDocument();
+    // The fire emote needs the assembled buster.
+    expect(screen.queryByRole("button", { name: "试试武器" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "跳一跳" }));
     expect(store.getState().action).toEqual({ kind: "jump", id: 1 });
     expect(animName(container)).toBe("tuvis2d-jump-se");
     expect(store.getState().motion.target).toBeNull();
+    // Choosing an emote closes the menu.
+    expect(document.querySelector(".world-emote-menu")).toBeNull();
 
-    fireEvent.click(spriteOf(container)!);
-    expect(store.getState().action).toEqual({ kind: "jump", id: 1 }); // guarded while playing
+    // While the jump is still playing, another click neither reopens nor retrigger.
+    fireEvent.click(hit);
+    expect(document.querySelector(".world-emote-menu")).toBeNull();
+    expect(store.getState().action).toEqual({ kind: "jump", id: 1 });
+  });
+
+  it("closes the emote menu when the character starts walking", () => {
+    const { store, container } = renderScene();
+    fireEvent.click(container.querySelector("[data-actor-hit]")!);
+    expect(document.querySelector(".world-emote-menu")).not.toBeNull();
+    act(() => store.getState().requestMove(scene.nav.nodes.center));
+    expect(document.querySelector(".world-emote-menu")).toBeNull();
+  });
+
+  it("offers the fire emote once assembled and loops it for two seconds", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { store, container } = renderScene();
+    act(() => {
+      for (const moduleId of MODULE_IDS) {
+        store.getState().dispatchQuest({ type: "COLLECT", moduleId });
+      }
+      for (const moduleId of MODULE_IDS) {
+        store.getState().dispatchQuest({ type: "INSTALL", moduleId });
+      }
+    });
+
+    fireEvent.click(container.querySelector("[data-actor-hit]")!);
+    fireEvent.click(screen.getByRole("button", { name: "试试武器" }));
+    expect(store.getState().action).toEqual({ kind: "fire", id: 1 });
+    expect(animName(container)).toBe("tuvis2d-fire-se");
+    // The try-fire loops for its whole window instead of playing once.
+    expect(spriteOf(container)!.style.animation).toContain("infinite");
+    expect(ACTION_DURATIONS.fire).toBe(2000);
+    // Firing from the emote menu also marks the weapon as tried.
+    expect(store.getState().quest.weaponTried).toBe(true);
+    act(() => vi.advanceTimersByTime(ACTION_DURATIONS.fire));
+    expect(store.getState().action).toBeNull();
   });
 });
 

@@ -7,7 +7,7 @@ import type { ActionAnim } from "./petFrames";
 
 export type Pose = Direction | "sit" | "coffee" | "display";
 
-export type Arrival = { token: number; hotspotId?: string; pickup?: boolean };
+export type Arrival = { token: number; hotspotId?: string; pickup?: boolean; tryFire?: boolean };
 
 export type ActionAnimation = {
   kind: ActionAnim;
@@ -24,10 +24,10 @@ export type RuntimeState = {
   latestRequestId: number;
   pendingArrival: Arrival | null;
   notice: string | null;
-  requestMove(point: Point, hotspotId?: string, pickup?: boolean): void;
+  requestMove(point: Point, hotspotId?: string, pickup?: boolean, tryFire?: boolean): void;
   cancelMovement(): void;
   setOverlay(overlay: Overlay): void;
-  arrive(token: number, hotspotId?: string, pickup?: boolean): void;
+  arrive(token: number, hotspotId?: string, pickup?: boolean, tryFire?: boolean): void;
   clearArrival(): void;
   dispatchQuest(event: QuestEvent): void;
   setPose(pose: Pose): void;
@@ -55,7 +55,7 @@ export function createRuntimeStore(
     pendingArrival: null,
     notice: null,
 
-    requestMove(point, hotspotId, pickup) {
+    requestMove(point, hotspotId, pickup, tryFire) {
       const state = get();
       if (state.overlay !== null) return;
       const token = state.latestRequestId + 1;
@@ -83,7 +83,7 @@ export function createRuntimeStore(
         motion: {
           position: state.motion.position,
           direction: nextDirection,
-          target: { token, path, hotspotId, pickup },
+          target: { token, path, hotspotId, pickup, tryFire },
         },
       });
     },
@@ -113,12 +113,12 @@ export function createRuntimeStore(
       });
     },
 
-    arrive(token, hotspotId, pickup) {
+    arrive(token, hotspotId, pickup, tryFire) {
       const state = get();
       if (token !== state.latestRequestId) return;
       set({
         motion: { ...state.motion, target: null },
-        pendingArrival: { token, hotspotId, pickup },
+        pendingArrival: { token, hotspotId, pickup, tryFire },
       });
     },
 

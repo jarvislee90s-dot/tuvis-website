@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useStore, type StoreApi } from "zustand";
+import type { StoreApi } from "zustand";
 import { loadWorldData, preloadAssets, preloadCoreAssets } from "@/world/assets/loadWorldData";
 import { SPRITE_ASSET_IDS } from "@/world/scene/petFrames";
 import { isMusicMuted, setMusicMuted, startWorkshopMusic, stopWorkshopMusic } from "@/world/audio/workshopAudio";
@@ -57,7 +57,6 @@ export function WorkshopRuntime({
     () => createRuntimeStore(bundle.scene, initialQuest),
     [bundle.scene, initialQuest],
   );
-  const helpSeen = useStore(store, (state) => state.quest.helpSeen);
   const [confirmReset, setConfirmReset] = useState(false);
   const resetCancelRef = useRef<HTMLButtonElement>(null);
   const [musicMuted, setMusicMutedState] = useState(isMusicMuted);
@@ -136,13 +135,6 @@ export function WorkshopRuntime({
             <button
               type="button"
               className="world-btn world-btn-small"
-              onClick={() => store.getState().setOverlay({ kind: "help" })}
-            >
-              {t("world.help")}
-            </button>
-            <button
-              type="button"
-              className="world-btn world-btn-small"
               onClick={() => setConfirmReset(true)}
             >
               {t("world.reset")}
@@ -151,21 +143,6 @@ export function WorkshopRuntime({
         </div>
         {lang === "en" ? (
           <p className="world-lang-note">{t("world.contentLanguageNote")}</p>
-        ) : null}
-        {!helpSeen ? (
-          <div className="world-help-banner">
-            <ul>
-              <li>{t("world.workshopHint1")}</li>
-              <li>{t("world.workshopHint2")}</li>
-            </ul>
-            <button
-              type="button"
-              className="world-btn world-btn-small"
-              onClick={() => store.getState().dispatchQuest({ type: "HELP_SEEN" })}
-            >
-              {t("world.gotIt")}
-            </button>
-          </div>
         ) : null}
         <SceneView bundle={bundle} />
       {confirmReset ? (

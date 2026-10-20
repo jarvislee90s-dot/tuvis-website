@@ -20,7 +20,7 @@ import type {
   WorldManifest,
 } from "../types";
 
-const MODULE_IDS: readonly ModuleId[] = ["sight", "cell", "emitter"];
+const MODULE_IDS: readonly ModuleId[] = ["sight", "cell", "emitter", "body"];
 const HOTSPOT_KINDS: readonly HotspotKind[] = [
   "workbench",
   "equipment",
@@ -369,6 +369,10 @@ function validateHotspot(
       hotspot.pickupHidden === undefined
         ? undefined
         : requireBoolean(hotspot.pickupHidden, `${path}.pickupHidden`),
+    pickupAnchor:
+      hotspot.pickupAnchor === undefined
+        ? undefined
+        : requirePoint(hotspot.pickupAnchor, `${path}.pickupAnchor`),
     nextSceneId:
       hotspot.nextSceneId === undefined
         ? undefined
@@ -420,7 +424,8 @@ function validateAssemblyGrid(raw: unknown, moduleIds: readonly ModuleId[]): Ass
     }
     cells[key] = cell;
   }
-  const required = ["body", ...moduleIds] as const;
+  // "body" is both a module and the pre-seated grid piece — dedupe.
+  const required = [...new Set(["body", ...moduleIds])] as const;
   for (const key of required) {
     if (!cells[key]) fail(`scene.assembly.grid.cells is missing "${key}"`);
   }
@@ -498,6 +503,14 @@ function validateScene(raw: unknown, manifest: WorldManifest): SceneDefinition {
       frame: requireFrameRef(manifest, rackDisplay.frame, "scene.rackDisplay.frame"),
       rect: requireRect(rackDisplay.rect, "scene.rackDisplay.rect"),
     },
+    workbenchDisplay: (() => {
+      const wb = requireRecord(doc.workbenchDisplay, "scene.workbenchDisplay");
+      return {
+        frame: requireFrameRef(manifest, wb.frame, "scene.workbenchDisplay.frame"),
+        rect: requireRect(wb.rect, "scene.workbenchDisplay.rect"),
+      };
+    })(),
+    trySpot: requirePoint(doc.trySpot, "scene.trySpot"),
     assembly: {
       size: requirePoint(assembly.size, "scene.assembly.size"),
       body: {

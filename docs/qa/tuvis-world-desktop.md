@@ -284,3 +284,42 @@ headless Chrome 的字体栅格与有头浏览器可能略有差异。
 **右上（NE）行走朝向左上** → 逐帧目检实锤：两张背面行走条带的内容朝向在生成交付时就放反了（`tuvis-walk-ne.png` 实际头朝左后、`tuvis-walk-nw.png` 实际头朝右后），此前两轮目检均未识别（背面视角朝向差异细微）。修复：对调两张文件内容使文件名与朝向一致（manifest sha256 / checksums / README 对照表同步），petFrames 的实测归一化参数随内容对调。答案备忘：方向错误用镜像/换素材修正，2.5D 立绘不可旋转。
 
 验证：150/150 测试、tsc/build、交互 QA 81/81、verify-pack/audit-handoff/import 全过；NE/NW 行走截图目检朝向正确。
+
+### 9.7 玩法迭代 · 第四轮（2026-10-20，grilling 对齐后实施）
+
+1. **主画幅满宽**：与顶部工具栏同宽（1120），画布随 3:2 比例增大。
+2. **维修步骤删除**：集齐三件后工作台直达组装面板；`canAssemble` 不再依赖
+   `cellRepaired`；任务指引与 `quest.instructions` 同步。修复连带回归：
+   `sanitizeQuest` 原要求 cellRepaired 才保留 installed，无维修流程下存档会丢
+   installed——已改为只要求集齐三件。
+3. **零件锚点数据化**（`pickupAnchor`，场景坐标）：能源匣→沙发座位、脉冲发射头→
+   货架顶（moduleId 移至装备架热点，rack case 支持 pickup），瞄准模块→工具箱内
+   （pickupHidden 保持隐藏）。绿框位置按验收截图目测落点。
+4. **完成态工作台**：桌面渲染成品小图（`workbenchDisplay`），点桌面弹「桌面上的成品」
+   面板；场景浮动「试用 Bug Buster」按钮与面板内按钮均触发 fire 开火动画（fire 条带
+   入库，4×543×724，实测 charH 0.939/feetY 0.960）。再次走进工作台不弹组装面板。
+5. **HUD 收编**：右上角半透明任务目标卡（可收起）承载模块槽 + 当前目标 + 操作说明 +
+   完成文案；顶栏移除 questbar、help 横幅与操作说明按钮，只留 音乐 + 重玩主线。
+
+修复过程记录：货架顶浮动零件曾与任务卡（z 1200）重叠导致点击被吞——anchor 下移至
+货架中格；「桌面成品」陈列与装备架陈列的位置回归以自动化探针守护（displays anchored
+on furniture）。验证：163 测试（+14，QuestCard 新组件 8 条）、tsc/build、只读 QA
+4 路、交互 QA 86/86 ×2、verify-pack 25 图 / audit-handoff 25 mappings、截图目检。
+
+### 9.8 玩法迭代 · 第五轮（2026-10-20）
+
+1. **机身可拾取**：ModuleId 增加 body，窗下柜子浮动零件，收集即落座工作台
+   （COLLECT body → installed）。组装门槛变为四件齐。
+2. **浮动零件缩小 30%**（110×76→77×53）并微移至验收绿框（发射头货架绿框位、
+   能源匣沙发座绿框位）。
+3. **试用开火**：站位 scene.trySpot=[430,635]（工作椅左侧，接入 nav）；fire 循环 2 秒。
+   定位教训：首版目测点距椅子碰撞菱形仅 3.1px（footRadius 12）不可达，须按
+   obstacle 距离实测选点。
+4. **到站转正面**：advanceMotion 到达时 nw→sw、ne→se（背面 idle 无动画）。
+5. **表情菜单**：点击兔维斯（独立命中层 data-actor-hit，z 1100——修复角色站进
+   热点后点击被截胡）弹出 跳一跳/庆祝一下/试一炮（fire 仅组装后），任务卡
+   操作说明同步新增提示。
+6. **任务卡紧凑化**：尺寸/字体缩 ~30%、背景透明度提高。
+
+验证：170 测试（+7）、tsc/build、只读 QA 4 路、交互 QA 97/97 ×2、
+verify-pack（Content counts 4 / grid 去重）/ audit-handoff、截图目检。

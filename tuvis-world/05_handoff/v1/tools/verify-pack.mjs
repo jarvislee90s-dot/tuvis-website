@@ -63,18 +63,18 @@ assert(new Set(scene.hotspots.map(h=>h.id)).size===scene.hotspots.length,"Duplic
 for(const h of scene.hotspots)assert(free(h.approach)&&Object.values(scene.nav.nodes).some(p=>p[0]===h.approach[0]&&p[1]===h.approach[1]),"Unreachable hotspot: "+h.id);
 for(const p of scene.props)assert(manifest.frames[p.frame],"Missing prop frame");
 for(const p of Object.values(scene.actions))assert(manifest.frames[p.frame],"Missing action frame");
-assert(content.equipment.length===4 && content.stories.length===3 && content.quest.modules.length===3,"Content counts");
+assert(content.equipment.length===4 && content.stories.length===3 && content.quest.modules.length===4,"Content counts");
 for(const id of manifest.coreAssets)assert(manifest.assets[id],"Missing core asset: "+id);
 for(const id of [content.heroAsset,content.cityAsset,content.workshopPreviewAsset,scene.background])assert(manifest.assets[id],"Missing page/background asset: "+id);
 assert(manifest.contentPath==="content/world.zh.json" && manifest.scenePath==="scene.json","Data entry paths");
 const modules=new Set(content.quest.modules.map(m=>m.id));
-assert(modules.size===3 && scene.assembly.modules.length===3,"Module ids");
+assert(modules.size===4 && scene.assembly.modules.length===3,"Module ids");
 for(const m of scene.assembly.modules)assert(modules.has(m.id)&&manifest.frames[m.frame],"Missing assembly module/frame");
 for(const f of [scene.assembly.body.frame,scene.assembly.complete.frame,scene.rackDisplay.frame])assert(manifest.frames[f],"Missing assembly/rack frame");
 const grid=scene.assembly.grid;
 assert(grid&&Number.isInteger(grid.rows)&&grid.rows>0&&Number.isInteger(grid.cols)&&grid.cols>0,"Assembly grid shape");
 {
-  const ids=["body",...[...modules]];
+  const ids=[...new Set(["body",...[...modules]])];
   const cells=grid.cells;
   assert(cells&&Object.keys(cells).length===ids.length&&ids.every(id=>Array.isArray(cells[id])),"Assembly grid cells must cover body + all modules");
   const seen=new Set();
