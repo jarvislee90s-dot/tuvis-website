@@ -14,7 +14,7 @@ const spec=await read(specPath),plan=await read(planPath);
 const manifest=JSON.parse(await read(packPrefix+"manifest.json"));
 const scene=JSON.parse(await read(packPrefix+"scene.json"));
 const content=JSON.parse(await read(packPrefix+"content/world.zh.json"));
-assert(Object.keys(manifest.assets).length===25,"Asset inventory count");
+assert(Object.keys(manifest.assets).length===24,"Asset inventory count");
 for(const [id,a] of Object.entries(manifest.assets)){
   const path=packPrefix+a.path;
   await readFile(resolve(project,path));
@@ -67,5 +67,5 @@ for(const path of docs)assert(!machinePath.test(await read(path)),"Machine-speci
 await scan(pack);
 const provenance=JSON.parse(await read(packPrefix+"asset-provenance.json"));
 for(const x of [...provenance.generated,...provenance.reused])if(x.prompt)await readFile(resolve(project,x.prompt));
-console.log("PASS: spec/plan material mappings 25/25; 9 root-relative task file lists; loader, state-event and pose contracts aligned.");
+console.log("PASS: spec/plan material mappings 24/24; 9 root-relative task file lists; loader, state-event and pose contracts aligned.");
 console.log("PASS: document links, provenance prompts and portable active-package paths.");

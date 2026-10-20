@@ -402,5 +402,6 @@
   "world.pickupAnalogyPrefix": "代码编辑类比：",
   "world.assemblyBody": "机身",
   "world.assemblyTray": "工具箱托盘",
-  "world.assemblyTrayEmpty": "收集到零件后会出现在这里。"
+  "world.assemblyTrayEmpty": "收集到零件后会出现在这里。",
+  "world.questDone": "主线任务已完成，请继续探索兔维斯世界。"
 }

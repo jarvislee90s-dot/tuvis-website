@@ -135,26 +135,19 @@
       "alpha": true,
       "sha256": "c11363f4814c310d20d7d45e8f6b1cec9f392e42f7bcdbe277b6052e9cdf0421"
     },
-    "tuvis2dWalkSw": {
-      "path": "assets/characters/2.5d/tuvis2d-walk-sw.png",
-      "width": 2172,
-      "height": 724,
-      "alpha": true,
-      "sha256": "16d73e3097ef04f0d670616657c4485b2a1cf9d6fb21c99c54075e9a21e5ff92"
-    },
     "tuvis2dWalkNw": {
       "path": "assets/characters/2.5d/tuvis2d-walk-nw.png",
       "width": 2172,
       "height": 724,
       "alpha": true,
-      "sha256": "1675e103edb08ad19f268dffee2ad52dfc7da860686052c542b5230ac78f47aa"
+      "sha256": "da9eea3cf0b6be4809eb045f76bd7b0264c92c4022ffb3304deb479c105227d3"
     },
     "tuvis2dWalkNe": {
       "path": "assets/characters/2.5d/tuvis2d-walk-ne.png",
       "width": 2172,
       "height": 724,
       "alpha": true,
-      "sha256": "da9eea3cf0b6be4809eb045f76bd7b0264c92c4022ffb3304deb479c105227d3"
+      "sha256": "1675e103edb08ad19f268dffee2ad52dfc7da860686052c542b5230ac78f47aa"
     },
     "tuvis2dJumpSe": {
       "path": "assets/characters/2.5d/tuvis2d-jump-se.png",

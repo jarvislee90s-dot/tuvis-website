@@ -255,22 +255,29 @@ async function screenshot(send, name) {
 }
 
 /**
- * Active pickup: the floating part must be visible above its hotspot before
- * anything happens; clicking the part walks to the hotspot, collects the
- * module and opens the pickup description panel.
+ * Active pickup flows. Visible parts (sofa/bookshelf): the floating part sits
+ * on the object, clicking it walks over and collects. Concealed part
+ * (toolbox): nothing floats — walking to the toolbox opens the box, which
+ * yields the module directly.
  */
 async function collectModules(send, order) {
   const labels = { sight: "瞄准模块", cell: "能源匣", emitter: "脉冲发射头" };
-  const hotspots = { sight: "toolbox", cell: "posters", emitter: "window" };
+  const hotspots = { sight: "toolbox", cell: "lounge", emitter: "books" };
+  const concealed = { sight: true, cell: false, emitter: false };
   for (const id of order) {
-    const partBefore = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
-    record(`pickup ${id}: floating part visible`, partBefore, partBefore);
-
-    const part = await centerOf(send, `[data-pickup-part="${id}"]`);
-    await mouseClick(send, part.x, part.y);
-    await waitForMoveStart(send);
-    await waitForMoveEnd(send);
-    await waitForDialog(send);
+    if (concealed[id]) {
+      const partVisible = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
+      record(`pickup ${id}: concealed part not floating`, !partVisible, partVisible);
+      await clickHotspot(send, hotspots[id]);
+    } else {
+      const partBefore = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
+      record(`pickup ${id}: floating part visible`, partBefore, partBefore);
+      const part = await centerOf(send, `[data-pickup-part="${id}"]`);
+      await mouseClick(send, part.x, part.y);
+      await waitForMoveStart(send);
+      await waitForMoveEnd(send);
+      await waitForDialog(send);
+    }
     const dialogText = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
     record(
       `pickup ${id}: panel opens with part name`,
@@ -295,12 +302,22 @@ async function runContentWithoutPickup(send, url) {
   await clearStorageAndReload(send, url);
   await dismissHelp(send);
   const before = await readQuest(send);
-  await clickHotspot(send, "toolbox");
+  // The energy cell floats on the lower sofa; the upper lounge area must
+  // still open the plain content panel without collecting it.
+  const spot = await evaluate(
+    send,
+    `(() => {
+      const r = document.querySelector('[data-hotspot="lounge"]').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height * 0.15 };
+    })()`,
+  );
+  await mouseClick(send, spot.x, spot.y);
+  await waitForDialog(send);
   const dialogText = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
   record("content click: overlay opens", dialogText.length > 0, dialogText.replace(/\s+/g, " ").slice(0, 50));
   const after = await readQuest(send);
-  record("content click: nothing collected", !after?.quest?.collected?.includes("sight"), after?.quest?.collected);
-  const partStill = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="sight"]'))`);
+  record("content click: nothing collected", !after?.quest?.collected?.includes("cell"), after?.quest?.collected);
+  const partStill = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="cell"]'))`);
   record("content click: floating part stays", partStill, partStill);
   record("content click: quest state untouched", JSON.stringify(after) === JSON.stringify(before), null);
   await closeDialog(send);
@@ -463,6 +480,9 @@ async function finishAssemblyAndRack(send, shotName) {
 
   await clickButton(send, "返回工坊");
   await waitForDialogGone(send);
+  // Closing the finished panel announces the completion back in the workshop.
+  await waitFor(send, `document.body.innerText.includes("主线任务已完成")`, { timeoutMs: 10_000 });
+  record("assembly close: completion banner", true, "主线任务已完成，请继续探索兔维斯世界。");
 
   // The rack has no dialog: arrival places the weapon and switches to the display pose.
   const rack = await centerOf(send, '.world-hotspot[data-hotspot="rack"]');

@@ -114,24 +114,29 @@ describe("workshop flow", () => {
     const { unmount } = renderRuntime(storage, storeRef);
     const store = await waitForStore(storeRef);
 
-    // Pickup 1: the floating part button starts a pickup walk to the toolbox.
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
-    fireEvent.click(screen.getByRole("button", { name: "瞄准模块（点击拾取）" }));
-    await waitFor(() => expect(store.getState().motion.target?.pickup).toBe(true));
-    expect(store.getState().motion.target?.hotspotId).toBe("toolbox");
-    act(() => store.getState().arrive(store.getState().motion.target!.token, "toolbox", true));
+    // Only the visible parts float: the concealed toolbox module has none.
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
+    expect(document.querySelector('[data-pickup-part="sight"]')).toBeNull();
+
+    // Pickup 1: walking up to the toolbox opens the box and grants the module.
+    await visit(store, "toolbox");
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "sight" }));
     expect(store.getState().quest.collected).toEqual(["sight"]);
+    expect(store.getState().action?.kind).toBe("pickup");
     await closePickup("瞄准模块");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
+    // The concealed module never had a floating part; the visible two remain.
     expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
 
-    // Pickups 2 and 3: arriving from the floating part collects and opens the panel.
-    await visit(store, "posters", true);
+    // Pickup 2: the floating part on the lounge sofa collects on arrival.
+    await visit(store, "lounge", true);
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "cell" }));
     await closePickup("能源匣");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(1);
 
-    await visit(store, "window", true);
+    // Pickup 3: the floating part on the bookshelf (stories kind) collects too.
+    await visit(store, "books", true);
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "emitter" }));
     await closePickup("脉冲发射头");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
@@ -164,6 +169,12 @@ describe("workshop flow", () => {
     expect(document.querySelector("[data-assembly-grid]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "返回工坊" }));
     await waitFor(() => expect(store.getState().overlay).toBeNull());
+
+    // Closing the finished assembly celebrates and posts the completion banner.
+    await waitFor(() => expect(store.getState().notice).toBe("questDone"));
+    expect(screen.getByText("主线任务已完成，请继续探索兔维斯世界。")).toBeInTheDocument();
+    expect(document.querySelector("p.world-scene-notice.is-success")).not.toBeNull();
+    expect(store.getState().action?.kind).toBe("celebrate");
 
     await visit(store, "rack");
     await waitFor(() => expect(isComplete(store.getState().quest)).toBe(true));
@@ -246,42 +257,66 @@ describe("workshop flow", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // A plain hotspot arrival opens content without collecting; only an arrival
-  // started from the floating part collects and plays the pickup action.
-  it("collects a module only when arriving from its floating part", async () => {
+  // The concealed toolbox module is collected by the arrival itself; visible
+  // floating parts (lounge, bookshelf) only collect when the walk was started
+  // from the floating part button.
+  it("opens the toolbox on arrival, but collects the lounge part only from its floating part", async () => {
     const storeRef: StoreRef = { current: null };
     renderRuntime(memoryStorage(), storeRef);
     const store = await waitForStore(storeRef);
 
-    // Normal arrival: content panel opens, nothing is collected.
+    // Plain arrival at the toolbox opens the box and collects the module.
     await visit(store, "toolbox");
-    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "equipment" }));
-    expect(store.getState().quest.collected).toEqual([]);
-    expect(screen.queryByRole("dialog", { name: "瞄准模块" })).not.toBeInTheDocument();
-    act(() => store.getState().setOverlay(null));
-
-    // The floating part routes a pickup walk to its hotspot.
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
-    fireEvent.click(screen.getByRole("button", { name: "瞄准模块（点击拾取）" }));
-    await waitFor(() => expect(store.getState().motion.target?.pickup).toBe(true));
-    expect(store.getState().motion.target?.hotspotId).toBe("toolbox");
-
-    act(() => store.getState().arrive(store.getState().motion.target!.token, "toolbox", true));
     await waitFor(() =>
       expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "sight" }),
     );
     expect(store.getState().quest.collected).toEqual(["sight"]);
-    expect(store.getState().action?.kind).toBe("pickup");
     expect(await screen.findByRole("dialog", { name: "瞄准模块" })).toBeInTheDocument();
     await closePickup("瞄准模块");
     await waitFor(() => expect(store.getState().overlay).toBeNull());
-    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
 
-    // Once collected, even a pickup arrival falls back to the plain content panel.
-    await visit(store, "toolbox", true);
+    // Once collected, even a plain arrival falls back to the equipment codex.
+    await visit(store, "toolbox");
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "equipment" }));
     expect(store.getState().quest.collected).toEqual(["sight"]);
     expect(screen.queryByRole("dialog", { name: "瞄准模块" })).not.toBeInTheDocument();
+    act(() => store.getState().setOverlay(null));
+
+    // A plain arrival at the lounge only reads its content.
+    await visit(store, "lounge");
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "world", id: "home" }));
+    expect(store.getState().quest.collected).toEqual(["sight"]);
+    act(() => store.getState().setOverlay(null));
+
+    // The floating part routes a pickup walk that collects on arrival.
+    expect(document.querySelector('[data-pickup-part="cell"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "能源匣（点击拾取）" }));
+    await waitFor(() => expect(store.getState().motion.target?.pickup).toBe(true));
+    expect(store.getState().motion.target?.hotspotId).toBe("lounge");
+
+    act(() => store.getState().arrive(store.getState().motion.target!.token, "lounge", true));
+    await waitFor(() =>
+      expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "cell" }),
+    );
+    expect(store.getState().quest.collected).toEqual(["sight", "cell"]);
+    expect(store.getState().action?.kind).toBe("pickup");
+    expect(await screen.findByRole("dialog", { name: "能源匣" })).toBeInTheDocument();
+    await closePickup("能源匣");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    // The collected part stops floating.
+    expect(document.querySelector('[data-pickup-part="cell"]')).toBeNull();
+  });
+
+  // The pickupHidden toolbox module never floats; the world-kind lounge and
+  // stories-kind bookshelf parts do.
+  it("renders floating parts only for visible pending modules", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    await waitForStore(storeRef);
+
+    expect(document.querySelector('[data-pickup-part="sight"]')).toBeNull();
+    expect(document.querySelector('[data-pickup-part="cell"]')).not.toBeNull();
+    expect(document.querySelector('[data-pickup-part="emitter"]')).not.toBeNull();
   });
 
   // Kills panels that focus their close button but never restore the trigger.

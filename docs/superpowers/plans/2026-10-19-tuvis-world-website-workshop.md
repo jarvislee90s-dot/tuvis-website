@@ -55,7 +55,6 @@
 | directions | tuvis-world/05_handoff/v1/assets/characters/tuvis-directions.png | Task 5 场内四向站姿与移动；帧 nw、ne、sw、se |
 | tuvis2dIdleSw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-idle-sw.png | Task 11 角色 2.5D 动画；idle SW 六帧条（含眨眼），SE 运行时镜像，coreAssets 首帧 |
 | tuvis2dWalkSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-se.png | Task 11 角色 2.5D 动画；walk SE 六帧行走条 |
-| tuvis2dWalkSw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-sw.png | Task 11 角色 2.5D 动画；walk SW 六帧行走条 |
 | tuvis2dWalkNw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-nw.png | Task 11 角色 2.5D 动画；walk NW 六帧行走条，兼作背面 idle 兜底 |
 | tuvis2dWalkNe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-ne.png | Task 11 角色 2.5D 动画；walk NE 六帧行走条（NW 镜像生成），兼作背面 idle 兜底 |
 | tuvis2dJumpSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-jump-se.png | Task 11 角色 2.5D 动画；点击角色跳跃四帧条 |

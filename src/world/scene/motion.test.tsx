@@ -195,12 +195,20 @@ describe("character presentation", () => {
     expect(spriteOf(container)!.style.animation).toBe("");
     expect(spriteOf(container)!.style.backgroundPositionX).toBe("0%");
 
+    // Feet stay planted across directions: each strip carries its measured
+    // ground anchor (petFrames.ts), so the translate differs per direction.
+    const ANCHOR_TRANSFORM = {
+      sw: "translate(-47.80%, -94.20%)",
+      se: "translate(-47.80%, -94.20%)", // mirrored idle-sw
+      nw: "translate(-53.20%, -79.60%)", // back-view strips were swapped to match facing
+      ne: "translate(-51.00%, -84.40%)",
+    } as const;
     for (const direction of ["sw", "nw", "ne", "se"] as const) {
       face(store, direction);
       const sprite = spriteOf(container)!;
       expect(sprite.style.left).toBe(left);
       expect(sprite.style.top).toBe(top);
-      expect(sprite.style.transform).toContain("translate(-50%, -97%)");
+      expect(sprite.style.transform).toContain(ANCHOR_TRANSFORM[direction]);
     }
   });
 

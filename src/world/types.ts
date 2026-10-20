@@ -74,6 +74,8 @@ export type Hotspot = {
   kind: HotspotKind;
   contentId?: string;
   moduleId?: ModuleId;
+  /** The module is concealed (in a box): no floating part, arrival opens it. */
+  pickupHidden?: boolean;
   nextSceneId?: string;
 };
 

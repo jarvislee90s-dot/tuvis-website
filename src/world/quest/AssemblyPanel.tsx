@@ -141,6 +141,13 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
 
   const trayIds = MODULE_IDS.filter((id) => quest.collected.includes(id) && !installed.includes(id));
 
+  // An install removes the dragged piece from the tray; any ghost still on
+  // screen would be a stale image of a piece that is no longer draggable.
+  useEffect(() => {
+    setGhost(null);
+  }, [installed]);
+  const visibleGhost = ghost && trayIds.includes(ghost.moduleId) ? ghost : null;
+
   const onPiecePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, id: ModuleId) => {
     if (event.button !== 0 || phase !== "build") return;
     const layout = layoutRef.current;
@@ -150,6 +157,13 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
     setSelected(id);
     setGhost({ moduleId: id, x: event.clientX - rect.left, y: event.clientY - rect.top });
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    // Belt against a missed pointerup (capture released outside the button):
+    // the drag image must never outlive the gesture.
+    window.addEventListener(
+      "pointerup",
+      () => setGhost(null),
+      { once: true },
+    );
   };
 
   const onPiecePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -327,9 +341,9 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
               )}
             </div>
 
-            {ghost ? (
-              <div className="world-assembly-ghost" style={{ left: ghost.x, top: ghost.y }}>
-                <FrameArt bundle={bundle} frameId={scene.assembly.modules.find((m) => m.id === ghost.moduleId)?.frame ?? ""} alt="" fit={100} />
+            {visibleGhost ? (
+              <div className="world-assembly-ghost" style={{ left: visibleGhost.x, top: visibleGhost.y }}>
+                <FrameArt bundle={bundle} frameId={scene.assembly.modules.find((m) => m.id === visibleGhost.moduleId)?.frame ?? ""} alt="" fit={100} />
               </div>
             ) : null}
 

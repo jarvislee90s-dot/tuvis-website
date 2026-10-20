@@ -535,8 +535,9 @@
   max-height: min(76vh, 640px);
   overflow: auto;
   border-radius: 22px;
-  background: var(--world-soft);
-  border: 1px solid var(--world-line);
+  /* Fallback keeps cards opaque even when rendered outside .world-page scope. */
+  background: var(--world-soft, #fffdf8);
+  border: 1px solid var(--world-line, #e7ddc7);
   box-shadow: 0 30px 80px rgba(20, 24, 20, 0.28);
   padding: 28px 28px 26px;
 }
@@ -978,7 +979,9 @@
 }
 
 .world-assembly-reveal-art {
-  flex: 1 1 300px;
+  /* The finished gun renders as a compact trophy (~1/5 of the earlier
+     full-width art), not a poster filling half the dialog. */
+  flex: 0 0 118px;
   display: grid;
   place-items: center;
 }
@@ -1000,6 +1003,12 @@
   border-left-color: var(--world-orange, #f08a1d);
   background: rgba(255, 255, 255, 0.08);
   color: rgba(240, 245, 245, 0.8);
+}
+
+/* Completion banner: the main quest line shown back in the workshop. */
+.world-scene-notice.is-success {
+  background: rgba(50, 199, 123, 0.12);
+  color: #1d7a4d;
 }
 
 .world-assembly-actions { display: flex; justify-content: flex-end; margin-top: 14px; }

@@ -667,7 +667,8 @@
         650
       ],
       "kind": "equipment",
-      "moduleId": "sight"
+      "moduleId": "sight",
+      "pickupHidden": true
     },
     {
       "id": "window",
@@ -683,8 +684,7 @@
         530
       ],
       "kind": "world",
-      "contentId": "city",
-      "moduleId": "emitter"
+      "contentId": "city"
     },
     {
       "id": "posters",
@@ -700,8 +700,7 @@
         550
       ],
       "kind": "world",
-      "contentId": "residents",
-      "moduleId": "cell"
+      "contentId": "residents"
     },
     {
       "id": "coffee",
@@ -731,7 +730,8 @@
         925,
         565
       ],
-      "kind": "stories"
+      "kind": "stories",
+      "moduleId": "emitter"
     },
     {
       "id": "rack",
@@ -777,7 +777,8 @@
         710
       ],
       "kind": "world",
-      "contentId": "home"
+      "contentId": "home",
+      "moduleId": "cell"
     },
     {
       "id": "table",
@@ -960,6 +961,7 @@
     "Prepared layout requires visual QA during implementation; it is not implemented gameplay.",
     "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset.",
     "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point.",
-    "assembly.grid: 九宫格组装布局，cells 为 [row, col]；瞄具上中、枪头中左、机身正中、能量管右下。"
+    "assembly.grid: 九宫格组装布局，cells 为 [row, col]；瞄具上中、枪头中左、机身正中、能量管右下。",
+    "零件分布 v2：机身在工作台（预置）；瞄准模块在工具箱内（pickupHidden，到达即开出）；能源匣在沙发上；脉冲发射头在书架上。"
   ]
 }

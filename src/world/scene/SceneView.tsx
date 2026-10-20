@@ -75,13 +75,15 @@ function characterFrame(
   };
 }
 
-/** Hotspots whose floating part is still waiting to be collected. */
+/** Hotspots whose floating part is still waiting to be collected. Concealed
+ * modules (pickupHidden) have no floating part — the arrival opens them. */
 function pendingPickups(bundle: WorldBundle, collected: readonly string[]): Hotspot[] {
   return bundle.scene.hotspots.filter(
     (hotspot) =>
       hotspot.moduleId !== undefined &&
+      !hotspot.pickupHidden &&
       !collected.includes(hotspot.moduleId) &&
-      (hotspot.kind === "equipment" || hotspot.kind === "world"),
+      (hotspot.kind === "equipment" || hotspot.kind === "world" || hotspot.kind === "stories"),
   );
 }
 
@@ -142,13 +144,16 @@ export function SceneView({ bundle }: SceneViewProps) {
       : null;
   const closeOverlay = () => {
     const state = store.getState();
-    // Celebrating behind the fullscreen modal is invisible; fire it when the
-    // finished assembly panel closes instead.
-    if (
-      state.overlay?.kind === "assembly" &&
-      ["sight", "cell", "emitter"].every((id) => state.quest.installed.includes(id as "sight"))
-    ) {
-      state.triggerAction("celebrate");
+    if (state.overlay?.kind === "assembly") {
+      const done = ["sight", "cell", "emitter"].every((id) =>
+        state.quest.installed.includes(id as "sight"),
+      );
+      if (done) {
+        // Celebrating behind the fullscreen modal is invisible; celebrate and
+        // announce completion when the finished assembly panel closes.
+        state.triggerAction("celebrate");
+        state.setNotice("questDone");
+      }
     }
     state.setOverlay(null);
   };
@@ -293,10 +298,14 @@ export function SceneView({ bundle }: SceneViewProps) {
         </div>
 
         {pickups.map((hotspot) => {
-          const [x, y, width] = hotspot.rect;
+          const [x, y, width, height] = hotspot.rect;
           const centerX = x + width / 2;
-          const boxW = 220;
-          const boxH = 150;
+          // Sit the part ON the object: anchored just above the hotspot's
+          // bottom edge (where the toolbox / sill / storage box actually is),
+          // small enough that the surrounding hotspot stays clickable.
+          const boxW = 110;
+          const boxH = 76;
+          const centerY = y + height - 24 - boxH / 2;
           const moduleDef = scene.assembly.modules.find((module) => module.id === hotspot.moduleId);
           if (!moduleDef || !hotspot.moduleId) return null;
           return (
@@ -308,9 +317,7 @@ export function SceneView({ bundle }: SceneViewProps) {
               aria-label={t("world.pickupHint", { label: labelFor(hotspot.moduleId) })}
               style={{
                 left: `${((centerX - boxW / 2) / scene.size[0]) * 100}%`,
-                // Hotspots near the stage top (posters) would push the box
-                // outside the stage where it gets clipped and unclickable.
-                top: `${(Math.max(y - boxH - 16, 8) / scene.size[1]) * 100}%`,
+                top: `${(centerY / scene.size[1]) * 100}%`,
                 width: `${(boxW / scene.size[0]) * 100}%`,
                 height: `${(boxH / scene.size[1]) * 100}%`,
               }}
@@ -350,8 +357,12 @@ export function SceneView({ bundle }: SceneViewProps) {
         })}
       </div>
       {notice ? (
-        <p className="world-scene-notice" role="status">
-          {notice === "unreachable" ? t("world.unreachable") : notice}
+        <p className={`world-scene-notice${notice === "questDone" ? " is-success" : ""}`} role="status">
+          {notice === "unreachable"
+            ? t("world.unreachable")
+            : notice === "questDone"
+              ? t("world.questDone")
+              : notice}
         </p>
       ) : null}
       </section>

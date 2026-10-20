@@ -158,7 +158,7 @@
       {
         "id": "sight",
         "label": "瞄准模块",
-        "source": "工具箱",
+        "source": "工具箱里",
         "english": "Aim Module",
         "color": "#3298ff",
         "description": "装在炮顶的差异探测瞄准镜，负责锁定藏在代码里的 Bug，让脉冲不会打偏。",
@@ -167,7 +167,7 @@
       {
         "id": "cell",
         "label": "能源匣",
-        "source": "居民海报附近的收纳盒",
+        "source": "沙发上",
         "english": "Power Cell",
         "color": "#32c77b",
         "description": "脉冲炮的能源匣，为整门炮供电；接口松动时火力会时断时续，需要先到工作台检修。",
@@ -176,7 +176,7 @@
       {
         "id": "emitter",
         "label": "脉冲发射头",
-        "source": "窗边储物位置",
+        "source": "书架上",
         "english": "Pulse Emitter",
         "color": "#ff9d28",
         "description": "炮身的脉冲发射头，把充好的能量聚成一发清理脉冲，专门驱散定位到的 Bug。",

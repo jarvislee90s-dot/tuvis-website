@@ -258,3 +258,29 @@ headless Chrome 的字体栅格与有头浏览器可能略有差异。
 | 交接审计 | `audit-handoff.mjs` PASS：25/25 mappings；grid 契约检查通过 |
 
 截图重拍 8 张（`docs/qa/screenshots/`），关键变化：工坊首景为 2.5D 角色 + 三个发光浮动零件；`assembly-selected.png` 为九宫格 + 托盘；`assembly-complete.png` 为成品揭示面板。`rack-complete.png` 与 `workshop-drag-complete.png` 为同一最终陈列画面（两条链路终点一致），属预期。
+
+### 9.4 人工验收反馈修复（2026-10-20）
+
+人工验收（截图反馈）发现四个问题，逐项实测定位后修复：
+
+1. **浮动零件过大、悬空位置不合理** → 零件盒从 220×150 缩到 110×76 场景像素，并从「热点顶部上方」改为锚定热点底沿上方 24px——即工具箱箱体、窗台、海报下收纳盒所在位置（零件归属地见任务文案：工具箱 / 窗边储物 / 海报旁收纳盒）。热点上部仍可点击打开原始内容面板（交互 QA 探针同步改为点热点上部）。
+2. **组装面板托盘同时显示两个零件** → 拖拽 ghost 泄漏：pointerup 丢失时拖影残留，零件安装后从托盘移除而拖影仍在。三层修复：ghost 渲染前校验零件仍在托盘（守卫）、安装发生即清空 ghost（effect）、pointerdown 时挂全局一次性 pointerup 兜底。
+3. **行走与静止大小不一致（仅 SE 正常）** → 用 PNG 透明度包围盒实测各条带：SE/idle 角色占单元高 ~90%，而重生成的 SW/NW/NE 条带仅 54%–58%，脚底线也从 0.95 变为 0.80–0.84。修复：petFrames 按实测逐条带归一化 displayHeight（角色统一 ~184 场景像素）与脚底锚点（anchor 进 transform translate）。
+4. **向左走时角色倒着走** → 逐帧裁剪目检实锤：以 `tuvis-walk-se.png `（尾空格）入库的条带实为**另一张 SE 朝向**素材（此前审计误判为 SW）。修复：SW 改由大尺寸 SE 条带运行时镜像承担，该文件从包/manifest/文档材料表移除（24 images / 24 mappings）。
+
+修复后验证：146/146 测试、tsc/build 绿、只读 QA 4 路（含 sprite/阴影对位断言）、交互 QA 79/79、verify-pack/audit-handoff/import-world-pack 全过；四方向行走截图（SW/NW/SE/NE）目检朝向正确、大小与 idle 一致。
+
+### 9.5 人工验收反馈修复 · 第二轮（2026-10-20）
+
+1. **重玩主线确认框透明** → 根因：确认框渲染在 `.world-page` 作用域外，`--world-soft`/`--world-line` 变量解析失败使卡片失去底色。移回作用域内，并给 `.world-modal-card` 补 fallback 底色防御。
+2. **零件按据点重分布**（机身预置在工作台）：能源匣→沙发、脉冲发射头→书架（浮动零件锚定物件上，点零件拾取、点区域其他部分开原始内容）、瞄准模块→工具箱内（新增 `pickupHidden`：不外显浮动零件，走到工具箱"开箱"即获得并弹说明面板）。interaction 的 equipment/world/**stories** 三类热点统一支持 pickup 语义；任务文案同步为「工具箱里 / 沙发上 / 书架上」。
+3. **组装完成揭示图成品机枪过大** → 缩至 ~1/5（118px 小图 + 名称 + 描述 + 类比 + 返回工坊）。
+4. **完成文案** → 组装完成关闭面板后，场景显示绿色横幅「主线任务已完成，请继续探索兔维斯世界。」（`world.questDone`，zh/en）。
+
+验证：150/150 测试（test-engineer 同步拾取语义，+4 用例）、tsc/build、只读 QA 4 路 ×2、交互 QA 81/81 ×2（新增箱内零件、完成横幅探针）、verify-pack/audit-handoff 全过。
+
+### 9.6 人工验收反馈修复 · 第三轮（2026-10-20）
+
+**右上（NE）行走朝向左上** → 逐帧目检实锤：两张背面行走条带的内容朝向在生成交付时就放反了（`tuvis-walk-ne.png` 实际头朝左后、`tuvis-walk-nw.png` 实际头朝右后），此前两轮目检均未识别（背面视角朝向差异细微）。修复：对调两张文件内容使文件名与朝向一致（manifest sha256 / checksums / README 对照表同步），petFrames 的实测归一化参数随内容对调。答案备忘：方向错误用镜像/换素材修正，2.5D 立绘不可旋转。
+
+验证：150/150 测试、tsc/build、交互 QA 81/81、verify-pack/audit-handoff/import 全过；NE/NW 行走截图目检朝向正确。

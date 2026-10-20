@@ -402,5 +402,6 @@
   "world.pickupAnalogyPrefix": "Code-editor analogy: ",
   "world.assemblyBody": "Body",
   "world.assemblyTray": "Toolbox tray",
-  "world.assemblyTrayEmpty": "Collected parts will appear here."
+  "world.assemblyTrayEmpty": "Collected parts will appear here.",
+  "world.questDone": "Main quest complete. Keep exploring the Tuvis world."
 }

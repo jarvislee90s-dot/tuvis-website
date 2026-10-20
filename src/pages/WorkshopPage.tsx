@@ -168,9 +168,6 @@ export function WorkshopRuntime({
           </div>
         ) : null}
         <SceneView bundle={bundle} />
-        </div>
-      </main>
-
       {confirmReset ? (
         <div
           className="world-modal"
@@ -198,6 +195,9 @@ export function WorkshopRuntime({
           </div>
         </div>
       ) : null}
+        </div>
+      </main>
+
     </RuntimeStoreContext.Provider>
   );
 }

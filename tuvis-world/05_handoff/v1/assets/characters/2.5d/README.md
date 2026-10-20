@@ -7,15 +7,16 @@
 |---|---|---|---|
 | tuvis2d-idle-sw.png | idle SW（含眨眼） | 6 × 362×724 | ` facing SW (front-left)..png` |
 | tuvis2d-walk-se.png | walk SE | 6 × 362×724 | `WALK cycle, facing SE (front-right). .png` |
-| tuvis2d-walk-sw.png | walk SW | 6 × 362×724 | `tuvis-walk-se.png `（尾随空格；**内容实为 SW**） |
-| tuvis2d-walk-nw.png | walk NW | 6 × 362×724 | `tuvis-walk-nw.png` |
-| tuvis2d-walk-ne.png | walk NE（NW 镜像生成） | 6 × 362×724 | `tuvis-walk-ne.png  .png` |
+| tuvis2d-walk-nw.png | walk NW（头朝左后） | 6 × 362×724 | `tuvis-walk-ne.png`（**原文件内容朝向对调**） |
+| tuvis2d-walk-ne.png | walk NE（头朝右后） | 6 × 362×724 | `tuvis-walk-nw.png`（**原文件内容朝向对调**） |
 | tuvis2d-jump-se.png | jump SE | 4 × 256×320 | `tuvis-jump-se.png` |
 | tuvis2d-pickup-se.png | pickup SE | 4 × 256×320 | `tuvis-pickup-se.png` |
 | tuvis2d-celebrate-se.png | celebrate SE | 4 × 256×320 | `tuvis-celebrate-se.png` |
 
 未入库（暂不启用，留在下载目录）：FIRE SE（4×543×724，可选庆祝）、WAVE SW（4×543×724）、
 CODE SW（4×543×724，打字坐姿）、REVIEW SW（6×362×724，UUID 命名文件）。
+
+弃用：`tuvis-walk-se.png `（尾随空格）经逐帧实测为**另一张 SE 朝向**条带（角色仅 58% 大小），SW 由 SE 大条带运行时镜像承担，该文件不入库。
 
 衍生方向：idle SE = idle SW 水平镜像（CSS）；idle NW/NE 无素材，用 walk 首帧静止兜底。
 已知限制：NE 行走为 NW 镜像，耳朵/护目镜左右关系反转；jump/pickup/celebrate 仅 SE，

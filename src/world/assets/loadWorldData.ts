@@ -365,6 +365,10 @@ function validateHotspot(
       hotspot.moduleId === undefined
         ? undefined
         : requireModuleId(hotspot.moduleId, `${path}.moduleId`),
+    pickupHidden:
+      hotspot.pickupHidden === undefined
+        ? undefined
+        : requireBoolean(hotspot.pickupHidden, `${path}.pickupHidden`),
     nextSceneId:
       hotspot.nextSceneId === undefined
         ? undefined

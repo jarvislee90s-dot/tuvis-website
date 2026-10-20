@@ -54,7 +54,7 @@ describe("copyWorldPack", () => {
   it("copies the approved pack with matching SHA-256 digests", async () => {
     const target = await makeTemp();
     const result = await copyWorldPack(PACK, target);
-    expect(result.written).toHaveLength(28);
+    expect(result.written).toHaveLength(27);
 
     const manifest = JSON.parse(await readFile(join(target, "manifest.json"), "utf8"));
     for (const asset of Object.values(manifest.assets)) {

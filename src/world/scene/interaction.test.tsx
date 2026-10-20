@@ -28,11 +28,13 @@ function installedAll(): QuestState {
 }
 
 describe("resolveHotspot", () => {
-  it("opens the plain codex on a normal arrival at the toolbox without collecting", () => {
+  // The toolbox module is concealed (pickupHidden): the plain arrival opens
+  // the box, plays the pickup action and collects — no floating part exists.
+  it("collects the concealed sight module on a plain arrival at the toolbox", () => {
     const result = resolveHotspot("toolbox", bundle, INITIAL_QUEST);
-    expect(result.overlay).toEqual({ kind: "equipment" });
-    expect(result.questEvent).toBeUndefined();
-    expect(result.action).toBeUndefined();
+    expect(result.overlay).toEqual({ kind: "pickup", moduleId: "sight" });
+    expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "sight" });
+    expect(result.action).toBe("pickup");
   });
 
   it("opens resident content on a normal arrival at the posters without collecting", () => {
@@ -49,6 +51,19 @@ describe("resolveHotspot", () => {
     expect(result.action).toBeUndefined();
   });
 
+  // The window and posters lost their moduleIds in the redistribution: even a
+  // pickup-flagged arrival can only open their content.
+  it("keeps the window and posters as pure content hotspots with no module", () => {
+    expect(scene.hotspots.find((h) => h.id === "window")?.moduleId).toBeUndefined();
+    expect(scene.hotspots.find((h) => h.id === "posters")?.moduleId).toBeUndefined();
+    expect(resolveHotspot("window", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
+      overlay: { kind: "world", id: "city" },
+    });
+    expect(resolveHotspot("posters", bundle, INITIAL_QUEST, { pickup: true })).toEqual({
+      overlay: { kind: "world", id: "residents" },
+    });
+  });
+
   it("collects the sight module only on a pickup arrival at the toolbox", () => {
     const result = resolveHotspot("toolbox", bundle, INITIAL_QUEST, { pickup: true });
     expect(result.overlay).toEqual({ kind: "pickup", moduleId: "sight" });
@@ -56,15 +71,29 @@ describe("resolveHotspot", () => {
     expect(result.action).toBe("pickup");
   });
 
-  it("collects the cell module only on a pickup arrival at the posters", () => {
-    const result = resolveHotspot("posters", bundle, INITIAL_QUEST, { pickup: true });
+  it("opens lounge content on a normal arrival without collecting the cell", () => {
+    const result = resolveHotspot("lounge", bundle, INITIAL_QUEST);
+    expect(result.overlay).toEqual({ kind: "world", id: "home" });
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
+  });
+
+  it("collects the cell module only on a pickup arrival at the lounge", () => {
+    const result = resolveHotspot("lounge", bundle, INITIAL_QUEST, { pickup: true });
     expect(result.overlay).toEqual({ kind: "pickup", moduleId: "cell" });
     expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "cell" });
     expect(result.action).toBe("pickup");
   });
 
-  it("collects the emitter module only on a pickup arrival at the window", () => {
-    const result = resolveHotspot("window", bundle, INITIAL_QUEST, { pickup: true });
+  it("opens the stories shelf on a normal arrival without collecting the emitter", () => {
+    const result = resolveHotspot("books", bundle, INITIAL_QUEST);
+    expect(result.overlay).toEqual({ kind: "stories" });
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
+  });
+
+  it("collects the emitter module only on a pickup arrival at the bookshelf", () => {
+    const result = resolveHotspot("books", bundle, INITIAL_QUEST, { pickup: true });
     expect(result.overlay).toEqual({ kind: "pickup", moduleId: "emitter" });
     expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "emitter" });
     expect(result.action).toBe("pickup");
@@ -79,11 +108,17 @@ describe("resolveHotspot", () => {
     expect(pickupAgain.action).toBeUndefined();
 
     const withCell = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "cell" });
-    expect(resolveHotspot("posters", bundle, withCell, { pickup: true }).overlay).toEqual({
+    expect(resolveHotspot("lounge", bundle, withCell, { pickup: true }).overlay).toEqual({
       kind: "world",
-      id: "residents",
+      id: "home",
     });
-    expect(resolveHotspot("posters", bundle, withCell, { pickup: true }).questEvent).toBeUndefined();
+    expect(resolveHotspot("lounge", bundle, withCell, { pickup: true }).questEvent).toBeUndefined();
+
+    const withEmitter = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "emitter" });
+    expect(resolveHotspot("books", bundle, withEmitter, { pickup: true }).overlay).toEqual({
+      kind: "stories",
+    });
+    expect(resolveHotspot("books", bundle, withEmitter, { pickup: true }).questEvent).toBeUndefined();
   });
 
   it("shows door destinations without starting another scene", () => {
@@ -164,7 +199,9 @@ describe("WorkbenchPanel", () => {
         onClose={() => undefined}
       />,
     );
-    expect(screen.getByText("在工具箱寻找")).toBeInTheDocument();
+    expect(screen.getByText("在工具箱里寻找")).toBeInTheDocument();
+    expect(screen.getByText("在沙发上寻找")).toBeInTheDocument();
+    expect(screen.getByText("在书架上寻找")).toBeInTheDocument();
   });
 
   it("repairs after selecting the loose interface", () => {

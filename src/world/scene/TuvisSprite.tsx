@@ -40,7 +40,9 @@ export function TuvisSprite({ def, position, depth, stage, onPointerDown, onClic
     // Mirror must apply AFTER the anchor translate in matrix order
     // (leftmost op runs last): "scaleX(-1) translate(...)" mirrors in place,
     // while "translate(...) scaleX(-1)" would shift the box by a full width.
-    transform: `${def.flip ? "scaleX(-1) " : ""}translate(${-anchorX * 100}%, ${-anchorY * 100}%)`,
+    // Percentages are rounded to 2 decimals — CSS needs no more and stable
+    // strings keep style assertions exact.
+    transform: `${def.flip ? "scaleX(-1) " : ""}translate(${(-anchorX * 100).toFixed(2)}%, ${(-anchorY * 100).toFixed(2)}%)`,
     transformOrigin: "0 0",
     pointerEvents: interactive ? "auto" : "none",
     cursor: interactive ? "pointer" : undefined,

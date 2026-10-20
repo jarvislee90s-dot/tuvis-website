@@ -10,7 +10,7 @@ export type SpriteAnimDef = {
   frames: number;
   /** Displayed cell height in scene coordinate units. */
   displayHeight: number;
-  /** Normalized feet point inside one cell. */
+  /** Normalized feet/ground point inside one cell. */
   anchor: readonly [number, number];
   fps: number;
   loop: boolean;
@@ -21,62 +21,64 @@ export type SpriteAnimDef = {
 };
 
 const STRIP = "assets/characters/2.5d";
-/** New-generation strips: 362x724 cells, character fills most of the cell. */
-const TALL = {
-  frameWidth: 362,
-  frameHeight: 724,
-  displayHeight: 205,
-  anchor: [0.5, 0.97] as const,
-};
-/** v0.1 strips: 256x320 cells, character occupies roughly the lower 78%. */
-const COMPACT = {
-  frameWidth: 256,
-  frameHeight: 320,
-  displayHeight: 245,
-  anchor: [0.5, 0.94] as const,
+/**
+ * The regenerated strips do not share a character scale: per-strip alpha
+ * bounding boxes were measured (see docs/qa/tuvis-world-desktop.md §9.4) and
+ * each displayHeight normalizes the character to ~184 scene px, matching the
+ * idle strip the acceptance reference uses. anchor is the measured ground
+ * point, not the cell corner.
+ */
+const TARGET_CHAR_PX = 184;
+
+type StripMetrics = {
+  /** Measured union character height / cell height. */
+  charH: number;
+  /** Measured union ground line / cell height. */
+  feetY: number;
+  /** Measured union horizontal center / cell width. */
+  centerX: number;
 };
 
-function strip(file: string, frames: number, extra: Partial<SpriteAnimDef> = {}): SpriteAnimDef {
+function tall(file: string, m: StripMetrics, frames: number, extra: Partial<SpriteAnimDef> = {}): SpriteAnimDef {
   return {
     src: assetUrl(`${STRIP}/${file}`),
-    frameWidth: TALL.frameWidth,
-    frameHeight: TALL.frameHeight,
+    frameWidth: 362,
+    frameHeight: 724,
     frames,
-    displayHeight: TALL.displayHeight,
-    anchor: TALL.anchor,
+    displayHeight: Math.round(TARGET_CHAR_PX / m.charH),
+    anchor: [m.centerX, m.feetY],
     fps: 6,
     loop: true,
     ...extra,
   };
 }
 
-function legacyStrip(file: string, extra: Partial<SpriteAnimDef> = {}): SpriteAnimDef {
+function compact(file: string, m: StripMetrics, extra: Partial<SpriteAnimDef> = {}): SpriteAnimDef {
   return {
     src: assetUrl(`${STRIP}/${file}`),
-    frameWidth: COMPACT.frameWidth,
-    frameHeight: COMPACT.frameHeight,
+    frameWidth: 256,
+    frameHeight: 320,
     frames: 4,
-    displayHeight: COMPACT.displayHeight,
-    anchor: COMPACT.anchor,
+    displayHeight: Math.round(TARGET_CHAR_PX / m.charH),
+    anchor: [m.centerX, m.feetY],
     fps: 7,
     loop: false,
     ...extra,
   };
 }
 
-const IDLE_SW = strip("tuvis2d-idle-sw.png", 6, { fps: 4 });
-const WALK_FILES: Record<Direction, string> = {
-  se: "tuvis2d-walk-se.png",
-  sw: "tuvis2d-walk-sw.png",
-  nw: "tuvis2d-walk-nw.png",
-  ne: "tuvis2d-walk-ne.png",
-};
+const IDLE_SW = tall("tuvis2d-idle-sw.png", { charH: 0.898, feetY: 0.942, centerX: 0.478 }, 6, { fps: 4 });
+/**
+ * Only one large front-facing walk render exists (the SE strip). The strip
+ * shipped as "walk SW" is a smaller second SE render, so SW mirrors the big
+ * SE strip; NW/NE are genuine back-view renders (NE generated as NW mirror).
+ */
+const WALK_SE = tall("tuvis2d-walk-se.png", { charH: 0.902, feetY: 0.956, centerX: 0.526 }, 6, { fps: 10 });
 
 /** Manifest asset ids of the frame strips (see manifest.json / coreAssets). */
 export const SPRITE_ASSET_IDS = [
   "tuvis2dIdleSw",
   "tuvis2dWalkSe",
-  "tuvis2dWalkSw",
   "tuvis2dWalkNw",
   "tuvis2dWalkNe",
   "tuvis2dJumpSe",
@@ -84,36 +86,43 @@ export const SPRITE_ASSET_IDS = [
   "tuvis2dCelebrateSe",
 ] as const;
 
-/**
- * 2.5D frame strips. Only idle SW / walk in four directions exist as real
- * renders; idle SE mirrors idle SW, and back-view idles hold the first walk
- * frame until dedicated strips are drawn. One-shot action strips are SE only.
- */
 export function idleAnim(direction: Direction): SpriteAnimDef {
   switch (direction) {
     case "sw":
       return IDLE_SW;
     case "se":
       return { ...IDLE_SW, flip: true };
+    // The two regenerated back-view strips shipped with swapped facing (the
+    // "NE" file faced back-left and vice versa); the files were swapped in
+    // the pack, so each direction reads its corrected metrics below.
     case "nw":
-      return strip(WALK_FILES.nw, 6, { staticFrame: 0 });
+      return tall("tuvis2d-walk-nw.png", { charH: 0.537, feetY: 0.796, centerX: 0.532 }, 6, { staticFrame: 0 });
     case "ne":
-      return strip(WALK_FILES.ne, 6, { staticFrame: 0 });
+      return tall("tuvis2d-walk-ne.png", { charH: 0.562, feetY: 0.844, centerX: 0.51 }, 6, { staticFrame: 0 });
   }
 }
 
 export function walkAnim(direction: Direction): SpriteAnimDef {
-  return strip(WALK_FILES[direction], 6, { fps: 10 });
+  switch (direction) {
+    case "se":
+      return WALK_SE;
+    case "sw":
+      return { ...WALK_SE, flip: true };
+    case "nw":
+      return tall("tuvis2d-walk-nw.png", { charH: 0.537, feetY: 0.796, centerX: 0.532 }, 6, { fps: 10 });
+    case "ne":
+      return tall("tuvis2d-walk-ne.png", { charH: 0.562, feetY: 0.844, centerX: 0.51 }, 6, { fps: 10 });
+  }
 }
 
 export function actionAnim(kind: ActionAnim): SpriteAnimDef {
   switch (kind) {
     case "jump":
-      return legacyStrip("tuvis2d-jump-se.png", { fps: 8 });
+      return compact("tuvis2d-jump-se.png", { charH: 0.878, feetY: 0.925, centerX: 0.498 }, { fps: 8 });
     case "pickup":
-      return legacyStrip("tuvis2d-pickup-se.png", { fps: 7 });
+      return compact("tuvis2d-pickup-se.png", { charH: 0.753, feetY: 0.931, centerX: 0.496 }, { fps: 7 });
     case "celebrate":
-      return legacyStrip("tuvis2d-celebrate-se.png", { fps: 6 });
+      return compact("tuvis2d-celebrate-se.png", { charH: 0.803, feetY: 0.925, centerX: 0.496 }, { fps: 6 });
   }
 }
 

@@ -37,7 +37,9 @@ export function resolveHotspot(
   switch (hotspot.kind) {
     case "equipment": {
       const pending = hotspot.moduleId && !quest.collected.includes(hotspot.moduleId);
-      if (pending && options.pickup && hotspot.moduleId) {
+      if (pending && hotspot.moduleId && (options.pickup || hotspot.pickupHidden)) {
+        // A clicked floating part collects on arrival; a concealed module
+        // (inside the toolbox) is opened — and collected — by the arrival.
         return {
           overlay: { kind: "pickup", moduleId: hotspot.moduleId },
           questEvent: { type: "COLLECT", moduleId: hotspot.moduleId },
@@ -58,6 +60,14 @@ export function resolveHotspot(
       return { overlay: { kind: "world", id: hotspot.contentId } };
     }
     case "stories": {
+      const pending = hotspot.moduleId && !quest.collected.includes(hotspot.moduleId);
+      if (pending && hotspot.moduleId && (options.pickup || hotspot.pickupHidden)) {
+        return {
+          overlay: { kind: "pickup", moduleId: hotspot.moduleId },
+          questEvent: { type: "COLLECT", moduleId: hotspot.moduleId },
+          action: "pickup",
+        };
+      }
       return { overlay: { kind: "stories" } };
     }
     case "door": {
