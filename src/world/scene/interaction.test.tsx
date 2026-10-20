@@ -28,22 +28,62 @@ function installedAll(): QuestState {
 }
 
 describe("resolveHotspot", () => {
-  it("claims the sight module at the toolbox and opens the codex", () => {
+  it("opens the plain codex on a normal arrival at the toolbox without collecting", () => {
     const result = resolveHotspot("toolbox", bundle, INITIAL_QUEST);
     expect(result.overlay).toEqual({ kind: "equipment" });
-    expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "sight" });
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
   });
 
-  it("claims the cell at the posters with resident content", () => {
+  it("opens resident content on a normal arrival at the posters without collecting", () => {
     const result = resolveHotspot("posters", bundle, INITIAL_QUEST);
     expect(result.overlay).toEqual({ kind: "world", id: "residents" });
-    expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "cell" });
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
   });
 
-  it("claims the emitter at the window with city content", () => {
+  it("opens city content on a normal arrival at the window without collecting", () => {
     const result = resolveHotspot("window", bundle, INITIAL_QUEST);
     expect(result.overlay).toEqual({ kind: "world", id: "city" });
+    expect(result.questEvent).toBeUndefined();
+    expect(result.action).toBeUndefined();
+  });
+
+  it("collects the sight module only on a pickup arrival at the toolbox", () => {
+    const result = resolveHotspot("toolbox", bundle, INITIAL_QUEST, { pickup: true });
+    expect(result.overlay).toEqual({ kind: "pickup", moduleId: "sight" });
+    expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "sight" });
+    expect(result.action).toBe("pickup");
+  });
+
+  it("collects the cell module only on a pickup arrival at the posters", () => {
+    const result = resolveHotspot("posters", bundle, INITIAL_QUEST, { pickup: true });
+    expect(result.overlay).toEqual({ kind: "pickup", moduleId: "cell" });
+    expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "cell" });
+    expect(result.action).toBe("pickup");
+  });
+
+  it("collects the emitter module only on a pickup arrival at the window", () => {
+    const result = resolveHotspot("window", bundle, INITIAL_QUEST, { pickup: true });
+    expect(result.overlay).toEqual({ kind: "pickup", moduleId: "emitter" });
     expect(result.questEvent).toEqual({ type: "COLLECT", moduleId: "emitter" });
+    expect(result.action).toBe("pickup");
+  });
+
+  it("falls back to the plain content panel once a module is already collected", () => {
+    const withSight = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "sight" });
+    expect(resolveHotspot("toolbox", bundle, withSight).overlay).toEqual({ kind: "equipment" });
+    const pickupAgain = resolveHotspot("toolbox", bundle, withSight, { pickup: true });
+    expect(pickupAgain.overlay).toEqual({ kind: "equipment" });
+    expect(pickupAgain.questEvent).toBeUndefined();
+    expect(pickupAgain.action).toBeUndefined();
+
+    const withCell = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "cell" });
+    expect(resolveHotspot("posters", bundle, withCell, { pickup: true }).overlay).toEqual({
+      kind: "world",
+      id: "residents",
+    });
+    expect(resolveHotspot("posters", bundle, withCell, { pickup: true }).questEvent).toBeUndefined();
   });
 
   it("shows door destinations without starting another scene", () => {

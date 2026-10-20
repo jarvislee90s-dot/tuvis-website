@@ -227,3 +227,34 @@ workshop-drag-complete.png  7657ab92edec9e6bda25408c5f3c7fc3
 ```
 
 headless Chrome 的字体栅格与有头浏览器可能略有差异。
+
+## 9. 玩法迭代验收（2026-10-19）：2.5D 动画 / 九宫格组装 / 主动拾取
+
+在 `0a23b8c` 系收口之后按《tuvis-world-改动清单》实施的三项玩法（外部清单，不再重复正文），本节记录增量验证。
+
+### 9.1 素材审计（实施前）
+
+`Tuvis_Isometric_Sprite_Strips_v0_1` 实为两代混合：v0.1 原版 256×320 单元 4 张（walk-sw 旧版、jump/pickup/celebrate SE）+ 再生成版 362×724 单元 10 张。逐张目检结论：`tuvis-walk-se.png `（尾随空格）内容实为 SW；`facing SW (front-right) .png` 是挥手 4 帧；UUID 命名文件是 REVIEW 姿态；walk-ne 是 walk-nw 的镜像生成（头朝相反侧，文件不同）。入库 8 张（idle-sw、walk 四向、jump/pickup/celebrate SE），FIRE/WAVE/CODE/REVIEW 留在下载目录未启用；对照表见 `public/world/v1/assets/characters/2.5d/README.md`。
+
+### 9.2 实现与评审修复
+
+- 实现：`petFrames.ts`（steps(N-1) 帧动画 + ACTION_DURATIONS）、`TuvisSprite.tsx`（background-position 百分比帧动画）、九宫格 `AssemblyPanel.tsx`（grid cells + 托盘 + converge→flash→reveal）、主动拾取（interaction pickup 分支 + PickupPanel + 浮动零件）、`scene.json assembly.grid`、i18n 404 键。
+- 独立评审（对照清单逐条）发现并已修复：
+  - P0 镜像精灵整体偏移一个身位（`translate(...) scaleX(-1)` 在 origin 0 0 下矩阵顺序错误）→ 改为 `scaleX(-1) translate(...)`，并在只读 QA 增加「actor sprite centered over shadow」几何断言（|dx|<8px）防回归；
+  - P1 托盘零件仅指针可选（键盘 Enter/Space 无法组装）→ 恢复 click 选中通道（ref 抑制拖拽后二次 click）；
+  - P1 2.5D 条带绕过 manifest 管线 → 8 张注册进 `manifest.assets`（sha256/尺寸/alpha），idle 进 `coreAssets`，其余工坊进入后后台预热；同步交接包（25 images / 56 checked files）、`asset-provenance.json`（+prompt 文件）、spec/plan 材料映射表（25/25）；
+  - P2 拖拽 ghost 参考系错位（cardRef→layoutRef）、celebrate 在全屏遮罩后不可见（延迟到关闭组装面板时触发）、reduced-motion 未关白闪（已补 `opacity:0`）。
+- 已知限制（记录不修）：NW/NE 无 idle 素材（walk 首帧静止兜底）、NE 行走为镜像（耳朵左右反转）、「零件飞入任务栏」无飞入动效、converge 收敛中心有 padding/gap 级 ≤20px 误差。
+
+### 9.3 增量验证（HEAD=本轮提交前工作区）
+
+| 项 | 结果 |
+|---|---|
+| 单元测试 | `pnpm test`：15 文件 / 146 条全过（连跑 3 次稳定；含九宫格变绿/放错静默/成功序列、拾取 6 分支、动画状态机等新用例） |
+| 类型 / 构建 | `tsc --noEmit` 零输出；`pnpm build` exit 0 |
+| 只读 QA | `qa-cdp.mjs` PASS 4 routes（新增 sprite/shadow 对位断言，zh/en 双路由通过） |
+| 交互 QA | `qa-world-interactions.mjs` PASS 79/79 ×2（点零件拾取→九宫格点击/拖拽/错格弹回→成功特效→装备架→持久化→缩放→深链） |
+| 资源校验 | `verify-pack.mjs` PASS：25 images, 15 frames, 12 hotspots, 18 connected nodes, 56 checked files |
+| 交接审计 | `audit-handoff.mjs` PASS：25/25 mappings；grid 契约检查通过 |
+
+截图重拍 8 张（`docs/qa/screenshots/`），关键变化：工坊首景为 2.5D 角色 + 三个发光浮动零件；`assembly-selected.png` 为九宫格 + 托盘；`assembly-complete.png` 为成品揭示面板。`rack-complete.png` 与 `workshop-drag-complete.png` 为同一最终陈列画面（两条链路终点一致），属预期。

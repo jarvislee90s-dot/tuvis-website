@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
-import type { ModuleId, Point, Rect, WorldBundle } from "../types";
-import { assetUrl, preloadAssets } from "../assets/loadWorldData";
+import type { ModuleId, WorldBundle } from "../types";
+import { preloadAssets } from "../assets/loadWorldData";
+import { FrameArt } from "./FrameArt";
 import type { QuestEvent, QuestState } from "./quest";
 import { MODULE_IDS } from "./quest";
 
@@ -12,74 +13,40 @@ type AssemblyPanelProps = {
   onClose(): void;
 };
 
-type DragState = {
+type GhostState = {
   moduleId: ModuleId;
-  center: Point;
-  offset: Point;
+  x: number;
+  y: number;
 };
 
 const ASSEMBLY_FRAMES = ["gunBody", "gunEmitter", "gunSight", "gunCell", "gunComplete"];
+const CONVERGE_MS = 650;
+const FLASH_MS = 480;
 
-type CropFrameProps = {
-  bundle: WorldBundle;
-  frameId: string;
-  rect: Rect;
-  alt?: string;
-  className?: string;
-  style?: CSSProperties;
-};
-
-/** Crop one frame into a scene-coordinate rectangle, expressed as percentages. */
-function CropFrame({ bundle, frameId, rect, alt = "", className, style }: CropFrameProps) {
-  const frame = bundle.manifest.frames[frameId];
-  const asset = frame ? bundle.manifest.assets[frame.asset] : undefined;
-  if (!frame || !asset) return null;
-  const [x, y, width, height] = rect;
-  const [sizeW, sizeH] = bundle.scene.size;
-  return (
-    <div
-      className={className}
-      style={{
-        position: "absolute",
-        left: `${(x / sizeW) * 100}%`,
-        top: `${(y / sizeH) * 100}%`,
-        width: `${(width / sizeW) * 100}%`,
-        height: `${(height / sizeH) * 100}%`,
-        ...style,
-      }}
-    >
-      <img
-        src={assetUrl(asset.path)}
-        alt={alt}
-        draggable={false}
-        style={{
-          position: "absolute",
-          width: `${(asset.width / frame.sourceRect[2]) * 100}%`,
-          height: `${(asset.height / frame.sourceRect[3]) * 100}%`,
-          left: `${(-frame.sourceRect[0] / frame.sourceRect[2]) * 100}%`,
-          top: `${(-frame.sourceRect[1] / frame.sourceRect[3]) * 100}%`,
-          maxWidth: "none",
-        }}
-      />
-    </div>
-  );
-}
+type Phase = "build" | "converge" | "flash" | "reveal";
 
 /**
- * Fixed three-quarter assembly close-up. Drag-and-drop and click-piece-then-
- * socket share one install check; wrong sockets and cancelled drags never
- * emit an event, so modules are never consumed by mistake.
+ * Nine-grid assembly close-up: left 3x3 grid with fixed cells for the body
+ * and the three modules, right tray of collected parts. Drag-and-drop and
+ * click-part-then-cell share one rule — a part only locks into its own cell,
+ * which turns green; wrong targets never consume the part and stay silent.
+ * When all four cells are filled the success sequence plays: parts converge
+ * to the center, a flash, then the finished Bug Buster with its description
+ * and a back-to-workshop button.
  */
 export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanelProps) {
   const { t } = useTranslation();
   const { scene, content } = bundle;
+  const grid = scene.assembly.grid;
   const [selected, setSelected] = useState<ModuleId | null>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [ghost, setGhost] = useState<GhostState | null>(null);
+  const [phase, setPhase] = useState<Phase>("build");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const sawMoveRef = useRef(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sawPointerDownRef = useRef(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
 
@@ -108,7 +75,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
   }, [bundle, attempt]);
 
   const close = useCallback(() => {
-    setDrag(null);
+    setGhost(null);
     setSelected(null);
     onClose();
   }, [onClose]);
@@ -117,7 +84,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
     };
-    const onBlur = () => setDrag(null);
+    const onBlur = () => setGhost(null);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("blur", onBlur);
     return () => {
@@ -126,102 +93,140 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
     };
   }, [close]);
 
+  // Success sequence: converge -> flash -> reveal. Each step schedules the
+  // next from its own effect so a phase change can never clear the pending
+  // transition of a later step.
+  useEffect(() => {
+    if (phase !== "build" || !complete || loadState !== "ready") return;
+    const timer = window.setTimeout(() => setPhase("converge"), 60);
+    return () => window.clearTimeout(timer);
+  }, [phase, complete, loadState]);
+  useEffect(() => {
+    if (phase !== "converge") return;
+    const timer = window.setTimeout(() => setPhase("flash"), CONVERGE_MS);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== "flash") return;
+    const timer = window.setTimeout(() => setPhase("reveal"), FLASH_MS);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
   const labelFor = (id: ModuleId) =>
     content.quest.modules.find((module) => module.id === id)?.label ?? id;
 
-  const tryInstall = (moduleId: ModuleId, center: Point) => {
-    const definition = scene.assembly.modules.find((module) => module.id === moduleId);
-    if (!definition) return false;
-    const distance = Math.hypot(
-      center[0] - definition.socket[0],
-      center[1] - definition.socket[1],
-    );
-    if (distance > definition.snapRadius) return false;
-    onEvent({ type: "INSTALL", moduleId });
-    setSelected(null);
-    setNotice(null);
-    return true;
+  const cellKeyOf = (id: "body" | ModuleId) => {
+    const cell = grid.cells[id];
+    return cell ? `${cell[0]}-${cell[1]}` : null;
   };
 
-  const toScene = (clientX: number, clientY: number): Point | null => {
-    const element = stageRef.current;
+  const cellAt = (clientX: number, clientY: number): string | null => {
+    const element = gridRef.current;
     if (!element) return null;
     const rect = element.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
-    return [
-      ((clientX - rect.left) / rect.width) * scene.assembly.size[0],
-      ((clientY - rect.top) / rect.height) * scene.assembly.size[1],
-    ];
+    const col = Math.floor(((clientX - rect.left) / rect.width) * grid.cols);
+    const row = Math.floor(((clientY - rect.top) / rect.height) * grid.rows);
+    if (col < 0 || col >= grid.cols || row < 0 || row >= grid.rows) return null;
+    return `${row}-${col}`;
   };
 
-  const pieceRect = (id: ModuleId): Rect => {
-    const definition = scene.assembly.modules.find((module) => module.id === id);
-    return definition?.rect ?? [0, 0, 1, 1];
+  const tryInstall = (moduleId: ModuleId, key: string | null) => {
+    if (!key || key !== cellKeyOf(moduleId)) return false;
+    if (installed.includes(moduleId)) return false;
+    onEvent({ type: "INSTALL", moduleId });
+    setSelected(null);
+    return true;
   };
 
-  const defaultCenter = (id: ModuleId): Point => {
-    const [x, y, width, height] = pieceRect(id);
-    return [x + width / 2, y + height / 2];
-  };
+  const trayIds = MODULE_IDS.filter((id) => quest.collected.includes(id) && !installed.includes(id));
 
   const onPiecePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, id: ModuleId) => {
-    if (event.button !== 0 || installed.includes(id)) return;
-    const point = toScene(event.clientX, event.clientY);
-    const center = defaultCenter(id);
-    const origin = point ?? center;
-    sawMoveRef.current = false;
+    if (event.button !== 0 || phase !== "build") return;
+    const layout = layoutRef.current;
+    if (!layout) return;
+    const rect = layout.getBoundingClientRect();
+    sawPointerDownRef.current = true;
     setSelected(id);
-    setDrag({
-      moduleId: id,
-      center: origin,
-      offset: [center[0] - origin[0], center[1] - origin[1]],
-    });
+    setGhost({ moduleId: id, x: event.clientX - rect.left, y: event.clientY - rect.top });
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
   const onPiecePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
-    sawMoveRef.current = true;
-    const point = toScene(event.clientX, event.clientY);
-    if (!point) return;
-    setDrag({
-      ...drag,
-      center: [point[0] + drag.offset[0], point[1] + drag.offset[1]],
-    });
+    if (!ghost) return;
+    const layout = layoutRef.current;
+    if (!layout) return;
+    const rect = layout.getBoundingClientRect();
+    setGhost({ ...ghost, x: event.clientX - rect.left, y: event.clientY - rect.top });
   };
 
   const onPiecePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
-    if (!sawMoveRef.current) {
-      // A plain click selects the piece; installation waits for a socket click.
-      setDrag(null);
-      return;
-    }
-    const point = toScene(event.clientX, event.clientY);
-    const center: Point = point
-      ? [point[0] + drag.offset[0], point[1] + drag.offset[1]]
-      : drag.center;
-    const installedNow = tryInstall(drag.moduleId, center);
-    setDrag(null);
-    if (!installedNow) setNotice(t("world.assemblyWrongSocket"));
+    if (!ghost) return;
+    const moduleId = ghost.moduleId;
+    setGhost(null);
+    sawPointerDownRef.current = false;
+    tryInstall(moduleId, cellAt(event.clientX, event.clientY));
   };
 
-  const onSocketClick = (id: ModuleId) => {
-    if (installed.includes(id) || selected !== id) {
-      if (selected !== id) setNotice(t("world.assemblyMismatch"));
+  // Keyboard activation (Enter/Space) fires only click, never pointer events,
+  // so it must be able to select a piece on its own.
+  const onPieceClick = (id: ModuleId) => {
+    if (phase !== "build") return;
+    if (sawPointerDownRef.current) {
+      sawPointerDownRef.current = false;
       return;
     }
-    const definition = scene.assembly.modules.find((module) => module.id === id);
-    if (definition) tryInstall(id, definition.socket);
+    setSelected(id);
   };
 
-  const [stageW, stageH] = scene.assembly.size;
+  const gun = content.equipment.find((entry) => entry.id === "bug-buster");
+
+  const cellClass = (key: string | null) => {
+    if (!key) return "world-assembly-cell is-plain";
+    if (key === cellKeyOf("body")) return "world-assembly-cell is-installed is-body";
+    const owner = MODULE_IDS.find((id) => cellKeyOf(id) === key);
+    if (!owner) return "world-assembly-cell is-plain";
+    return installed.includes(owner)
+      ? "world-assembly-cell is-installed"
+      : "world-assembly-cell is-target";
+  };
+
+  const renderCellContent = (key: string) => {
+    if (key === cellKeyOf("body")) {
+      return <FrameArt bundle={bundle} frameId={scene.assembly.body.frame} alt={t("world.assemblyBody")} />;
+    }
+    const owner = MODULE_IDS.find((id) => cellKeyOf(id) === key);
+    if (!owner) return null;
+    if (installed.includes(owner)) {
+      const definition = scene.assembly.modules.find((module) => module.id === owner);
+      if (!definition) return null;
+      return <FrameArt bundle={bundle} frameId={definition.frame} alt={`${labelFor(owner)}（已安装）`} />;
+    }
+    return <span className="world-assembly-cell-label">{labelFor(owner)}</span>;
+  };
+
+  const cells: Array<{ key: string; row: number; col: number }> = [];
+  for (let row = 0; row < grid.rows; row += 1) {
+    for (let col = 0; col < grid.cols; col += 1) {
+      cells.push({ key: `${row}-${col}`, row, col });
+    }
+  }
+
+  const convergeOffset = (id: "body" | ModuleId): CSSProperties => {
+    const cell = grid.cells[id];
+    if (!cell) return {};
+    const [row, col] = cell;
+    const x = ((col + 0.5) / grid.cols) * 100;
+    const y = ((row + 0.5) / grid.rows) * 100;
+    return { ["--cx" as string]: `${(50 - x) * grid.cols}%`, ["--cy" as string]: `${(50 - y) * grid.rows}%` };
+  };
 
   return (
     <div className="world-modal" onMouseDown={(event) => {
       if (event.target === event.currentTarget) close();
     }}>
       <div
+        ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="world-assembly-title"
@@ -253,128 +258,120 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
           </div>
         ) : null}
 
-        {loadState === "ready" ? (
-          <>
+        {loadState === "ready" && phase !== "reveal" ? (
+          <div ref={layoutRef} className="world-assembly-layout" data-assembly-stage>
             <div
-              ref={stageRef}
-              className={`world-assembly-stage${selected !== null ? " has-selection" : ""}`}
-              style={{ aspectRatio: `${stageW} / ${stageH}` }}
-              data-assembly-stage
+              ref={gridRef}
+              className={`world-assembly-grid${phase === "converge" || phase === "flash" ? " is-converging" : ""}`}
+              style={{ aspectRatio: "1" }}
+              data-assembly-grid
             >
-              {complete ? (
-                <CropFrame
-                  bundle={bundle}
-                  frameId={scene.assembly.complete.frame}
-                  rect={scene.assembly.complete.rect}
-                  alt="Bug Buster 成品"
-                />
-              ) : (
-                <>
-                  <CropFrame
-                    bundle={bundle}
-                    frameId={scene.assembly.body.frame}
-                    rect={scene.assembly.body.rect}
-                    alt="Bug Buster 主体"
-                  />
-
-                  {scene.assembly.modules.map((module) => {
-                    const installedNow = installed.includes(module.id);
-                    if (!installedNow) return null;
-                    const [width, height] = [module.rect[2], module.rect[3]];
-                    return (
-                      <CropFrame
-                        key={`installed-${module.id}`}
-                        bundle={bundle}
-                        frameId={module.frame}
-                        rect={[
-                          module.socket[0] - width / 2,
-                          module.socket[1] - height / 2,
-                          width,
-                          height,
-                        ]}
-                        alt={`${labelFor(module.id)}（已安装）`}
-                        className="world-assembly-installed"
-                      />
-                    );
-                  })}
-
-                  {scene.assembly.modules.map((module) => {
-                    if (installed.includes(module.id)) return null;
-                    const [x, y, width, height] = module.rect;
-                    const center = drag?.moduleId === module.id ? drag.center : [x + width / 2, y + height / 2];
-                    return (
+              {cells.map(({ key }) => {
+                const bodyKey = cellKeyOf("body");
+                const owner = MODULE_IDS.find((id) => cellKeyOf(id) === key);
+                const converging = phase === "converge" || phase === "flash";
+                const style =
+                  converging && key === bodyKey
+                    ? convergeOffset("body")
+                    : converging && owner
+                      ? convergeOffset(owner)
+                      : undefined;
+                return (
+                  <div key={key} className={cellClass(key)} data-assembly-cell={key} style={style}>
+                    {renderCellContent(key)}
+                    {owner && !installed.includes(owner) ? (
                       <button
-                        key={module.id}
                         type="button"
-                        className={`world-assembly-piece ${selected === module.id ? "is-selected" : ""} ${drag?.moduleId === module.id ? "is-dragging" : ""}`}
-                        aria-label={`${t("world.assemblyPiece")}：${labelFor(module.id)}`}
-                        aria-pressed={selected === module.id}
-                        style={{
-                          left: `${((center[0] - width / 2) / stageW) * 100}%`,
-                          top: `${((center[1] - height / 2) / stageH) * 100}%`,
-                          width: `${(width / stageW) * 100}%`,
-                          height: `${(height / stageH) * 100}%`,
-                        }}
-                        onPointerDown={(event) => onPiecePointerDown(event, module.id)}
-                        onPointerMove={onPiecePointerMove}
-                        onPointerUp={onPiecePointerUp}
-                        onPointerCancel={() => setDrag(null)}
-                        onClick={() => {
-                          if (sawMoveRef.current) {
-                            sawMoveRef.current = false;
-                            return;
-                          }
-                          setSelected(module.id);
-                        }}
-                      >
-                        <img
-                          src={assetUrl(bundle.manifest.assets[bundle.manifest.frames[module.frame].asset].path)}
-                          alt=""
-                          draggable={false}
-                          style={cropStyle(bundle, module.frame)}
-                        />
-                      </button>
-                    );
-                  })}
+                        className="world-assembly-cell-hit"
+                        aria-label={`${t("world.assemblySocket")}：${labelFor(owner)}`}
+                        data-assembly-socket={owner}
+                        disabled={!selected || selected !== owner || phase !== "build"}
+                        onClick={() => tryInstall(owner, key)}
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
 
-                  {scene.assembly.modules.map((module) => (
+            <div className="world-assembly-tray" data-assembly-tray>
+              <p className="world-assembly-tray-title">{t("world.assemblyTray")}</p>
+              {trayIds.length === 0 ? (
+                <p className="world-assembly-tray-empty">{t("world.assemblyTrayEmpty")}</p>
+              ) : (
+                trayIds.map((id) => {
+                  const definition = scene.assembly.modules.find((module) => module.id === id);
+                  if (!definition) return null;
+                  return (
                     <button
-                      key={`socket-${module.id}`}
+                      key={id}
                       type="button"
-                      className="world-assembly-socket"
-                      aria-label={`${t("world.assemblySocket")}：${labelFor(module.id)}`}
-                      style={{
-                        left: `${(module.socket[0] / stageW) * 100}%`,
-                        top: `${(module.socket[1] / stageH) * 100}%`,
+                      className={`world-assembly-piece is-tray${selected === id ? " is-selected" : ""}${ghost?.moduleId === id ? " is-dragging" : ""}`}
+                      aria-label={`${t("world.assemblyPiece")}：${labelFor(id)}`}
+                      aria-pressed={selected === id}
+                      data-assembly-piece={id}
+                      onPointerDown={(event) => onPiecePointerDown(event, id)}
+                      onPointerMove={onPiecePointerMove}
+                      onPointerUp={onPiecePointerUp}
+                      onPointerCancel={() => {
+                        setGhost(null);
+                        sawPointerDownRef.current = false;
                       }}
-                      onClick={() => onSocketClick(module.id)}
-                    />
-                  ))}
-                </>
+                      onClick={() => onPieceClick(id)}
+                    >
+                      <FrameArt bundle={bundle} frameId={definition.frame} alt="" />
+                      <span className="world-assembly-piece-label">{labelFor(id)}</span>
+                    </button>
+                  );
+                })
               )}
             </div>
-            {notice ? <p className="world-scene-notice" role="status">{notice}</p> : null}
-            <div className="world-assembly-actions">
+
+            {ghost ? (
+              <div className="world-assembly-ghost" style={{ left: ghost.x, top: ghost.y }}>
+                <FrameArt bundle={bundle} frameId={scene.assembly.modules.find((m) => m.id === ghost.moduleId)?.frame ?? ""} alt="" fit={100} />
+              </div>
+            ) : null}
+
+            {phase === "flash" ? <div className="world-assembly-flash" /> : null}
+          </div>
+        ) : null}
+
+        {loadState === "ready" && phase === "reveal" ? (
+          <div className="world-assembly-reveal" data-assembly-reveal>
+            <div className="world-assembly-reveal-art">
+              <FrameArt
+                bundle={bundle}
+                frameId={scene.assembly.complete.frame}
+                alt={gun?.name ?? content.quest.title}
+                fit={100}
+              />
+            </div>
+            <div className="world-assembly-reveal-info">
+              <p className="world-pickup-kicker" style={gun?.color ? { color: gun.color } : undefined}>
+                {t("world.assemblyComplete")}
+              </p>
+              <h3 className="world-assembly-reveal-name">
+                {gun?.name ?? content.quest.title}
+                {gun?.english ? <span> {gun.english}</span> : null}
+              </h3>
+              {gun?.description ? <p className="world-pickup-desc">{gun.description}</p> : null}
+              {gun?.analogy ? <p className="world-pickup-analogy">{gun.analogy}</p> : null}
               <button type="button" className="world-btn world-btn-primary" onClick={close}>
                 {t("world.assemblyClose")}
               </button>
             </div>
-          </>
+          </div>
+        ) : null}
+
+        {loadState === "ready" && phase !== "reveal" ? (
+          <div className="world-assembly-actions">
+            <button type="button" className="world-btn world-btn-primary" onClick={close}>
+              {t("world.assemblyClose")}
+            </button>
+          </div>
         ) : null}
       </div>
     </div>
   );
-}
-
-function cropStyle(bundle: WorldBundle, frameId: string): CSSProperties {
-  const frame = bundle.manifest.frames[frameId];
-  const asset = bundle.manifest.assets[frame.asset];
-  return {
-    position: "absolute",
-    width: `${(asset.width / frame.sourceRect[2]) * 100}%`,
-    height: `${(asset.height / frame.sourceRect[3]) * 100}%`,
-    left: `${(-frame.sourceRect[0] / frame.sourceRect[2]) * 100}%`,
-    top: `${(-frame.sourceRect[1] / frame.sourceRect[3]) * 100}%`,
-    maxWidth: "none",
-  };
 }

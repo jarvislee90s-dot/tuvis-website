@@ -108,6 +108,8 @@ export type MotionTarget = {
   token: number;
   path: Point[];
   hotspotId?: string;
+  /** Arrive as a pickup run (collect the floating part) when true. */
+  pickup?: boolean;
 };
 
 export type MotionState = {
@@ -126,7 +128,7 @@ export function advanceMotion(
   motion: MotionState,
   elapsedMs: number,
   scene: SceneDefinition,
-): { motion: MotionState; arrived?: { token: number; hotspotId?: string } } {
+): { motion: MotionState; arrived?: { token: number; hotspotId?: string; pickup?: boolean } } {
   const target = motion.target;
   if (!target) return { motion };
 
@@ -142,7 +144,7 @@ export function advanceMotion(
   if (path.length === 0) {
     return {
       motion: { position, direction, target: null },
-      arrived: { token: target.token, hotspotId: target.hotspotId },
+      arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup },
     };
   }
 
@@ -176,7 +178,7 @@ export function advanceMotion(
       target: path.length > 0 ? { ...target, path } : null,
     },
     ...(path.length === 0
-      ? { arrived: { token: target.token, hotspotId: target.hotspotId } }
+      ? { arrived: { token: target.token, hotspotId: target.hotspotId, pickup: target.pickup } }
       : {}),
   };
 }

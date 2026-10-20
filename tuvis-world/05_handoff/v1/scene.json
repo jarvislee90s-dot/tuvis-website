@@ -930,6 +930,28 @@
         900,
         636
       ]
+    },
+    "grid": {
+      "rows": 3,
+      "cols": 3,
+      "cells": {
+        "sight": [
+          0,
+          1
+        ],
+        "emitter": [
+          1,
+          0
+        ],
+        "body": [
+          1,
+          1
+        ],
+        "cell": [
+          2,
+          2
+        ]
+      }
     }
   },
   "layoutNotes": [
@@ -937,6 +959,7 @@
     "Door nextSceneId is reserved data; current click shows in-home destination information.",
     "Prepared layout requires visual QA during implementation; it is not implemented gameplay.",
     "walkable is the center-safe outer region; footRadius applies to interior furniture, not a second outer inset.",
-    "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point."
+    "For seated rendering use actions.sit.depth and hip anchor; preserve navigation position at the chair approach point.",
+    "assembly.grid: 九宫格组装布局，cells 为 [row, col]；瞄具上中、枪头中左、机身正中、能量管右下。"
   ]
 }

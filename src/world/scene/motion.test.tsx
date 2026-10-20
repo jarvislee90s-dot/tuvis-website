@@ -1,12 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { act, render } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render } from "@testing-library/react";
 import { bundle, scene } from "../testFixtures";
 import type { Point } from "../types";
 import { advanceMotion, findPath, type MotionState } from "./navigation";
 import { isSegmentClear } from "./geometry";
+import { ACTION_DURATIONS } from "./petFrames";
 import { createRuntimeStore, RuntimeStoreContext } from "./runtimeStore";
 import { SceneView } from "./SceneView";
 import { Sprite } from "./Sprite";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("advanceMotion", () => {
   it("caps a huge frame gap at 100 ms of travel", () => {
@@ -139,41 +144,79 @@ function actorFrame(container: HTMLElement) {
   return container.querySelector(".world-actor svg[data-frame]") as SVGElement | null;
 }
 
+/** The animated strip div used while walking, idling or playing an action. */
+function spriteOf(container: HTMLElement) {
+  return container.querySelector(".world-actor [data-sprite-anim]") as HTMLElement | null;
+}
+
+function animName(container: HTMLElement) {
+  return spriteOf(container)?.getAttribute("data-sprite-anim") ?? null;
+}
+
+/** Facing a direction without movement, so the idle strip is selected. */
+function face(
+  store: ReturnType<typeof createRuntimeStore>,
+  direction: "sw" | "nw" | "ne" | "se",
+) {
+  act(() =>
+    store.setState({
+      motion: { position: scene.spawn, direction, target: null },
+    }),
+  );
+}
+
 describe("character presentation", () => {
   // Kills a renderer that always draws one standing frame or lets the foot
   // anchor move between direction frames.
-  it("follows the movement direction and keeps the foot anchor fixed", () => {
+  it("walks with a strip per direction and idles without moving the feet", () => {
     const { store, container } = renderScene();
 
     act(() => store.getState().requestMove(scene.nav.nodes.window));
     expect(store.getState().motion.direction).toBe("nw");
-    expect(actorFrame(container)).toHaveAttribute("data-frame", "nw");
+    expect(animName(container)).toBe("tuvis2d-walk-nw");
+    expect(spriteOf(container)!.style.animation).toContain("world-sprite-frames");
 
     act(() => store.getState().requestMove(scene.nav.nodes.posters));
     expect(store.getState().motion.direction).toBe("ne");
-    expect(actorFrame(container)).toHaveAttribute("data-frame", "ne");
+    expect(animName(container)).toBe("tuvis2d-walk-ne");
 
-    const left = actorFrame(container)!.style.left;
-    const top = actorFrame(container)!.style.top;
+    const { left, top } = spriteOf(container)!.style;
+    face(store, "sw");
+    expect(animName(container)).toBe("tuvis2d-idle-sw");
+    expect(spriteOf(container)!.style.transform).not.toContain("scaleX(-1)");
+    expect(spriteOf(container)!.style.animation).toContain("infinite");
+
+    face(store, "se");
+    expect(animName(container)).toBe("tuvis2d-idle-sw"); // SE mirrors the SW idle strip
+    expect(spriteOf(container)!.style.transform).toContain("scaleX(-1)");
+
+    face(store, "nw");
+    expect(animName(container)).toBe("tuvis2d-walk-nw"); // back view holds walk frame 0
+    expect(spriteOf(container)!.style.animation).toBe("");
+    expect(spriteOf(container)!.style.backgroundPositionX).toBe("0%");
+
     for (const direction of ["sw", "nw", "ne", "se"] as const) {
-      act(() => store.setState({ pose: direction }));
-      const svg = actorFrame(container)!;
-      expect(svg).toHaveAttribute("data-frame", direction);
-      expect(svg.style.left).toBe(left);
-      expect(svg.style.top).toBe(top);
+      face(store, direction);
+      const sprite = spriteOf(container)!;
+      expect(sprite.style.left).toBe(left);
+      expect(sprite.style.top).toBe(top);
+      expect(sprite.style.transform).toContain("translate(-50%, -97%)");
     }
   });
 
-  // Kills reusing actorHeight for action poses, or action heights while standing.
-  it("uses actorHeight while standing and action heights for daily poses", () => {
+  // Kills reusing the strip height for daily poses, or action heights while standing.
+  it("uses the tall strip while standing and action heights for daily poses", () => {
     const { store, container } = renderScene();
     const heightFor = (height: number) => `${(height / scene.size[1]) * 100}%`;
 
-    expect(actorFrame(container)).toHaveAttribute("data-frame", "se");
-    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actorHeight));
+    expect(animName(container)).toBe("tuvis2d-idle-sw");
+    expect(spriteOf(container)!.style.height).toBe(heightFor(205)); // 2.5D strip height
+    expect(actorFrame(container)).toBeNull();
 
     act(() => store.setState({ pose: "coffee" }));
+    expect(actorFrame(container)).toHaveAttribute("data-frame", "coffee");
     expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.coffee.height));
+    expect(spriteOf(container)).toBeNull();
 
     act(() => store.setState({ pose: "display" }));
     expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.display.height));
@@ -183,7 +226,55 @@ describe("character presentation", () => {
     expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.sit.height));
 
     act(() => store.setState({ pose: "nw" }));
-    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actorHeight));
+    expect(actorFrame(container)).toBeNull();
+    expect(spriteOf(container)!.style.height).toBe(heightFor(205));
+  });
+
+  // One-shot actions override walk and idle, then clear on their own schedule.
+  it("overrides walk and idle with one-shot actions until they end", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { store, container } = renderScene();
+
+    act(() => store.getState().requestMove(scene.nav.nodes.window));
+    expect(animName(container)).toBe("tuvis2d-walk-nw");
+
+    act(() => store.getState().triggerAction("jump"));
+    expect(animName(container)).toBe("tuvis2d-jump-se");
+    expect(spriteOf(container)!.style.animation).toContain("1 forwards");
+    act(() => vi.advanceTimersByTime(ACTION_DURATIONS.jump));
+    expect(animName(container)).toBe("tuvis2d-walk-nw"); // back to walking
+
+    act(() => store.getState().cancelMovement());
+    expect(animName(container)).toBe("tuvis2d-walk-nw"); // static idle facing nw
+    expect(spriteOf(container)!.style.animation).toBe("");
+
+    act(() => store.getState().triggerAction("pickup"));
+    expect(animName(container)).toBe("tuvis2d-pickup-se");
+    act(() => vi.advanceTimersByTime(ACTION_DURATIONS.pickup));
+    expect(animName(container)).toBe("tuvis2d-walk-nw");
+  });
+
+  it("mirrors the SE action strip while facing SW", () => {
+    const { store, container } = renderScene();
+    face(store, "sw");
+    act(() => store.getState().triggerAction("celebrate"));
+    expect(animName(container)).toBe("tuvis2d-celebrate-se");
+    expect(spriteOf(container)!.style.transform).toContain("scaleX(-1)");
+  });
+
+  // Clicking the character plays a jump instead of starting a walk.
+  it("plays a jump when the character is clicked and does not retrigger mid-air", () => {
+    const { store, container } = renderScene();
+    const sprite = spriteOf(container)!;
+    expect(sprite).not.toBeNull();
+
+    fireEvent.click(sprite);
+    expect(store.getState().action).toEqual({ kind: "jump", id: 1 });
+    expect(animName(container)).toBe("tuvis2d-jump-se");
+    expect(store.getState().motion.target).toBeNull();
+
+    fireEvent.click(spriteOf(container)!);
+    expect(store.getState().action).toEqual({ kind: "jump", id: 1 }); // guarded while playing
   });
 });
 

@@ -158,17 +158,29 @@
       {
         "id": "sight",
         "label": "瞄准模块",
-        "source": "工具箱"
+        "source": "工具箱",
+        "english": "Aim Module",
+        "color": "#3298ff",
+        "description": "装在炮顶的差异探测瞄准镜，负责锁定藏在代码里的 Bug，让脉冲不会打偏。",
+        "analogy": "就像编辑器的「跳转到定义」：一眼把光标送到出问题的地方。"
       },
       {
         "id": "cell",
         "label": "能源匣",
-        "source": "居民海报附近的收纳盒"
+        "source": "居民海报附近的收纳盒",
+        "english": "Power Cell",
+        "color": "#32c77b",
+        "description": "脉冲炮的能源匣，为整门炮供电；接口松动时火力会时断时续，需要先到工作台检修。",
+        "analogy": "好比 IDE 的插件进程：接口一松，整个工具都得重启。"
       },
       {
         "id": "emitter",
         "label": "脉冲发射头",
-        "source": "窗边储物位置"
+        "source": "窗边储物位置",
+        "english": "Pulse Emitter",
+        "color": "#ff9d28",
+        "description": "炮身的脉冲发射头，把充好的能量聚成一发清理脉冲，专门驱散定位到的 Bug。",
+        "analogy": "类似「快速修复」：对准告警按下，问题当场清掉。"
       }
     ],
     "instructions": [
@@ -186,7 +198,7 @@
       "点击地面移动",
       "点击物件，兔维斯会走近并互动"
     ],
-    "assemblyHelp": "拖动零件到高亮插槽；也可以先点零件，再点插槽。",
+    "assemblyHelp": "把零件拖进九宫格里它自己的位置，也可以先点零件再点它的格子；放对会变绿锁定，全部放对自动组装。",
     "outside": "先在工坊里逛逛吧。",
     "unreachable": "这里暂时过不去，换个位置试试。",
     "repairNeeded": "先到工作台检查能源匣接口。",

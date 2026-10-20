@@ -28,7 +28,9 @@ export function useSceneLoop(
         const result = advanceMotion(state.motion, elapsed, scene);
         store.setState({ motion: result.motion });
         if (result.arrived) {
-          store.getState().arrive(result.arrived.token, result.arrived.hotspotId);
+          store
+            .getState()
+            .arrive(result.arrived.token, result.arrived.hotspotId, result.arrived.pickup);
         }
       }
       frame = requestAnimationFrame(tick);

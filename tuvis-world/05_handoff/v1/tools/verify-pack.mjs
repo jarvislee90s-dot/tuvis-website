@@ -71,6 +71,21 @@ const modules=new Set(content.quest.modules.map(m=>m.id));
 assert(modules.size===3 && scene.assembly.modules.length===3,"Module ids");
 for(const m of scene.assembly.modules)assert(modules.has(m.id)&&manifest.frames[m.frame],"Missing assembly module/frame");
 for(const f of [scene.assembly.body.frame,scene.assembly.complete.frame,scene.rackDisplay.frame])assert(manifest.frames[f],"Missing assembly/rack frame");
+const grid=scene.assembly.grid;
+assert(grid&&Number.isInteger(grid.rows)&&grid.rows>0&&Number.isInteger(grid.cols)&&grid.cols>0,"Assembly grid shape");
+{
+  const ids=["body",...[...modules]];
+  const cells=grid.cells;
+  assert(cells&&Object.keys(cells).length===ids.length&&ids.every(id=>Array.isArray(cells[id])),"Assembly grid cells must cover body + all modules");
+  const seen=new Set();
+  for(const id of ids){
+    const [r,c]=cells[id];
+    assert(Number.isInteger(r)&&r>=0&&r<grid.rows&&Number.isInteger(c)&&c>=0&&c<grid.cols,"Grid cell out of range: "+id);
+    const k=r+"-"+c;
+    assert(!seen.has(k),"Grid cells overlap: "+k);
+    seen.add(k);
+  }
+}
 for(const h of scene.hotspots){
   if(h.moduleId)assert(modules.has(h.moduleId),"Unknown module at hotspot");
   if(h.kind==="world")assert(content.world.some(c=>c.id===h.contentId),"Unknown world content");

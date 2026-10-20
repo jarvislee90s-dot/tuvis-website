@@ -120,6 +120,62 @@
       "height": 1024,
       "alpha": true,
       "sha256": "d19e1882c48ccd3ddf2f9b586d239cf51c028e6519763bc70aed50ba52348fe5"
+    },
+    "tuvis2dIdleSw": {
+      "path": "assets/characters/2.5d/tuvis2d-idle-sw.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "248b94a097a3d5d729a87180019e27fb4da86aab778347540611bcf83cacd082"
+    },
+    "tuvis2dWalkSe": {
+      "path": "assets/characters/2.5d/tuvis2d-walk-se.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "c11363f4814c310d20d7d45e8f6b1cec9f392e42f7bcdbe277b6052e9cdf0421"
+    },
+    "tuvis2dWalkSw": {
+      "path": "assets/characters/2.5d/tuvis2d-walk-sw.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "16d73e3097ef04f0d670616657c4485b2a1cf9d6fb21c99c54075e9a21e5ff92"
+    },
+    "tuvis2dWalkNw": {
+      "path": "assets/characters/2.5d/tuvis2d-walk-nw.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "1675e103edb08ad19f268dffee2ad52dfc7da860686052c542b5230ac78f47aa"
+    },
+    "tuvis2dWalkNe": {
+      "path": "assets/characters/2.5d/tuvis2d-walk-ne.png",
+      "width": 2172,
+      "height": 724,
+      "alpha": true,
+      "sha256": "da9eea3cf0b6be4809eb045f76bd7b0264c92c4022ffb3304deb479c105227d3"
+    },
+    "tuvis2dJumpSe": {
+      "path": "assets/characters/2.5d/tuvis2d-jump-se.png",
+      "width": 1024,
+      "height": 320,
+      "alpha": true,
+      "sha256": "76bc08ac372794ea370de4342c6f85e540b11b1265f3c053ea9e0fce14223668"
+    },
+    "tuvis2dPickupSe": {
+      "path": "assets/characters/2.5d/tuvis2d-pickup-se.png",
+      "width": 1024,
+      "height": 320,
+      "alpha": true,
+      "sha256": "d5da240fc66fd88f956d9b89dd96df0096e600907c455e00ac09ea242e1807fe"
+    },
+    "tuvis2dCelebrateSe": {
+      "path": "assets/characters/2.5d/tuvis2d-celebrate-se.png",
+      "width": 1024,
+      "height": 320,
+      "alpha": true,
+      "sha256": "5e8abbb7c4af48dce8d7b774d57de6faf923514004a44fce7f994d5d0c50de85"
     }
   },
   "frames": {
@@ -323,7 +379,8 @@
     "room",
     "directions",
     "actions",
-    "props"
+    "props",
+    "tuvis2dIdleSw"
   ],
   "contentPath": "content/world.zh.json",
   "scenePath": "scene.json",

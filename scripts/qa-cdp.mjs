@@ -251,6 +251,17 @@ export const DOM_PROBE = `(() => {
     return img ? img.complete && img.naturalWidth > 0 : false;
   };
   const actor = document.querySelector(".world-actor");
+  const actorGeometry = (() => {
+    const sprite = document.querySelector(".world-actor div[data-sprite-anim], .world-actor svg[data-frame]");
+    const shadow = document.querySelector(".world-actor-shadow");
+    if (!sprite || !shadow) return null;
+    const s = sprite.getBoundingClientRect();
+    const d = shadow.getBoundingClientRect();
+    return {
+      dx: (s.left + s.width / 2) - (d.left + d.width / 2),
+      spriteWidth: s.width,
+    };
+  })();
   return {
     title: document.title,
     lang: document.documentElement.lang,
@@ -258,6 +269,9 @@ export const DOM_PROBE = `(() => {
     stageBgLoaded: imageLoaded(".world-stage-bg"),
     actor: q(".world-actor").length,
     actorFrame: actor?.querySelector("[data-frame]")?.getAttribute("data-frame") ?? null,
+    actorAnim: actor?.querySelector("[data-sprite-anim]")?.getAttribute("data-sprite-anim") ?? null,
+    actorGeometry,
+    pickupParts: q("[data-pickup-part]").map((node) => node.getAttribute("data-pickup-part")),
     hotspots: q(".world-hotspot[data-hotspot]").map((node) => ({
       id: node.getAttribute("data-hotspot"),
       label: node.getAttribute("aria-label"),
@@ -345,6 +359,14 @@ export function checksForRoute(route, probe, failures, externalRequests = []) {
     expect("workshop stage present", probe.worldStage === 1, probe.worldStage);
     expect("stage background loaded", probe.stageBgLoaded, probe.stageBgLoaded);
     expect("actor present", probe.actor === 1, probe.actor);
+    expect("actor sprite animation present", Boolean(probe.actorAnim), probe.actorAnim);
+    // A mirrored strip must not shift the sprite off its logical position:
+    // the transformed sprite box stays centered over the ground shadow.
+    expect(
+      "actor sprite centered over shadow",
+      probe.actorGeometry !== null && Math.abs(probe.actorGeometry.dx) < 8,
+      probe.actorGeometry,
+    );
     expect("twelve hotspots", probe.hotspots.length === 12, probe.hotspots.length);
     expect("quest bar present", probe.questBar === 1, probe.questBar);
     expect("help banner present", probe.helpBanner === 1, probe.helpBanner);

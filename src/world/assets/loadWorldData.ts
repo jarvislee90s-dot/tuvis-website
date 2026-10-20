@@ -1,5 +1,6 @@
 import type {
   AssetDefinition,
+  AssemblyGrid,
   AssemblyModule,
   EquipmentEntry,
   FrameDefinition,
@@ -284,6 +285,22 @@ function validateContent(raw: unknown, manifest: WorldManifest): WorldContent {
           id: requireModuleId(module.id, `content.quest.modules[${i}].id`),
           label: requireString(module.label, `content.quest.modules[${i}].label`),
           source: requireString(module.source, `content.quest.modules[${i}].source`),
+          english:
+            module.english === undefined
+              ? undefined
+              : requireString(module.english, `content.quest.modules[${i}].english`),
+          color:
+            module.color === undefined
+              ? undefined
+              : requireString(module.color, `content.quest.modules[${i}].color`),
+          description:
+            module.description === undefined
+              ? undefined
+              : requireString(module.description, `content.quest.modules[${i}].description`),
+          analogy:
+            module.analogy === undefined
+              ? undefined
+              : requireString(module.analogy, `content.quest.modules[${i}].analogy`),
         };
       }),
       instructions: requireArray(quest.instructions, "content.quest.instructions").map((t, i) =>
@@ -383,6 +400,35 @@ function validateAssemblyModule(
   };
 }
 
+function validateAssemblyGrid(raw: unknown, moduleIds: readonly ModuleId[]): AssemblyGrid {
+  const grid = requireRecord(raw, "scene.assembly.grid");
+  const rows = requirePositive(grid.rows, "scene.assembly.grid.rows");
+  const cols = requirePositive(grid.cols, "scene.assembly.grid.cols");
+  const cellsRaw = requireRecord(grid.cells, "scene.assembly.grid.cells");
+  const cells: Record<string, Point> = {};
+  for (const [key, value] of Object.entries(cellsRaw)) {
+    if (key !== "body" && !MODULE_IDS.includes(key as ModuleId)) {
+      fail(`scene.assembly.grid.cells.${key} is not a body/module id`);
+    }
+    const cell = requirePoint(value, `scene.assembly.grid.cells.${key}`);
+    if (cell[0] < 0 || cell[0] >= rows || cell[1] < 0 || cell[1] >= cols) {
+      fail(`scene.assembly.grid.cells.${key} is outside the ${rows}x${cols} grid`);
+    }
+    cells[key] = cell;
+  }
+  const required = ["body", ...moduleIds] as const;
+  for (const key of required) {
+    if (!cells[key]) fail(`scene.assembly.grid.cells is missing "${key}"`);
+  }
+  const seen = new Set<string>();
+  for (const key of required) {
+    const cellKey = `${cells[key][0]}-${cells[key][1]}`;
+    if (seen.has(cellKey)) fail(`scene.assembly.grid cells overlap at ${cellKey}`);
+    seen.add(cellKey);
+  }
+  return { rows, cols, cells: cells as AssemblyGrid["cells"] };
+}
+
 function validateScene(raw: unknown, manifest: WorldManifest): SceneDefinition {
   const doc = requireRecord(raw, "scene");
   if (doc.schemaVersion !== 1) fail("scene schemaVersion must be 1");
@@ -461,6 +507,7 @@ function validateScene(raw: unknown, manifest: WorldManifest): SceneDefinition {
         frame: requireFrameRef(manifest, complete.frame, "scene.assembly.complete.frame"),
         rect: requireRect(complete.rect, "scene.assembly.complete.rect"),
       },
+      grid: validateAssemblyGrid(assembly.grid, MODULE_IDS),
     },
     layoutNotes: Array.isArray(doc.layoutNotes)
       ? doc.layoutNotes.map((n, i) => requireString(n, `scene.layoutNotes[${i}]`))

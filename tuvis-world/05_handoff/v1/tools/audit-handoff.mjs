@@ -14,7 +14,7 @@ const spec=await read(specPath),plan=await read(planPath);
 const manifest=JSON.parse(await read(packPrefix+"manifest.json"));
 const scene=JSON.parse(await read(packPrefix+"scene.json"));
 const content=JSON.parse(await read(packPrefix+"content/world.zh.json"));
-assert(Object.keys(manifest.assets).length===17,"Asset inventory count");
+assert(Object.keys(manifest.assets).length===25,"Asset inventory count");
 for(const [id,a] of Object.entries(manifest.assets)){
   const path=packPrefix+a.path;
   await readFile(resolve(project,path));
@@ -39,6 +39,7 @@ assert(spec.includes("pnpm 10.20.0")&&plan.includes("pnpm 10.20.0"),"Tool versio
 assert(content.ui.enter==="进入兔维斯工坊"&&spec.includes("“进入兔维斯工坊”进入互动页"),"CTA copy mismatch");
 assert(plan.includes("该事件仅由 Task 6 到达装备架触发"),"Ambiguous rack completion owner");
 assert(scene.actions.sit.depth>scene.props.find(p=>p.frame==="deskChair").depth,"Seated depth");
+assert(scene.assembly.grid&&scene.assembly.grid.rows===3&&scene.assembly.grid.cols===3&&Object.keys(scene.assembly.grid.cells).length===4,"Assembly grid contract");
 assert(plan.includes("导航脚底仍保持椅子靠近点"),"Seated navigation recovery");
 const docs=[specPath,planPath,readinessPath];
 for(const path of docs){
@@ -66,5 +67,5 @@ for(const path of docs)assert(!machinePath.test(await read(path)),"Machine-speci
 await scan(pack);
 const provenance=JSON.parse(await read(packPrefix+"asset-provenance.json"));
 for(const x of [...provenance.generated,...provenance.reused])if(x.prompt)await readFile(resolve(project,x.prompt));
-console.log("PASS: spec/plan material mappings 17/17; 9 root-relative task file lists; loader, state-event and pose contracts aligned.");
+console.log("PASS: spec/plan material mappings 25/25; 9 root-relative task file lists; loader, state-event and pose contracts aligned.");
 console.log("PASS: document links, provenance prompts and portable active-package paths.");

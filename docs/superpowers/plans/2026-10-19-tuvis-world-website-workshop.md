@@ -53,6 +53,14 @@
 |---|---|---|
 | room | tuvis-world/05_handoff/v1/assets/scene/workshop-base.png | W-06 工坊入口预览；Task 5 背景层（scene.background） |
 | directions | tuvis-world/05_handoff/v1/assets/characters/tuvis-directions.png | Task 5 场内四向站姿与移动；帧 nw、ne、sw、se |
+| tuvis2dIdleSw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-idle-sw.png | Task 11 角色 2.5D 动画；idle SW 六帧条（含眨眼），SE 运行时镜像，coreAssets 首帧 |
+| tuvis2dWalkSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-se.png | Task 11 角色 2.5D 动画；walk SE 六帧行走条 |
+| tuvis2dWalkSw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-sw.png | Task 11 角色 2.5D 动画；walk SW 六帧行走条 |
+| tuvis2dWalkNw | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-nw.png | Task 11 角色 2.5D 动画；walk NW 六帧行走条，兼作背面 idle 兜底 |
+| tuvis2dWalkNe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-walk-ne.png | Task 11 角色 2.5D 动画；walk NE 六帧行走条（NW 镜像生成），兼作背面 idle 兜底 |
+| tuvis2dJumpSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-jump-se.png | Task 11 角色 2.5D 动画；点击角色跳跃四帧条 |
+| tuvis2dPickupSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-pickup-se.png | Task 11 角色 2.5D 动画；拾取零件四帧条 |
+| tuvis2dCelebrateSe | tuvis-world/05_handoff/v1/assets/characters/2.5d/tuvis2d-celebrate-se.png | Task 11 角色 2.5D 动画；组装完成庆祝四帧条 |
 | actions | tuvis-world/05_handoff/v1/assets/characters/tuvis-actions.png | Task 6 日常动作；帧 sit、coffee、display |
 | props | tuvis-world/05_handoff/v1/assets/props/workshop-props.png | Task 5/6 家具与深度遮挡；帧 deskChair、loungeChair、lowTable |
 | hero | tuvis-world/05_handoff/v1/assets/landing/hero.png | W-01 首屏、W-02 角色介绍（Task 2） |

@@ -379,10 +379,8 @@
   "world.assemblyError": "组装素材加载失败。",
   "world.assemblyComplete": "Bug Buster 组装完成",
   "world.assemblyCompleteHint": "Bug Buster 已完成，返回工坊继续探索。",
-  "world.assemblyHelp": "拖动零件到高亮插槽；也可以先点零件，再点插槽。",
+  "world.assemblyHelp": "把零件拖进九宫格里它自己的位置，也可以先点零件再点它的格子；放对会变绿锁定，全部放对自动组装。",
   "world.assemblyClose": "返回工坊",
-  "world.assemblyWrongSocket": "没有对准插槽，零件已回到托盘。",
-  "world.assemblyMismatch": "这个插槽与当前零件不匹配。",
   "world.reset": "重玩主线",
   "world.resetConfirm": "这会清除本地主线进度，重新开始组装。",
   "world.unreachable": "这里暂时过不去，换个位置试试。",
@@ -398,5 +396,11 @@
   "world.rackPlaced": "Bug Buster 已陈列在装备架上。",
   "world.musicOn": "音乐：开",
   "world.musicOff": "音乐：关",
-  "world.musicCredit": "背景音乐：Sappheiros – Universe（BreakingCopyright）"
+  "world.musicCredit": "背景音乐：Sappheiros – Universe（BreakingCopyright）",
+  "world.pickupTitle": "拾取零件",
+  "world.pickupHint": "{{label}}（点击拾取）",
+  "world.pickupAnalogyPrefix": "代码编辑类比：",
+  "world.assemblyBody": "机身",
+  "world.assemblyTray": "工具箱托盘",
+  "world.assemblyTrayEmpty": "收集到零件后会出现在这里。"
 }

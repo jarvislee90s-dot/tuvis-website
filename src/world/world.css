@@ -830,16 +830,28 @@
   filter: drop-shadow(0 4px 5px rgba(20, 24, 20, 0.24));
 }
 
-/* ---------- assembly close-up ---------- */
+/* ---------- assembly close-up (nine-grid) ---------- */
 
-.world-assembly-card { width: min(820px, 100%); }
+.world-assembly-card { width: min(960px, 100%); }
 .world-assembly-help { margin: 6px 0 14px; font-size: 0.88rem; }
 .world-assembly-error { display: grid; gap: 10px; justify-items: start; }
 
-.world-assembly-stage {
+.world-assembly-layout {
   position: relative;
-  width: 100%;
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.world-assembly-grid {
+  flex: 1 1 320px;
+  max-width: 520px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px;
   border-radius: 18px;
   border: 1px solid #33454b;
   background:
@@ -847,53 +859,231 @@
     linear-gradient(160deg, #1c272b, #131b1e);
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
-.world-assembly-piece {
+.world-assembly-cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+  border-radius: 12px;
+}
+
+.world-assembly-cell.is-plain { background: rgba(255, 255, 255, 0.05); }
+
+.world-assembly-cell.is-target {
+  border: 2px dashed rgba(240, 138, 29, 0.8);
+  background: rgba(240, 138, 29, 0.1);
+}
+
+.world-assembly-cell.is-installed {
+  border: 2px solid #32c77b;
+  background: rgba(50, 199, 123, 0.16);
+}
+
+.world-assembly-cell-label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 6px;
+}
+
+.world-assembly-cell-hit {
   position: absolute;
-  z-index: 20;
+  inset: 0;
   padding: 0;
   border: 0;
+  border-radius: 12px;
   background: transparent;
-  cursor: grab;
-  touch-action: none;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
-}
-
-.world-assembly-piece img { pointer-events: none; }
-.world-assembly-piece:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 10px; }
-.world-assembly-piece.is-selected { border-radius: 12px; box-shadow: 0 0 0 3px rgba(240, 138, 29, 0.85); }
-.world-assembly-piece.is-dragging { cursor: grabbing; z-index: 40; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.4)); }
-
-.world-assembly-installed { z-index: 10; pointer-events: none; }
-
-.world-assembly-socket {
-  position: absolute;
-  z-index: 15;
-  width: 44px;
-  height: 44px;
-  translate: -50% -50%;
-  border-radius: 50%;
-  border: 2px dashed rgba(240, 138, 29, 0.85);
-  background: rgba(240, 138, 29, 0.16);
   cursor: pointer;
 }
 
-/* While a piece is selected, its socket must win over tray pieces that
-   overlap it (piece z-index 20); dragging still floats at 40. */
-.world-assembly-stage.has-selection .world-assembly-socket { z-index: 25; }
+.world-assembly-cell-hit:disabled { cursor: default; }
 
-.world-assembly-socket:hover,
-.world-assembly-socket:focus-visible {
-  background: rgba(240, 138, 29, 0.36);
+.world-assembly-cell-hit:not(:disabled):hover,
+.world-assembly-cell-hit:not(:disabled):focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(240, 138, 29, 0.25);
+  box-shadow: inset 0 0 0 3px rgba(240, 138, 29, 0.7);
+}
+
+.world-assembly-grid.is-converging .world-assembly-cell {
+  transition: transform 650ms cubic-bezier(0.55, 0, 0.85, 0.36);
+  transform: translate(var(--cx, 0), var(--cy, 0));
+  z-index: 5;
+}
+
+.world-assembly-tray {
+  flex: 0 1 220px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px dashed rgba(240, 138, 29, 0.45);
+  background: rgba(240, 138, 29, 0.06);
+}
+
+.world-assembly-tray-title { margin: 0; font-weight: 700; font-size: 0.86rem; }
+.world-assembly-tray-empty { margin: 0; color: var(--ink-dim, #6b7280); font-size: 0.82rem; }
+
+.world-assembly-piece.is-tray {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1px solid rgba(216, 207, 186, 0.9);
+  border-radius: 12px;
+  background: #f8f4ea;
+  cursor: grab;
+  touch-action: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18));
+}
+
+.world-assembly-piece.is-tray:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.world-assembly-piece.is-tray.is-selected { box-shadow: 0 0 0 3px rgba(240, 138, 29, 0.85); }
+.world-assembly-piece-label { font-size: 0.78rem; font-weight: 600; }
+
+.world-assembly-ghost {
+  position: absolute;
+  z-index: 60;
+  width: 150px;
+  translate: -50% -60%;
+  pointer-events: none;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.4));
+}
+
+.world-assembly-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 72%);
+  animation: world-assembly-flash 480ms ease-out forwards;
+  pointer-events: none;
+}
+
+.world-assembly-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid #33454b;
+  background: linear-gradient(160deg, #1c272b, #131b1e);
+}
+
+.world-assembly-reveal-art {
+  flex: 1 1 300px;
+  display: grid;
+  place-items: center;
+}
+
+.world-assembly-reveal-info {
+  flex: 1 1 240px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  color: rgba(240, 245, 245, 0.92);
+}
+
+.world-assembly-reveal-name { margin: 0; font-size: 1.15rem; color: #fff; }
+.world-assembly-reveal-name span { color: rgba(255, 255, 255, 0.66); font-size: 0.9rem; font-weight: 600; }
+
+.world-assembly-reveal .world-pickup-desc { margin: 0; color: rgba(240, 245, 245, 0.92); }
+
+.world-assembly-reveal .world-pickup-analogy {
+  border-left-color: var(--world-orange, #f08a1d);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(240, 245, 245, 0.8);
 }
 
 .world-assembly-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .world-assembly-actions .world-btn { margin-top: 0; }
 
-/* ---------- workshop chrome ---------- */
+/* ---------- pickup panel ---------- */
+
+.world-pickup-card { width: min(520px, 100%); }
+
+.world-pickup-kicker {
+  margin: 0 0 2px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.world-pickup-english { margin: -2px 0 10px; color: var(--ink-dim, #6b7280); font-size: 0.88rem; }
+
+.world-pickup-art {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  border: 1px solid rgba(216, 207, 186, 0.9);
+  border-radius: 14px;
+  background: #f8f4ea;
+}
+
+.world-pickup-desc { margin: 10px 0 0; font-size: 0.92rem; }
+
+.world-pickup-analogy {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--world-orange, #f08a1d);
+  border-radius: 0 10px 10px 0;
+  background: rgba(240, 138, 29, 0.08);
+  color: var(--ink-dim, #6b7280);
+  font-size: 0.88rem;
+}
+
+/* ---------- floating pickup parts ---------- */
+
+.world-pickup-part {
+  position: absolute;
+  /* Above the hotspot layer (1000): the floating part owns the clicks inside
+     its box, the rest of the hotspot area still opens the plain content. */
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  animation:
+    world-part-float 1.6s ease-in-out infinite,
+    world-part-glow 2.2s ease-in-out infinite;
+  touch-action: manipulation;
+}
+
+/* Soft halo behind the piece so it reads as a pickup against the scene. */
+.world-pickup-part::before {
+  content: "";
+  position: absolute;
+  inset: 8% 14%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 214, 120, 0.5), rgba(255, 214, 120, 0) 70%);
+  pointer-events: none;
+}
+
+.world-pickup-part:hover,
+.world-pickup-part:focus-visible {
+  outline: none;
+  filter: drop-shadow(0 0 16px rgba(255, 214, 120, 0.98));
+}
+
+.world-pickup-part img,
+.world-pickup-part span {
+  position: relative;
+}
+
+@keyframes world-part-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 214, 120, 0.65)); }
+  50% { filter: drop-shadow(0 0 18px rgba(255, 214, 120, 0.95)); }
+}
 
 .world-workshop-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .world-workshop-tools .world-btn { margin-top: 0; }
@@ -956,7 +1146,36 @@
   to { opacity: 1; }
 }
 
+/* Frame-strip playback: background-size is frames*100%, so 0%->100%
+   background-position-x with steps() walks every frame exactly once. */
+@keyframes world-sprite-frames {
+  from { background-position-x: 0%; }
+  to { background-position-x: 100%; }
+}
+
+@keyframes world-part-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7px; }
+}
+
+@keyframes world-assembly-flash {
+  0% { opacity: 0; }
+  35% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .world-actor.is-moving,
-  .world-actor svg { animation: none; }
+  .world-actor svg,
+  .world-actor [data-sprite-anim],
+  .world-pickup-part {
+    animation: none;
+  }
+  .world-assembly-grid.is-converging .world-assembly-cell {
+    transition: none;
+  }
+  .world-assembly-flash {
+    animation: none;
+    opacity: 0;
+  }
 }

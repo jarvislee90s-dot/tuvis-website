@@ -16,7 +16,11 @@ export type ContentOverlay =
   | { kind: "door"; id?: string }
   | { kind: "help" };
 
-export type Overlay = null | ContentOverlay | { kind: "task" | "repair" | "assembly" };
+export type Overlay =
+  | null
+  | ContentOverlay
+  | { kind: "task" | "repair" | "assembly" }
+  | { kind: "pickup"; moduleId: ModuleId };
 
 export type AssetDefinition = {
   path: string;
@@ -89,6 +93,16 @@ export type AssemblyModule = {
   snapRadius: number;
 };
 
+/**
+ * 3x3 grid layout of the assembly close-up. Cells hold [row, col]; only the
+ * body and the three modules occupy cells, the rest stay empty.
+ */
+export type AssemblyGrid = {
+  rows: number;
+  cols: number;
+  cells: Record<"body" | ModuleId, Point>;
+};
+
 export type SceneDefinition = {
   schemaVersion: number;
   id: string;
@@ -113,6 +127,7 @@ export type SceneDefinition = {
     body: { frame: string; rect: Rect };
     modules: AssemblyModule[];
     complete: { frame: string; rect: Rect };
+    grid: AssemblyGrid;
   };
   layoutNotes?: string[];
 };
@@ -169,7 +184,16 @@ export type WorldContent = {
   stories: StoryEntry[];
   quest: {
     title: string;
-    modules: Array<{ id: ModuleId; label: string; source: string }>;
+    modules: Array<{
+      id: ModuleId;
+      label: string;
+      source: string;
+      /** Optional pickup-panel detail; content pack is Chinese-only today. */
+      english?: string;
+      color?: string;
+      description?: string;
+      analogy?: string;
+    }>;
     instructions: string[];
   };
   ui: {

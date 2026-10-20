@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useStore, type StoreApi } from "zustand";
-import { loadWorldData, preloadCoreAssets } from "@/world/assets/loadWorldData";
+import { loadWorldData, preloadAssets, preloadCoreAssets } from "@/world/assets/loadWorldData";
+import { SPRITE_ASSET_IDS } from "@/world/scene/petFrames";
 import { isMusicMuted, setMusicMuted, startWorkshopMusic, stopWorkshopMusic } from "@/world/audio/workshopAudio";
 import { INITIAL_QUEST } from "@/world/quest/quest";
 import { readQuest, writeQuest } from "@/world/quest/persistence";
@@ -214,6 +215,9 @@ export default function WorkshopPage() {
     loadWorldData()
       .then(async (bundle) => {
         await preloadCoreAssets(bundle);
+        // Strips are warm-up only: the idle strip ships as a core asset, the
+        // rest load in the background so first use never waits on them.
+        void preloadAssets(bundle, [...SPRITE_ASSET_IDS]).catch(() => undefined);
         if (cancelled) return;
         document.title = `${bundle.content.quest.title} · Tuvis Workshop`;
         setState({ status: "ready", bundle });

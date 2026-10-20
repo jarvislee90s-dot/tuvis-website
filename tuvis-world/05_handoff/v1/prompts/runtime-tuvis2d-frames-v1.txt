@@ -1,0 +1,18 @@
+兔维斯 2.5D 帧动画条 v0.1（概念素材，未逐帧人工校正）
+
+来源：ChatGPT 图像生成（DALL·E 系列），由 Tuvis_Isometric_Sprite_Strips_v0_1 交付包整理。
+以既有兔维斯造型（灰白机甲服 + 青色护目镜 + 绿色萝卜徽章）为参考做原创角色设计，
+等距 3/4 视角，透明背景 RGBA，横向等宽条带。
+
+条带清单（原始文件名 -> 入库文件名，注意部分原始命名与内容不符）：
+- " facing SW (front-left)..png"（6 帧，含眨眼） -> tuvis2d-idle-sw.png
+- "WALK cycle, facing SE (front-right). .png"（6 帧） -> tuvis2d-walk-se.png
+- "tuvis-walk-se.png "（尾随空格；内容实为 SW，6 帧） -> tuvis2d-walk-sw.png
+- "tuvis-walk-nw.png"（6 帧） -> tuvis2d-walk-nw.png
+- "tuvis-walk-ne.png  .png"（6 帧，NW 镜像生成） -> tuvis2d-walk-ne.png
+- "tuvis-jump-se.png"（4 帧） -> tuvis2d-jump-se.png
+- "tuvis-pickup-se.png"（4 帧） -> tuvis2d-pickup-se.png
+- "tuvis-celebrate-se.png"（4 帧） -> tuvis2d-celebrate-se.png
+
+未入库：FIRE/WAVE/CODE/REVIEW 条带（暂不启用）。已知限制：NE 行走为 NW 镜像，
+耳朵/护目镜左右关系反转；idle 仅 SW，SE 由运行时镜像，NW/NE 用 walk 首帧静止兜底。

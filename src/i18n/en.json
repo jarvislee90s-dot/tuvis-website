@@ -379,10 +379,8 @@
   "world.assemblyError": "Failed to load assembly assets.",
   "world.assemblyComplete": "Bug Buster assembled",
   "world.assemblyCompleteHint": "Bug Buster is complete. Return to the workshop to keep exploring.",
-  "world.assemblyHelp": "Drag a part to the highlighted socket, or select a part and then click its socket.",
+  "world.assemblyHelp": "Drag each part into its own grid cell, or select the part and click its cell. A correct cell turns green; fill all of them to assemble.",
   "world.assemblyClose": "Back to workshop",
-  "world.assemblyWrongSocket": "Missed the socket; the part returned to the tray.",
-  "world.assemblyMismatch": "That socket does not match the selected part.",
   "world.reset": "Replay story",
   "world.resetConfirm": "Replay the main quest? This clears local quest progress.",
   "world.unreachable": "You can't get there. Try another spot.",
@@ -398,5 +396,11 @@
   "world.rackPlaced": "Bug Buster is now displayed on the rack.",
   "world.musicOn": "Music: On",
   "world.musicOff": "Music: Off",
-  "world.musicCredit": "Background music: Sappheiros – Universe (BreakingCopyright)"
+  "world.musicCredit": "Background music: Sappheiros – Universe (BreakingCopyright)",
+  "world.pickupTitle": "Part picked up",
+  "world.pickupHint": "{{label}} (click to pick up)",
+  "world.pickupAnalogyPrefix": "Code-editor analogy: ",
+  "world.assemblyBody": "Body",
+  "world.assemblyTray": "Toolbox tray",
+  "world.assemblyTrayEmpty": "Collected parts will appear here."
 }

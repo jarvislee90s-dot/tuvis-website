@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import type { StoreApi } from "zustand";
 import "@/i18n";
 import { bundle } from "./testFixtures";
-import { INITIAL_QUEST, isComplete } from "./quest/quest";
+import { INITIAL_QUEST, isComplete, MODULE_IDS } from "./quest/quest";
 import { QUEST_STORAGE_KEY, readQuest } from "./quest/persistence";
 import type { RuntimeState } from "./scene/runtimeStore";
 
@@ -75,17 +75,28 @@ function setStageRect(element: HTMLElement, left: number, top: number, width: nu
     }) as DOMRect;
 }
 
-async function visit(store: StoreApi<RuntimeState>, id: string) {
+async function visit(store: StoreApi<RuntimeState>, id: string, pickup = false) {
   const hotspot = bundle.scene.hotspots.find((entry) => entry.id === id);
   expect(hotspot).toBeDefined();
-  act(() => store.getState().requestMove(hotspot!.approach, id));
+  act(() => store.getState().requestMove(hotspot!.approach, id, pickup));
   const token = store.getState().motion.target?.token;
   expect(token).toBeDefined();
-  act(() => store.getState().arrive(token!, id));
+  act(() => store.getState().arrive(token!, id, pickup));
   await waitFor(() => expect(store.getState().pendingArrival).toBeNull());
 }
 
+/** Close a pickup dialog via its own 知道了 button (the help banner has one too). */
+async function closePickup(label: string) {
+  const dialog = await screen.findByRole("dialog", { name: label });
+  fireEvent.click(within(dialog).getByRole("button", { name: "知道了" }));
+}
+
 beforeEach(() => {
+  // jsdom has no PointerEvent constructor, which would strip button/pointerId
+  // from fireEvent.pointerDown; real browsers always provide them.
+  if (typeof globalThis.PointerEvent === "undefined") {
+    vi.stubGlobal("PointerEvent", MouseEvent);
+  }
   vi.stubGlobal("Image", LoadingImage);
   loadMocks.loadWorldData.mockResolvedValue(bundle);
   loadMocks.preloadCoreAssets.mockResolvedValue(undefined);
@@ -103,18 +114,29 @@ describe("workshop flow", () => {
     const { unmount } = renderRuntime(storage, storeRef);
     const store = await waitForStore(storeRef);
 
-    await visit(store, "toolbox");
-    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "equipment" }));
-    act(() => store.getState().setOverlay(null));
+    // Pickup 1: the floating part button starts a pickup walk to the toolbox.
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "瞄准模块（点击拾取）" }));
+    await waitFor(() => expect(store.getState().motion.target?.pickup).toBe(true));
+    expect(store.getState().motion.target?.hotspotId).toBe("toolbox");
+    act(() => store.getState().arrive(store.getState().motion.target!.token, "toolbox", true));
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "sight" }));
+    expect(store.getState().quest.collected).toEqual(["sight"]);
+    await closePickup("瞄准模块");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
 
-    await visit(store, "posters");
-    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "world", id: "residents" }));
-    act(() => store.getState().setOverlay(null));
+    // Pickups 2 and 3: arriving from the floating part collects and opens the panel.
+    await visit(store, "posters", true);
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "cell" }));
+    await closePickup("能源匣");
 
-    await visit(store, "window");
-    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "world", id: "city" }));
-    act(() => store.getState().setOverlay(null));
+    await visit(store, "window", true);
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "emitter" }));
+    await closePickup("脉冲发射头");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
     expect(store.getState().quest.collected).toHaveLength(3);
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(0);
 
     await visit(store, "workbench");
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "repair" }));
@@ -124,12 +146,22 @@ describe("workshop flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "进入组装" }));
     await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "assembly" }));
 
+    // Select a tray piece (pointerdown), then lock it into its own socket.
     for (const [id, label] of [["sight", "瞄准模块"], ["cell", "能源匣"], ["emitter", "脉冲发射头"]] as const) {
-      fireEvent.click(await screen.findByRole("button", { name: `零件：${label}` }));
+      const piece = screen.getByRole("button", { name: `零件：${label}` });
+      fireEvent.pointerDown(piece, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+      fireEvent.pointerUp(piece, { pointerId: 1, clientX: 0, clientY: 0 });
       fireEvent.click(screen.getByRole("button", { name: `插槽：${label}` }));
       await waitFor(() => expect(store.getState().quest.installed).toContain(id));
     }
+
+    // Success sequence: converge + flash play first, then the reveal takes over.
     expect(await screen.findByRole("heading", { name: "Bug Buster 组装完成" })).toBeInTheDocument();
+    await waitFor(
+      () => expect(document.querySelector("[data-assembly-reveal]")).not.toBeNull(),
+      { timeout: 4000 },
+    );
+    expect(document.querySelector("[data-assembly-grid]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "返回工坊" }));
     await waitFor(() => expect(store.getState().overlay).toBeNull());
 
@@ -214,6 +246,44 @@ describe("workshop flow", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  // A plain hotspot arrival opens content without collecting; only an arrival
+  // started from the floating part collects and plays the pickup action.
+  it("collects a module only when arriving from its floating part", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    const store = await waitForStore(storeRef);
+
+    // Normal arrival: content panel opens, nothing is collected.
+    await visit(store, "toolbox");
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "equipment" }));
+    expect(store.getState().quest.collected).toEqual([]);
+    expect(screen.queryByRole("dialog", { name: "瞄准模块" })).not.toBeInTheDocument();
+    act(() => store.getState().setOverlay(null));
+
+    // The floating part routes a pickup walk to its hotspot.
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: "瞄准模块（点击拾取）" }));
+    await waitFor(() => expect(store.getState().motion.target?.pickup).toBe(true));
+    expect(store.getState().motion.target?.hotspotId).toBe("toolbox");
+
+    act(() => store.getState().arrive(store.getState().motion.target!.token, "toolbox", true));
+    await waitFor(() =>
+      expect(store.getState().overlay).toEqual({ kind: "pickup", moduleId: "sight" }),
+    );
+    expect(store.getState().quest.collected).toEqual(["sight"]);
+    expect(store.getState().action?.kind).toBe("pickup");
+    expect(await screen.findByRole("dialog", { name: "瞄准模块" })).toBeInTheDocument();
+    await closePickup("瞄准模块");
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(document.querySelectorAll("[data-pickup-part]")).toHaveLength(2);
+
+    // Once collected, even a pickup arrival falls back to the plain content panel.
+    await visit(store, "toolbox", true);
+    await waitFor(() => expect(store.getState().overlay).toEqual({ kind: "equipment" }));
+    expect(store.getState().quest.collected).toEqual(["sight"]);
+    expect(screen.queryByRole("dialog", { name: "瞄准模块" })).not.toBeInTheDocument();
+  });
+
   // Kills panels that focus their close button but never restore the trigger.
   it("returns focus to the hotspot after workbench and assembly panels close", async () => {
     const storeRef: StoreRef = { current: null };
@@ -229,6 +299,12 @@ describe("workshop flow", () => {
     await waitFor(() => expect(store.getState().overlay).toBeNull());
     expect(hotspot).toHaveFocus();
 
+    // The tray only lists collected modules, so hand them over first.
+    act(() => {
+      for (const moduleId of MODULE_IDS) {
+        store.getState().dispatchQuest({ type: "COLLECT", moduleId });
+      }
+    });
     act(() => store.getState().setOverlay({ kind: "assembly" }));
     expect(await screen.findByRole("button", { name: "零件：瞄准模块" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });

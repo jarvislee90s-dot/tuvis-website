@@ -1,17 +1,21 @@
 import { useEffect, useRef, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
-import type { ContentOverlay, Point, SceneDefinition, WorldBundle, WorldManifest } from "../types";
+import type { ContentOverlay, Hotspot, Point, SceneDefinition, WorldBundle, WorldManifest } from "../types";
 import { assetUrl } from "../assets/loadWorldData";
 import { ContentPanel } from "../content/ContentPanel";
 import { AssemblyPanel } from "../quest/AssemblyPanel";
+import { FrameArt } from "../quest/FrameArt";
+import { PickupPanel } from "../quest/PickupPanel";
 import { QuestBar } from "../quest/QuestBar";
 import { WorkbenchPanel } from "../quest/WorkbenchPanel";
 import { toScenePoint } from "./geometry";
 import { resolveHotspot } from "./interaction";
+import { ACTION_DURATIONS, actionAnim, idleAnim, walkAnim } from "./petFrames";
 import { Sprite } from "./Sprite";
 import { useRuntimeStore, type Pose } from "./runtimeStore";
 import { useSceneLoop } from "./useSceneLoop";
+import { TuvisSprite } from "./TuvisSprite";
 
 type SceneViewProps = {
   bundle: WorldBundle;
@@ -71,14 +75,25 @@ function characterFrame(
   };
 }
 
+/** Hotspots whose floating part is still waiting to be collected. */
+function pendingPickups(bundle: WorldBundle, collected: readonly string[]): Hotspot[] {
+  return bundle.scene.hotspots.filter(
+    (hotspot) =>
+      hotspot.moduleId !== undefined &&
+      !collected.includes(hotspot.moduleId) &&
+      (hotspot.kind === "equipment" || hotspot.kind === "world"),
+  );
+}
+
 export function SceneView({ bundle }: SceneViewProps) {
-  const { scene, manifest } = bundle;
+  const { scene, manifest, content } = bundle;
   const { t } = useTranslation();
   const store = useRuntimeStore();
   useSceneLoop(store, scene);
 
   const motion = useStore(store, (state) => state.motion);
   const pose = useStore(store, (state) => state.pose);
+  const action = useStore(store, (state) => state.action);
   const notice = useStore(store, (state) => state.notice);
   const quest = useStore(store, (state) => state.quest);
   const overlay = useStore(store, (state) => state.overlay);
@@ -89,14 +104,27 @@ export function SceneView({ bundle }: SceneViewProps) {
     if (!pendingArrival) return;
     const current = store.getState();
     if (pendingArrival.hotspotId) {
-      const result = resolveHotspot(pendingArrival.hotspotId, bundle, current.quest);
+      const result = resolveHotspot(pendingArrival.hotspotId, bundle, current.quest, {
+        pickup: pendingArrival.pickup,
+      });
       if (result.questEvent) current.dispatchQuest(result.questEvent);
+      if (result.action) current.triggerAction(result.action);
       if (result.pose) current.setPose(result.pose);
       if (result.message) current.setNotice(result.message);
       if (result.overlay) current.setOverlay(result.overlay);
     }
     current.clearArrival();
   }, [pendingArrival, bundle, store]);
+
+  // One-shot action animations return to idle/walk on their own schedule.
+  useEffect(() => {
+    if (!action) return;
+    const timer = window.setTimeout(
+      () => store.getState().clearAction(),
+      ACTION_DURATIONS[action.kind],
+    );
+    return () => window.clearTimeout(timer);
+  }, [action, store]);
 
   const character = characterFrame(scene, manifest, pose, motion.position);
   const moving = motion.target !== null;
@@ -112,7 +140,21 @@ export function SceneView({ bundle }: SceneViewProps) {
       overlay.kind === "help")
       ? overlay
       : null;
-  const closeOverlay = () => store.getState().setOverlay(null);
+  const closeOverlay = () => {
+    const state = store.getState();
+    // Celebrating behind the fullscreen modal is invisible; fire it when the
+    // finished assembly panel closes instead.
+    if (
+      state.overlay?.kind === "assembly" &&
+      ["sight", "cell", "emitter"].every((id) => state.quest.installed.includes(id as "sight"))
+    ) {
+      state.triggerAction("celebrate");
+    }
+    state.setOverlay(null);
+  };
+
+  const labelFor = (id: string) =>
+    content.quest.modules.find((module) => module.id === id)?.label ?? id;
 
   const onStageClick = (event: MouseEvent<HTMLDivElement>) => {
     const element = stageRef.current;
@@ -129,6 +171,32 @@ export function SceneView({ bundle }: SceneViewProps) {
     }
     store.getState().requestMove(point);
   };
+
+  // Clicking the character itself plays a jump instead of walking.
+  const onActorActivate = (event: { stopPropagation(): void }) => {
+    event.stopPropagation();
+    const state = store.getState();
+    if (state.action || state.overlay !== null) return;
+    state.setPose(state.motion.direction);
+    state.triggerAction("jump");
+  };
+
+  // Walk/idle strips per direction; actions are SE-only (SW mirrors).
+  const oldPose = pose === "sit" || pose === "coffee" || pose === "display";
+  const showOldPose = oldPose && !action;
+  const actionDef = action ? actionAnim(action.kind) : null;
+  const animDef = actionDef
+    ? motion.direction === "sw"
+      ? { ...actionDef, flip: true }
+      : actionDef
+    : moving
+      ? walkAnim(motion.direction)
+      : idleAnim(motion.direction);
+  const animKey = action
+    ? `${action.kind}-${action.id}`
+    : `${moving ? "walk" : "idle"}-${motion.direction}`;
+
+  const pickups = pendingPickups(bundle, quest.collected);
 
   return (
     <>
@@ -201,17 +269,60 @@ export function SceneView({ bundle }: SceneViewProps) {
           style={{ zIndex: Math.round(character.depth) }}
           aria-hidden="true"
         >
-          <Sprite
-            key={character.frameId}
-            manifest={manifest}
-            frameId={character.frameId}
-            position={character.position}
-            height={character.height}
-            anchor={character.anchor}
-            zIndex={0}
-            stage={scene.size}
-          />
+          {showOldPose ? (
+            <Sprite
+              key={character.frameId}
+              manifest={manifest}
+              frameId={character.frameId}
+              position={character.position}
+              height={character.height}
+              anchor={character.anchor}
+              zIndex={0}
+              stage={scene.size}
+            />
+          ) : (
+            <TuvisSprite
+              key={animKey}
+              def={animDef}
+              position={character.position}
+              depth={0}
+              stage={scene.size}
+              onClick={onActorActivate}
+            />
+          )}
         </div>
+
+        {pickups.map((hotspot) => {
+          const [x, y, width] = hotspot.rect;
+          const centerX = x + width / 2;
+          const boxW = 220;
+          const boxH = 150;
+          const moduleDef = scene.assembly.modules.find((module) => module.id === hotspot.moduleId);
+          if (!moduleDef || !hotspot.moduleId) return null;
+          return (
+            <button
+              key={`pickup-${hotspot.id}`}
+              type="button"
+              className="world-pickup-part"
+              data-pickup-part={hotspot.moduleId}
+              aria-label={t("world.pickupHint", { label: labelFor(hotspot.moduleId) })}
+              style={{
+                left: `${((centerX - boxW / 2) / scene.size[0]) * 100}%`,
+                // Hotspots near the stage top (posters) would push the box
+                // outside the stage where it gets clipped and unclickable.
+                top: `${(Math.max(y - boxH - 16, 8) / scene.size[1]) * 100}%`,
+                width: `${(boxW / scene.size[0]) * 100}%`,
+                height: `${(boxH / scene.size[1]) * 100}%`,
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                store.getState().requestMove(hotspot.approach, hotspot.id, true);
+              }}
+            >
+              <FrameArt bundle={bundle} frameId={moduleDef.frame} alt="" fit={88} />
+            </button>
+          );
+        })}
 
         {scene.hotspots.map((hotspot) => {
           const [x, y, width, height] = hotspot.rect;
@@ -247,6 +358,10 @@ export function SceneView({ bundle }: SceneViewProps) {
 
       {contentOverlay ? (
         <ContentPanel overlay={contentOverlay} bundle={bundle} onClose={closeOverlay} />
+      ) : null}
+
+      {overlay?.kind === "pickup" ? (
+        <PickupPanel bundle={bundle} moduleId={overlay.moduleId} onClose={closeOverlay} />
       ) : null}
 
       {overlay && (overlay.kind === "task" || overlay.kind === "repair") ? (

@@ -227,13 +227,14 @@ async function readActorPosition(send) {
   return evaluate(
     send,
     `(() => {
-      const svg = document.querySelector(".world-actor svg[data-frame]");
-      if (!svg) return null;
-      const left = parseFloat(svg.style.left);
-      const top = parseFloat(svg.style.top);
+      const el = document.querySelector(".world-actor svg[data-frame], .world-actor div[data-sprite-anim]");
+      if (!el) return null;
+      const left = parseFloat(el.style.left);
+      const top = parseFloat(el.style.top);
       return {
         position: [(left / 100) * ${SCENE_SIZE[0]}, (top / 100) * ${SCENE_SIZE[1]}],
-        frame: svg.getAttribute("data-frame"),
+        frame: el.getAttribute("data-frame"),
+        anim: el.getAttribute("data-sprite-anim"),
       };
     })()`,
   );
@@ -253,19 +254,73 @@ async function screenshot(send, name) {
   return file;
 }
 
+/**
+ * Active pickup: the floating part must be visible above its hotspot before
+ * anything happens; clicking the part walks to the hotspot, collects the
+ * module and opens the pickup description panel.
+ */
 async function collectModules(send, order) {
   const labels = { sight: "瞄准模块", cell: "能源匣", emitter: "脉冲发射头" };
   const hotspots = { sight: "toolbox", cell: "posters", emitter: "window" };
   for (const id of order) {
-    await clickHotspot(send, hotspots[id]);
+    const partBefore = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
+    record(`pickup ${id}: floating part visible`, partBefore, partBefore);
+
+    const part = await centerOf(send, `[data-pickup-part="${id}"]`);
+    await mouseClick(send, part.x, part.y);
+    await waitForMoveStart(send);
+    await waitForMoveEnd(send);
+    await waitForDialog(send);
     const dialogText = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
-    record(`collect ${id}: overlay content`, dialogText.length > 0, dialogText.slice(0, 40));
+    record(
+      `pickup ${id}: panel opens with part name`,
+      dialogText.includes(labels[id]),
+      dialogText.replace(/\s+/g, " ").slice(0, 60),
+    );
     const quest = await readQuest(send);
-    record(`collect ${id}: stored`, Boolean(quest?.quest?.collected?.includes(id)), quest?.quest?.collected);
+    record(`pickup ${id}: stored`, Boolean(quest?.quest?.collected?.includes(id)), quest?.quest?.collected);
     const status = await evaluate(send, `document.querySelector(".world-questbar")?.innerText ?? ""`);
-    record(`collect ${id}: quest bar updated`, status.includes(labels[id]) && status.includes("已领取"), status.replace(/\s+/g, " ").slice(0, 80));
+    record(`pickup ${id}: quest bar updated`, status.includes(labels[id]) && status.includes("已领取"), status.replace(/\s+/g, " ").slice(0, 80));
     await closeDialog(send);
+    const partAfter = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="${id}"]'))`);
+    record(`pickup ${id}: floating part removed`, !partAfter, partAfter);
   }
+}
+
+/**
+ * Clicking the hotspot area (not the floating part) must open the original
+ * content panel WITHOUT collecting the module; the part stays floating.
+ */
+async function runContentWithoutPickup(send, url) {
+  await clearStorageAndReload(send, url);
+  await dismissHelp(send);
+  const before = await readQuest(send);
+  await clickHotspot(send, "toolbox");
+  const dialogText = await evaluate(send, `document.querySelector('[role="dialog"]')?.innerText ?? ""`);
+  record("content click: overlay opens", dialogText.length > 0, dialogText.replace(/\s+/g, " ").slice(0, 50));
+  const after = await readQuest(send);
+  record("content click: nothing collected", !after?.quest?.collected?.includes("sight"), after?.quest?.collected);
+  const partStill = await evaluate(send, `Boolean(document.querySelector('[data-pickup-part="sight"]'))`);
+  record("content click: floating part stays", partStill, partStill);
+  record("content click: quest state untouched", JSON.stringify(after) === JSON.stringify(before), null);
+  await closeDialog(send);
+}
+
+/** Clicking the character itself must play the jump strip and then settle. */
+async function runJumpProbe(send) {
+  const actor = await centerOf(send, ".world-actor div[data-sprite-anim]");
+  await mouseClick(send, actor.x, actor.y);
+  await waitFor(send, `Boolean(document.querySelector('.world-actor [data-sprite-anim="tuvis2d-jump-se"]'))`, { timeoutMs: 5_000 });
+  record("actor click: jump strip plays", true, "tuvis2d-jump-se");
+  await waitFor(
+    send,
+    `(() => {
+      const anim = document.querySelector(".world-actor div[data-sprite-anim]")?.getAttribute("data-sprite-anim");
+      return Boolean(anim) && anim !== "tuvis2d-jump-se";
+    })()`,
+    { timeoutMs: 10_000 },
+  );
+  record("actor click: returns to idle", true);
 }
 
 async function repairAndOpenAssembly(send) {
@@ -280,9 +335,27 @@ async function repairAndOpenAssembly(send) {
   await screenshot(send, "workbench-repair.png");
 
   await clickButton(send, "进入组装");
-  await waitFor(send, `Boolean(document.querySelector(".world-assembly-stage"))`, { timeoutMs: 15_000 });
+  await waitFor(send, `Boolean(document.querySelector("[data-assembly-stage]"))`, { timeoutMs: 15_000 });
   await waitFor(send, `document.querySelectorAll(".world-assembly-piece").length === 3`, { timeoutMs: 15_000 });
-  record("workbench: assembly opens with three pieces", true, await evaluate(send, `document.querySelectorAll(".world-assembly-piece").length`));
+  record(
+    "workbench: assembly opens with three tray pieces and body cell",
+    await evaluate(send, `document.querySelectorAll(".world-assembly-piece").length`) === 3,
+    await evaluate(send, `document.querySelectorAll(".world-assembly-piece").length`),
+  );
+}
+
+const INSTALLED_CELLS = `document.querySelectorAll(".world-assembly-cell.is-installed").length`;
+
+async function waitForInstallCount(send, expected) {
+  await waitFor(
+    send,
+    `(() => {
+      const count = ${INSTALLED_CELLS};
+      const reveal = Boolean(document.querySelector("[data-assembly-reveal]"));
+      return count === ${expected} || (${expected} === 4 && reveal);
+    })()`,
+    { timeoutMs: 15_000 },
+  );
 }
 
 async function installByClick(send, id, label, shotName) {
@@ -290,70 +363,96 @@ async function installByClick(send, id, label, shotName) {
   await mouseClick(send, piece.x, piece.y);
   await waitFor(
     send,
-    `(() => {
-      const pressed = document.querySelector('.world-assembly-piece[aria-pressed="true"]');
-      return document.querySelector(".world-assembly-stage")?.classList.contains("has-selection") &&
-        pressed?.getAttribute("aria-label") === ${JSON.stringify(`零件：${label}`)};
-    })()`,
+    `document.querySelector('.world-assembly-piece[aria-pressed="true"]')?.getAttribute("aria-label") === ${JSON.stringify(`零件：${label}`)}`,
   );
 
-  const socket = await centerOf(send, `[aria-label="插槽：${label}"]`);
+  const socket = await centerOf(send, `[data-assembly-socket="${id}"]`);
+  const cellKey = await evaluate(
+    send,
+    `document.querySelector('[data-assembly-socket="${id}"]')?.closest("[data-assembly-cell]")?.getAttribute("data-assembly-cell") ?? null`,
+  );
   const hit = await evaluate(
     send,
     `(() => {
       const el = document.elementFromPoint(${socket.x}, ${socket.y});
-      const target = document.querySelector(${JSON.stringify(`[aria-label="插槽：${label}"]`)});
+      const target = document.querySelector(${JSON.stringify(`[data-assembly-socket="${id}"]`)});
       return {
         hitSocket: Boolean(el && target && (el === target || target.contains(el))),
+        disabled: target ? target.disabled : null,
         tag: el ? el.tagName : null,
-        className: el ? (typeof el.className === "string" ? el.className : el.className?.baseVal ?? "") : null,
         aria: el ? el.getAttribute("aria-label") : null,
       };
     })()`,
   );
-  record(`assembly click ${id}: elementFromPoint hits socket`, hit.hitSocket, hit);
+  record(`assembly click ${id}: elementFromPoint hits its own cell`, hit.hitSocket && hit.disabled === false, hit);
   if (!hit.hitSocket) throw new Error(`Socket ${id} is covered: ${JSON.stringify(hit)}`);
   if (shotName) await screenshot(send, shotName);
 
-  const before = await evaluate(send, `document.querySelectorAll(".world-assembly-installed").length`);
+  // Another module's cell must not accept this part: its hit button is disabled.
+  const others = await evaluate(
+    send,
+    `Array.from(document.querySelectorAll("[data-assembly-socket]"))
+      .filter((node) => node.getAttribute("data-assembly-socket") !== ${JSON.stringify(id)})
+      .every((node) => node.disabled)`,
+  );
+  record(`assembly click ${id}: other cells reject selection`, others, others);
+
+  const before = await evaluate(send, INSTALLED_CELLS);
   await mouseClick(send, socket.x, socket.y);
   try {
-    await waitFor(
-      send,
-      `(() => {
-        const count = document.querySelectorAll(".world-assembly-installed").length;
-        const complete = document.body.innerText.includes("Bug Buster 组装完成");
-        return count === ${before + 1} || (${before} === 2 && complete);
-      })()`,
-    );
+    await waitForInstallCount(send, before + 1);
   } catch (error) {
     const diagnostic = await evaluate(
       send,
       `({
-        notice: document.querySelector(".world-scene-notice")?.textContent ?? null,
+        installedCells: ${INSTALLED_CELLS},
         selected: document.querySelector('.world-assembly-piece[aria-pressed="true"]')?.getAttribute("aria-label") ?? null,
-        installed: document.querySelectorAll(".world-assembly-installed").length,
         pieces: Array.from(document.querySelectorAll(".world-assembly-piece")).map((node) => node.getAttribute("aria-label")),
       })`,
     );
     throw new Error(`${error.message}; diagnostic=${JSON.stringify(diagnostic)}`);
   }
-  record(`assembly click ${id}: installed count`, true, before + 1);
+  // The filled cell must actually be green (socket disappears once installed,
+  // so match the recorded grid cell instead).
+  const cellGreen = await evaluate(
+    send,
+    `document.querySelector('[data-assembly-cell="${cellKey}"]')?.classList.contains("is-installed") ?? false`,
+  );
+  record(`assembly click ${id}: cell turns green`, cellGreen, { cellKey, cellGreen });
 }
 
-async function installByDrag(send, id, label) {
+async function installByDrag(send, id, label, wrongCellKey) {
   const piece = await centerOf(send, `[aria-label="零件：${label}"]`);
-  const socket = await centerOf(send, `[aria-label="插槽：${label}"]`);
-  const before = await evaluate(send, `document.querySelectorAll(".world-assembly-installed").length`);
+  const socket = await centerOf(send, `[data-assembly-socket="${id}"]`);
+  const before = await evaluate(send, INSTALLED_CELLS);
+
+  if (wrongCellKey) {
+    // Drop on an empty cell: no green, no consumption, part returns to tray.
+    const wrong = await centerOf(send, `[data-assembly-cell="${wrongCellKey}"]`);
+    await mouseDrag(send, piece, wrong);
+    await waitAtLeast(send, 300);
+    const stillThere = await evaluate(
+      send,
+      `Array.from(document.querySelectorAll(".world-assembly-piece")).some((node) => node.getAttribute("aria-label") === ${JSON.stringify(`零件：${label}`)})`,
+    );
+    const count = await evaluate(send, INSTALLED_CELLS);
+    record(
+      `assembly drag ${id}: wrong cell keeps part in tray`,
+      stillThere && count === before,
+      { stillThere, count, before },
+    );
+  }
+
   await mouseDrag(send, piece, socket);
-  await waitFor(
-    send,
-    `(() => {
-      const count = document.querySelectorAll(".world-assembly-installed").length;
-      const complete = document.body.innerText.includes("Bug Buster 组装完成");
-      return count === ${before + 1} || (${before} === 2 && complete);
-    })()`,
-  );
+  try {
+    await waitForInstallCount(send, before + 1);
+  } catch (error) {
+    const diagnostic = await evaluate(
+      send,
+      `({ installedCells: ${INSTALLED_CELLS}, pieces: document.querySelectorAll(".world-assembly-piece").length })`,
+    );
+    throw new Error(`${error.message}; diagnostic=${JSON.stringify(diagnostic)}`);
+  }
   record(`assembly drag ${id}: installed count`, true, before + 1);
 }
 
@@ -392,6 +491,7 @@ async function runMainChain(send, url) {
   const initial = await screenshot(send, "workshop-zh-1280.png");
   record("workshop: initial screenshot", true, path.basename(initial));
   await dismissHelp(send);
+  await runJumpProbe(send);
 
   await collectModules(send, ["sight", "cell", "emitter"]);
   await repairAndOpenAssembly(send);
@@ -399,21 +499,23 @@ async function runMainChain(send, url) {
   await installByClick(send, "sight", "瞄准模块", "assembly-selected.png");
   await installByClick(send, "cell", "能源匣");
   await installByClick(send, "emitter", "脉冲发射头");
-  await waitFor(
-    send,
-    `Array.from(document.querySelectorAll(".world-assembly-actions button")).some((node) => node.textContent.trim() === "返回工坊")`,
+
+  // Success sequence: converge + flash must end in the reveal step with the
+  // finished gun, its description and the back button.
+  await waitFor(send, `Boolean(document.querySelector("[data-assembly-reveal]"))`, { timeoutMs: 20_000 });
+  const gridGone = await evaluate(send, `!document.querySelector("[data-assembly-grid]")`);
+  record("assembly success: grid replaced by reveal", gridGone, gridGone);
+  const revealText = await evaluate(send, `document.querySelector("[data-assembly-reveal]")?.innerText ?? ""`);
+  record(
+    "assembly success: name and description shown",
+    revealText.includes("Bug 清除脉冲炮") && revealText.includes("Bug Buster"),
+    revealText.replace(/\s+/g, " ").slice(0, 90),
   );
-  // The modal card is scrollable on an 800px viewport; bring the close action
-  // into view so the completion screenshot includes the "返回工坊" button.
-  await evaluate(
+  const revealHasButton = await evaluate(
     send,
-    `(() => {
-      const button = Array.from(document.querySelectorAll(".world-assembly-actions button"))
-        .find((node) => node.textContent.trim() === "返回工坊");
-      button?.scrollIntoView({ block: "nearest" });
-      return Boolean(button);
-    })()`,
+    `Array.from(document.querySelectorAll("[data-assembly-reveal] button")).some((node) => node.textContent.trim() === "返回工坊")`,
   );
+  record("assembly success: back-to-workshop button", revealHasButton, revealHasButton);
   await screenshot(send, "assembly-complete.png");
   await finishAssemblyAndRack(send, "rack-complete.png");
 }
@@ -448,9 +550,10 @@ async function runDragChain(send, url) {
   // Different collection order: any module order must work.
   await collectModules(send, ["cell", "emitter", "sight"]);
   await repairAndOpenAssembly(send);
-  await installByDrag(send, "cell", "能源匣");
+  await installByDrag(send, "cell", "能源匣", "0-0");
   await installByDrag(send, "sight", "瞄准模块");
   await installByDrag(send, "emitter", "脉冲发射头");
+  await waitFor(send, `Boolean(document.querySelector("[data-assembly-reveal]"))`, { timeoutMs: 20_000 });
   await finishAssemblyAndRack(send, "workshop-drag-complete.png");
 }
 
@@ -474,10 +577,10 @@ async function clickScenePoint(send, point) {
       send,
       `(() => {
         if (document.querySelector(".world-actor.is-moving")) return false;
-        const svg = document.querySelector(".world-actor svg[data-frame]");
-        if (!svg) return false;
-        const x = (parseFloat(svg.style.left) / 100) * ${SCENE_SIZE[0]};
-        const y = (parseFloat(svg.style.top) / 100) * ${SCENE_SIZE[1]};
+        const el = document.querySelector(".world-actor svg[data-frame], .world-actor div[data-sprite-anim]");
+        if (!el) return false;
+        const x = (parseFloat(el.style.left) / 100) * ${SCENE_SIZE[0]};
+        const y = (parseFloat(el.style.top) / 100) * ${SCENE_SIZE[1]};
         // CSS serializes percentage positions to ~6 significant digits.
         return Math.hypot(x - ${point[0]}, y - ${point[1]}) < 3;
       })()`,
@@ -487,9 +590,9 @@ async function clickScenePoint(send, point) {
     const diagnostic = await evaluate(
       send,
       `(() => {
-        const svg = document.querySelector(".world-actor svg[data-frame]");
+        const el = document.querySelector(".world-actor svg[data-frame], .world-actor div[data-sprite-anim]");
         return {
-          position: svg ? [(parseFloat(svg.style.left) / 100) * ${SCENE_SIZE[0]}, (parseFloat(svg.style.top) / 100) * ${SCENE_SIZE[1]}] : null,
+          position: el ? [(parseFloat(el.style.left) / 100) * ${SCENE_SIZE[0]}, (parseFloat(el.style.top) / 100) * ${SCENE_SIZE[1]}] : null,
           moving: Boolean(document.querySelector(".world-actor.is-moving")),
           notice: document.querySelector(".world-scene-notice")?.textContent ?? null,
           dialog: document.querySelectorAll('[role="dialog"]').length,
@@ -589,6 +692,7 @@ async function main() {
     await navigateAndWait(page, url, READY_WORKSHOP);
     record("workshop: initial load", true, url);
 
+    await runContentWithoutPickup(page.send, url);
     await runMainChain(page.send, url);
     await runCancelProbe(page.send, url);
     await runDragChain(page.send, url);

@@ -16,6 +16,38 @@
     {
       "asset": "props",
       "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-props-v1.txt"
+    },
+    {
+      "asset": "tuvis2dIdleSw",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkSw",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkNw",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkNe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dJumpSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dPickupSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dCelebrateSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
     }
   ],
   "reused": [

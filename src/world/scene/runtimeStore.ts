@@ -3,27 +3,37 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Direction, Overlay, Point, SceneDefinition } from "../types";
 import { INITIAL_QUEST, isModuleId, questReducer, type QuestEvent, type QuestState } from "../quest/quest";
 import { directionFor, findPath, type MotionState } from "./navigation";
+import type { ActionAnim } from "./petFrames";
 
 export type Pose = Direction | "sit" | "coffee" | "display";
 
-export type Arrival = { token: number; hotspotId?: string };
+export type Arrival = { token: number; hotspotId?: string; pickup?: boolean };
+
+export type ActionAnimation = {
+  kind: ActionAnim;
+  /** Increments on every trigger so remounting restarts the strip. */
+  id: number;
+};
 
 export type RuntimeState = {
   motion: MotionState;
   quest: QuestState;
   overlay: Overlay;
   pose: Pose;
+  action: ActionAnimation | null;
   latestRequestId: number;
   pendingArrival: Arrival | null;
   notice: string | null;
-  requestMove(point: Point, hotspotId?: string): void;
+  requestMove(point: Point, hotspotId?: string, pickup?: boolean): void;
   cancelMovement(): void;
   setOverlay(overlay: Overlay): void;
-  arrive(token: number, hotspotId?: string): void;
+  arrive(token: number, hotspotId?: string, pickup?: boolean): void;
   clearArrival(): void;
   dispatchQuest(event: QuestEvent): void;
   setPose(pose: Pose): void;
   setNotice(notice: string | null): void;
+  triggerAction(kind: ActionAnim): void;
+  clearAction(): void;
 };
 
 /**
@@ -40,11 +50,12 @@ export function createRuntimeStore(
     quest: initialQuest,
     overlay: null,
     pose: "se",
+    action: null,
     latestRequestId: 0,
     pendingArrival: null,
     notice: null,
 
-    requestMove(point, hotspotId) {
+    requestMove(point, hotspotId, pickup) {
       const state = get();
       if (state.overlay !== null) return;
       const token = state.latestRequestId + 1;
@@ -72,7 +83,7 @@ export function createRuntimeStore(
         motion: {
           position: state.motion.position,
           direction: nextDirection,
-          target: { token, path, hotspotId },
+          target: { token, path, hotspotId, pickup },
         },
       });
     },
@@ -102,12 +113,12 @@ export function createRuntimeStore(
       });
     },
 
-    arrive(token, hotspotId) {
+    arrive(token, hotspotId, pickup) {
       const state = get();
       if (token !== state.latestRequestId) return;
       set({
         motion: { ...state.motion, target: null },
-        pendingArrival: { token, hotspotId },
+        pendingArrival: { token, hotspotId, pickup },
       });
     },
 
@@ -132,6 +143,15 @@ export function createRuntimeStore(
 
     setNotice(notice) {
       set({ notice });
+    },
+
+    triggerAction(kind) {
+      const state = get();
+      set({ action: { kind, id: (state.action?.id ?? 0) + 1 } });
+    },
+
+    clearAction() {
+      set({ action: null });
     },
   }));
 }

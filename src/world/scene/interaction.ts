@@ -2,22 +2,33 @@ import { i18n } from "@/i18n";
 import type { Overlay, WorldBundle } from "../types";
 import type { QuestEvent, QuestState } from "../quest/quest";
 import { canAssemble, hasAllModules } from "../quest/quest";
+import type { ActionAnim } from "./petFrames";
 
 export type InteractionResult = {
   overlay: Overlay;
   questEvent?: QuestEvent;
   pose?: "sit" | "coffee" | "display";
+  action?: ActionAnim;
   message?: string;
+};
+
+export type InteractionOptions = {
+  /** Arrived from clicking the floating part: collect it on arrival. */
+  pickup?: boolean;
 };
 
 /**
  * Resolve an arrived hotspot from scene data only (kind / contentId /
- * moduleId). Chinese labels are never used for branching.
+ * moduleId). Chinese labels are never used for branching. Module hotspots no
+ * longer auto-collect: a normal arrival opens the plain content panel, and a
+ * pickup arrival (the floating part was clicked) collects the module and
+ * opens the pickup description panel.
  */
 export function resolveHotspot(
   id: string,
   bundle: WorldBundle,
   quest: QuestState,
+  options: InteractionOptions = {},
 ): InteractionResult {
   const { scene, content } = bundle;
   const hotspot = scene.hotspots.find((entry) => entry.id === id);
@@ -25,20 +36,26 @@ export function resolveHotspot(
 
   switch (hotspot.kind) {
     case "equipment": {
-      return {
-        overlay: { kind: "equipment" },
-        questEvent: hotspot.moduleId
-          ? { type: "COLLECT", moduleId: hotspot.moduleId }
-          : undefined,
-      };
+      const pending = hotspot.moduleId && !quest.collected.includes(hotspot.moduleId);
+      if (pending && options.pickup && hotspot.moduleId) {
+        return {
+          overlay: { kind: "pickup", moduleId: hotspot.moduleId },
+          questEvent: { type: "COLLECT", moduleId: hotspot.moduleId },
+          action: "pickup",
+        };
+      }
+      return { overlay: { kind: "equipment" } };
     }
     case "world": {
-      return {
-        overlay: { kind: "world", id: hotspot.contentId },
-        questEvent: hotspot.moduleId
-          ? { type: "COLLECT", moduleId: hotspot.moduleId }
-          : undefined,
-      };
+      const pending = hotspot.moduleId && !quest.collected.includes(hotspot.moduleId);
+      if (pending && options.pickup && hotspot.moduleId) {
+        return {
+          overlay: { kind: "pickup", moduleId: hotspot.moduleId },
+          questEvent: { type: "COLLECT", moduleId: hotspot.moduleId },
+          action: "pickup",
+        };
+      }
+      return { overlay: { kind: "world", id: hotspot.contentId } };
     }
     case "stories": {
       return { overlay: { kind: "stories" } };
