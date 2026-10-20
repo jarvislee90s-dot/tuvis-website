@@ -99,6 +99,24 @@ describe("AssemblyPanel", () => {
     expect(onEvent).toHaveBeenCalledWith({ type: "INSTALL", moduleId: "cell" });
   });
 
+  it("does not install the selected piece into another module's socket", async () => {
+    const { onEvent } = await openPanel();
+    fireEvent.click(screen.getByRole("button", { name: "零件：瞄准模块" }));
+    fireEvent.click(screen.getByRole("button", { name: "插槽：能源匣" }));
+    expect(onEvent).not.toHaveBeenCalled();
+    expect(screen.getByText("这个插槽与当前零件不匹配。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "零件：瞄准模块" })).toBeInTheDocument();
+  });
+
+  // Proxy for the CSS class that raises sockets above overlapping tray pieces.
+  it("marks the stage with has-selection while a piece is selected", async () => {
+    await openPanel();
+    const stage = document.querySelector("[data-assembly-stage]") as HTMLElement;
+    expect(stage).not.toHaveClass("has-selection");
+    fireEvent.click(screen.getByRole("button", { name: "零件：瞄准模块" }));
+    expect(stage).toHaveClass("has-selection");
+  });
+
   it("drags a piece into the matching socket", async () => {
     const { onEvent } = await openPanel();
     setStageRect(550, 360);

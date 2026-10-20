@@ -854,7 +854,7 @@
 **环境自检**
 - Node `v22.22.3`；npm `10.9.8`；pnpm 安装前不存在，`npm install --global pnpm@10.20.0 --registry=https://registry.npmjs.org` 后为 `10.20.0`（全局 bin 在 `/.npm-global/bin`，已软链到 `/usr/local/bin/pnpm`）。
 - 官方 npm registry 可达（`npm view --registry=https://registry.npmjs.org pnpm@10.20.0 version` → 10.20.0）；项目依赖使用官方 registry 安装。默认 npm registry 为 `https://registry.npmmirror.com`，未用于本次安装。
-- 仓库由附件 ZIP 解包到 `/mnt/tos/workspace/tuvis-website`；基线 HEAD `a9eeea6`；挂载 `/mnt/tos` 容量充足。`.autocase/input` 只读未写入。
+- 仓库由附件 ZIP 解包到本地工作目录；基线 HEAD `a9eeea6`。输入附件只读未写入。
 - `verify-pack.mjs`：PASS 17 images / 15 frames / 12 hotspots / 18 connected nodes / 47 files；`audit-handoff.mjs`：两项 PASS。
 - 基线 `pnpm test`：6 files / 42 tests 全通过（测试环境启动较慢，约 5 分钟，后续按需单文件运行）。
 
@@ -1094,7 +1094,7 @@
 
 **部署模拟**：生产 `dist/` 由 `vite preview` 在 `http://127.0.0.1:4173/tuvis-website/` 提供（GitHub Pages 子路径）。Chromium 146 CDP，1280×900，DPR 1。
 
-**抽查**：9/9 PASS，截图在 `/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/`（初始、地面移动、工具箱图鉴、坐姿、门说明、维修、组装、成品、装备架完成）。
+**抽查**：9/9 PASS，截图归档在 `docs/qa/screenshots/`（初始、地面移动、工具箱图鉴、坐姿、门说明、维修、组装、成品、装备架完成）。
 
 **发现**：
 1. `.world-stage` 未建立层叠上下文，角色/家具/热点的高 z-index 逃逸到页面根层叠上下文，压住 z-index 60 的弹窗；维修面板截图可见角色与家具盖住 SVG 示意。

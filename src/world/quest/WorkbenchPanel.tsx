@@ -44,7 +44,12 @@ export function WorkbenchPanel({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const title = mode === "task" ? content.quest.title : "能源匣维修";
+  const title =
+    mode === "task"
+      ? content.quest.title
+      : quest.cellRepaired
+        ? t("world.repairDone")
+        : t("world.repairTitle");
 
   return (
     <div
@@ -72,12 +77,16 @@ export function WorkbenchPanel({
 
         {mode === "task" ? (
           <div className="world-modal-body">
-            <p>Bug Buster 的主体已经放在工作台上，还缺三个模块。</p>
+            <p>{t("world.taskIntro")}</p>
             <ul className="world-module-list">
               {content.quest.modules.map((module) => (
                 <li key={module.id} className={quest.collected.includes(module.id) ? "is-collected" : ""}>
                   <strong>{module.label}</strong>
-                  <span>{quest.collected.includes(module.id) ? "已领取" : `在${module.source}寻找`}</span>
+                  <span>
+                    {quest.collected.includes(module.id)
+                      ? t("world.statusCollected")
+                      : t("world.taskFindAt", { source: module.source })}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -87,8 +96,8 @@ export function WorkbenchPanel({
           </div>
         ) : (
           <div className="world-modal-body">
-            <div className="world-repair" aria-label="能源匣接口示意">
-              <svg viewBox="0 0 360 150" role="img" aria-label="能源匣接口">
+            <div className="world-repair" aria-label={t("world.cellInterface")}>
+              <svg viewBox="0 0 360 150" role="img" aria-label={t("world.cellInterface")}>
                 <rect x="20" y="24" width="320" height="102" rx="16" fill="#202a2e" />
                 <rect x="44" y="46" width="272" height="58" rx="10" fill="#2f3d42" stroke="#7c8d92" />
                 <circle cx="88" cy="75" r="14" fill={quest.cellRepaired ? "#32c77b" : "#f08a1d"} />
@@ -105,7 +114,7 @@ export function WorkbenchPanel({
                   className="world-repair-port"
                   onClick={() => setSelectedPort(true)}
                   role="button"
-                  aria-label="松动接口"
+                  aria-label={t("world.looseInterface")}
                   tabIndex={0}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") setSelectedPort(true);
@@ -124,21 +133,21 @@ export function WorkbenchPanel({
             </div>
             {quest.cellRepaired ? (
               <>
-                <p className="world-repair-status is-ok">接口已复位，供能检查通过。</p>
+                <p className="world-repair-status is-ok">{t("world.cellFixed")}</p>
                 <button type="button" className="world-btn world-btn-primary" onClick={onOpenAssembly}>
-                  进入组装
+                  {t("world.enterAssembly")}
                 </button>
               </>
             ) : (
               <>
-                <p>点击高亮的松动接口，再执行检查。</p>
+                <p>{t("world.repairHint")}</p>
                 <button
                   type="button"
                   className="world-btn world-btn-primary"
                   disabled={!selectedPort}
                   onClick={() => onEvent({ type: "REPAIR_CELL" })}
                 >
-                  执行检查
+                  {t("world.repairCheck")}
                 </button>
               </>
             )}

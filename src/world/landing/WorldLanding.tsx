@@ -66,10 +66,10 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
             <p className="world-lead">{content.intro}</p>
             <div className="world-actions">
               <Link className="world-btn world-btn-primary" to={workshopHref}>
-                {content.ui.enter}
+                {t("world.enterWorkshop")}
               </Link>
               <a className="world-btn world-btn-ghost" href="#character">
-                {zh === "en" ? "Meet Tuvis" : "认识兔维斯"}
+                {t("world.characterSection")}
               </a>
             </div>
             {zh === "en" ? <p className="world-lang-note">{t("world.contentLanguageNote")}</p> : null}
@@ -90,7 +90,7 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
               height={manifest.assets[content.heroAsset]?.height}
               fetchPriority="high"
             />
-            <span className="world-hero-tag">回路城 · 发明工坊</span>
+            <span className="world-hero-tag">{t("world.heroTag")}</span>
           </div>
         </div>
       </section>
@@ -109,8 +109,8 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
             <figcaption>{content.character.name} · {content.character.subtitle}</figcaption>
           </figure>
           <div>
-            <p className="world-kicker">W-02 · 认识兔维斯</p>
-            <h2 id="character-title" className="world-h2">{content.character.name}</h2>
+            <p className="world-kicker">W-02 · {t("world.characterSection")}</p>
+            <h2 id="character-title" className="world-h2">{t("world.characterHeading")}</h2>
             <p className="world-section-intro">{content.character.intro}</p>
             <ul className="world-tags">
               {content.character.tags.map((tag) => <li key={tag}>{tag}</li>)}
@@ -130,8 +130,8 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
       {/* W-03 装备图鉴 */}
       <section id="equipment" className="world-section world-equipment" aria-labelledby="equipment-title">
         <div className="world-shell">
-          <p className="world-kicker">W-03 · 装备图鉴</p>
-          <h2 id="equipment-title" className="world-h2">兔维斯的四件装备</h2>
+          <p className="world-kicker">W-03 · {t("world.equipmentSection")}</p>
+          <h2 id="equipment-title" className="world-h2">{t("world.equipmentHeading")}</h2>
           <div className="world-equipment-grid">
             {content.equipment.map((item) => {
               const asset = manifest.assets[item.asset];
@@ -176,8 +176,8 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
       {/* W-04 世界设定 */}
       <section id="world" className="world-section world-setting" aria-labelledby="world-setting-title">
         <div className="world-shell">
-          <p className="world-kicker">W-04 · 世界设定</p>
-          <h2 id="world-setting-title" className="world-h2">回路城与发明工坊</h2>
+          <p className="world-kicker">W-04 · {t("world.worldSection")}</p>
+          <h2 id="world-setting-title" className="world-h2">{t("world.worldHeading")}</h2>
           <div className="world-setting-grid">
             {content.world.filter((entry) => entry.id !== "home").map((entry) => (
               <article key={entry.id} className="world-setting-card">
@@ -199,8 +199,8 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
       {/* W-05 故事档案 */}
       <section id="stories" className="world-section world-stories" aria-labelledby="stories-title">
         <div className="world-shell">
-          <p className="world-kicker">W-05 · 故事档案</p>
-          <h2 id="stories-title" className="world-h2">工坊里的小故事</h2>
+          <p className="world-kicker">W-05 · {t("world.storiesSection")}</p>
+          <h2 id="stories-title" className="world-h2">{t("world.storiesHeading")}</h2>
           <div className="world-story-grid">
             {content.stories.map((story) => (
               <article key={story.id} className="world-story-card">
@@ -220,7 +220,7 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
                     className="world-btn world-btn-small"
                     onClick={() => setOverlay({ kind: "stories", id: story.id })}
                   >
-                    查看简介
+                    {t("world.viewIntro")}
                   </button>
                 </div>
               </article>
@@ -240,21 +240,21 @@ export function WorldLanding({ bundle }: WorldLandingProps) {
               width={manifest.assets[content.workshopPreviewAsset]?.width}
               height={manifest.assets[content.workshopPreviewAsset]?.height}
             />
-            <span className="world-workshop-badge">斜俯视 · 可探索</span>
+            <span className="world-workshop-badge">{t("world.badgeIsometric")}</span>
           </div>
           <div>
-            <p className="world-kicker">W-06 · 工坊体验</p>
+            <p className="world-kicker">W-06 · {t("world.workshopSection")}</p>
             <h2 id="workshop-title" className="world-h2">{content.quest.title}</h2>
-            <p className="world-section-intro">点击地面移动，走近工作台、工具箱与窗边，找齐三个模块并修好能源匣。</p>
+            <p className="world-section-intro">{t("world.workshopDesc")}</p>
             <ol className="world-quest-steps">
               {content.quest.instructions.map((step) => <li key={step}>{step}</li>)}
             </ol>
             <ul className="world-help-lines">
-              {content.ui.helpLines.map((line) => <li key={line}>{line}</li>)}
+              <li>{t("world.workshopHint1")}</li>
             </ul>
-            <p className="world-desktop-note">电脑浏览器体验 · 支持鼠标操作 · 按 Esc 关闭面板</p>
+            <p className="world-desktop-note">{t("world.workshopHint2")}</p>
             <Link className="world-btn world-btn-primary" to={workshopHref}>
-              {content.ui.enter}
+              {t("world.enterWorkshop")}
             </Link>
           </div>
         </div>

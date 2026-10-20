@@ -878,6 +878,10 @@
   cursor: pointer;
 }
 
+/* While a piece is selected, its socket must win over tray pieces that
+   overlap it (piece z-index 20); dragging still floats at 40. */
+.world-assembly-stage.has-selection .world-assembly-socket { z-index: 25; }
+
 .world-assembly-socket:hover,
 .world-assembly-socket:focus-visible {
   background: rgba(240, 138, 29, 0.36);

@@ -116,14 +116,14 @@ export function WorkshopRuntime({
               className="world-btn world-btn-small"
               onClick={() => store.getState().setOverlay({ kind: "help" })}
             >
-              {bundle.content.ui.help}
+              {t("world.help")}
             </button>
             <button
               type="button"
               className="world-btn world-btn-small"
               onClick={() => setConfirmReset(true)}
             >
-              {bundle.content.ui.reset}
+              {t("world.reset")}
             </button>
           </div>
         </div>
@@ -133,14 +133,15 @@ export function WorkshopRuntime({
         {!helpSeen ? (
           <div className="world-help-banner">
             <ul>
-              {bundle.content.ui.helpLines.map((line) => <li key={line}>{line}</li>)}
+              <li>{t("world.workshopHint1")}</li>
+              <li>{t("world.workshopHint2")}</li>
             </ul>
             <button
               type="button"
               className="world-btn world-btn-small"
               onClick={() => store.getState().dispatchQuest({ type: "HELP_SEEN" })}
             >
-              知道了
+              {t("world.gotIt")}
             </button>
           </div>
         ) : null}
@@ -162,14 +163,14 @@ export function WorkshopRuntime({
             aria-describedby="world-reset-desc"
             className="world-modal-card"
           >
-            <h2 id="world-reset-title" className="world-modal-title">{bundle.content.ui.reset}</h2>
-            <p id="world-reset-desc" className="world-modal-body">{bundle.content.ui.resetConfirm}</p>
+            <h2 id="world-reset-title" className="world-modal-title">{t("world.reset")}</h2>
+            <p id="world-reset-desc" className="world-modal-body">{t("world.resetConfirm")}</p>
             <div className="world-assembly-actions">
               <button ref={resetCancelRef} type="button" className="world-btn world-btn-small" onClick={() => setConfirmReset(false)}>
-                取消
+                {t("world.replayCancel")}
               </button>
               <button type="button" className="world-btn world-btn-primary" onClick={resetQuest}>
-                确认重玩
+                {t("world.replayConfirm")}
               </button>
             </div>
           </div>

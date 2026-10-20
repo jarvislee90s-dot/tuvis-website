@@ -122,10 +122,11 @@ export function ContentPanel({ overlay, bundle, onClose }: ContentPanelProps) {
       </ul>
     );
   } else {
-    title = content.ui.help;
+    title = t("world.help");
     body = (
       <ul className="world-panel-list">
-        {content.ui.helpLines.map((line) => <li key={line}>{line}</li>)}
+        <li>{t("world.workshopHint1")}</li>
+        <li>{t("world.workshopHint2")}</li>
       </ul>
     );
   }

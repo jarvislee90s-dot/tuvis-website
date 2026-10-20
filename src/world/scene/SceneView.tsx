@@ -1,4 +1,5 @@
 import { useEffect, useRef, type MouseEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
 import type { ContentOverlay, Point, SceneDefinition, WorldBundle, WorldManifest } from "../types";
 import { assetUrl } from "../assets/loadWorldData";
@@ -71,7 +72,8 @@ function characterFrame(
 }
 
 export function SceneView({ bundle }: SceneViewProps) {
-  const { scene, manifest, content } = bundle;
+  const { scene, manifest } = bundle;
+  const { t } = useTranslation();
   const store = useRuntimeStore();
   useSceneLoop(store, scene);
 
@@ -238,7 +240,7 @@ export function SceneView({ bundle }: SceneViewProps) {
       </div>
       {notice ? (
         <p className="world-scene-notice" role="status">
-          {notice === "unreachable" ? content.ui.unreachable : notice}
+          {notice === "unreachable" ? t("world.unreachable") : notice}
         </p>
       ) : null}
       </section>

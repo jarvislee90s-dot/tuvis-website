@@ -1,3 +1,4 @@
+import { i18n } from "@/i18n";
 import type { Overlay, WorldBundle } from "../types";
 import type { QuestEvent, QuestState } from "../quest/quest";
 import { canAssemble, hasAllModules } from "../quest/quest";
@@ -61,16 +62,16 @@ export function resolveHotspot(
         if (!canAssemble(quest)) {
           return {
             overlay: null,
-            message: `${content.quest.title}：${hasAllModules(quest.collected) ? content.ui.repairNeeded : "先找齐三个模块。"}`,
+            message: `${content.quest.title}：${hasAllModules(quest.collected) ? content.ui.repairNeeded : i18n.t("world.rackNeedModules")}`,
           };
         }
-        return { overlay: null, message: "先在工作台完成组装。" };
+        return { overlay: null, message: i18n.t("world.rackNeedAssembly") };
       }
       return {
         overlay: null,
         pose: "display",
         questEvent: quest.displayedOnRack ? undefined : { type: "PLACE_ON_RACK" },
-        message: "Bug Buster 已陈列在装备架上。",
+        message: i18n.t("world.rackPlaced"),
       };
     }
     default:

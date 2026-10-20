@@ -1,6 +1,6 @@
 # 兔维斯世界 · 桌面验收记录（2026-10-19）
 
-对照需求说明书 9.1–9.3 与实施计划 Task 1–9。以下结果均为本仓库的实际命令或浏览器自动化输出；未实际执行的平台逐项列在末尾，不按通过计。
+对照需求说明书 9.1–9.3 与实施计划 Task 1–9。以下“通过”仅指本文列出的命令、自动化测试与本机浏览器结果；未实测项逐条列出，不按通过计。
 
 ## 融合基线
 
@@ -17,317 +17,211 @@
 | 资源校验 | `verify-pack.mjs` PASS：17 images, 15 frames, 12 hotspots, 18 connected nodes, 47 checked files |
 | 交接审计 | `audit-handoff.mjs` PASS：17/17 mappings; 9 root-relative task file lists; 链接与路径检查通过 |
 
-后续区块门槛以本次实测的 15 个文件 / 129 条测试为基线。
-
-## 0. 执行环境（历史记录：云端沙箱）
+## 1. 验收环境与复验方式
 
 | 项 | 实际值 |
 |---|---|
-| OS | Linux 6.6.95.bck.2-rc1-amd64（云端沙箱） |
-| Node / npm / pnpm | v22.22.3 / 10.9.8 / 10.20.0 |
-| 浏览器 | Chromium `146.0.7680.31`（`/usr/local/bin/chromium`，通过 CDP `127.0.0.1:9222` 驱动） |
-| 预览服务 | `pnpm preview --host 127.0.0.1 --port 4173`（构建产物 `dist/`） |
-| 视口 / DPR | 1280×720 DPR1；1920×1080 DPR1.25；1280×720 DPR2（Chrome 设备模拟，不是 Windows/macOS 实机缩放） |
-| 浏览器自动化脚本 | `/tmp/qa-browser.mjs`（非产品代码；证据见 `/mnt/tos/workspace/tuvis-world-qa/`） |
-| 截图 | `/mnt/tos/workspace/tuvis-world-qa/landing-zh-1280.png`、`workshop-zh-1280.png`、`workshop-zh-1920.png`、`landing-zh-1920.png` 等 |
+| 分支 / HEAD | `feat/tuvis-world`；C0–C4 提交为 `4d3affd`、`04c8159`、`c9cf605`、`418c8f2`、`c6a6a4d`、`563a0aa`；C5 收口为 `a834812`；英文界面收口为 `0a23b8c`；终审为 `fix(world): localize remaining english chrome strings`；工作台任务文案收口为 `fix(world): localize workbench task copy` |
+| 浏览器 | Google Chrome `155.0.8059.80`，`--headless=new`，CDP `127.0.0.1:9222`，独立 profile `/tmp/tuvis-qa-profile` |
+| 预览服务 | `pnpm preview --host 127.0.0.1 --port 4173`，构建产物 `dist/`，子路径 `/tuvis-website/` |
+| 视口 / DPR | 1280×800、1600×900，DPR 1（无真实系统缩放） |
+| 自动化脚本 | `scripts/qa-cdp.mjs`（只读四路由探针）、`scripts/qa-world-interactions.mjs`（真实鼠标交互） |
+| 截图 | `docs/qa/screenshots/`（`Page.captureScreenshot`） |
 
-## 1. 资源校验
+复验命令：
 
-```text
-$ node tuvis-world/05_handoff/v1/tools/verify-pack.mjs
-PASS: 17 images, 15 frames, 12 hotspots, 18 connected nodes, 47 checked files.
-Static resource verification only; website implementation and browser acceptance remain in the plan.
+```bash
+cd /Users/jarvis/Documents/tuvis-website
+export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use 22.23.2
+export npm_config_manage_package_manager_versions=false CI=true
+npx --yes pnpm@10.20.0 install --frozen-lockfile
+npx --yes pnpm@10.20.0 test
+npx --yes pnpm@10.20.0 exec tsc --noEmit
+npx --yes pnpm@10.20.0 build
+npx --yes pnpm@10.20.0 preview --host 127.0.0.1 --port 4173
 
-$ node tuvis-world/05_handoff/v1/tools/audit-handoff.mjs
-PASS: spec/plan material mappings 17/17; 9 root-relative task file lists; loader, state-event and pose contracts aligned.
-PASS: document links, provenance prompts and portable active-package paths.
+# 另一个终端：启动带调试端口的 Chrome
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless=new --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/tuvis-qa-profile --no-first-run \
+  --no-default-browser-check about:blank
+
+node scripts/qa-cdp.mjs
+node scripts/qa-world-interactions.mjs
 ```
 
-导入命令实际输出：
+## 2. 自动化结果汇总
 
-```text
-$ node scripts/import-world-pack.mjs
-import-world-pack: copied 20 files to public/world/v1
-```
-
-导入器在写入前逐文件校验 SHA-256 与包内相对路径；测试覆盖真实包 SHA 一致、篡改字节拒绝、`../outside.png` 拒绝且不写目标目录。
-
-## 2. 专题首页（9.1）
-
-### 2.1 六模块与内容来源
-
-| 模块 | 页面呈现 | 数据来源 |
-|---|---|---|
-| W-01 主视觉 | 标题、导语、hero 角色、回路城氛围、两个入口 | `content.title/intro`、`content.heroAsset`（`assets/landing/hero.png`）、`content.cityAsset`（`assets/landing/city.png`） |
-| W-02 认识兔维斯 | 角色图、姓名/副标题/简介、三个性格标签、HUD 护目镜/胡萝卜核心/工坊装甲 | `content.character.*`，图同 `heroAsset` |
-| W-03 装备图鉴 | 四装备图、名称、英文名、身份色、说明、代码编辑类比 | `content.equipment[]`；图片按 `sourceRect` 从 `family` 图集裁切 |
-| W-04 世界设定 | 回路城、工坊、居民三类图文 | `content.world[]` + `content.cityAsset/workshopPreviewAsset/residents` |
-| W-05 故事档案 | 三张封面、标题、状态、简介、“查看简介”展开 | `content.stories[]` + `storyPerfect/storyMissing/storyWeapon` |
-| W-06 工坊体验 | 工坊预览、任务四步、两条操作提示、桌面提示、入口 | `content.workshopPreviewAsset`（`room`）、`content.quest.*`、`content.ui.helpLines` |
-
-浏览器逐段检查（`/tmp/qa-sections.mjs`，1280×900）：
-
-```text
-{"id":"hero","imgs":2,"broken":0}
-{"id":"character","imgs":1,"broken":0}
-{"id":"equipment","imgs":4,"broken":0}
-{"id":"world","imgs":3,"broken":0}
-{"id":"stories","imgs":3,"broken":0}
-{"id":"workshop","imgs":1,"broken":0}
-```
-
-六段均含真实标题/正文；每段图片 `naturalWidth > 0`，坏图数 0。
-
-### 2.2 入口、裁切、故事展开
-
-浏览器验收（47/47 通过）中的相关输出：
-
-```text
-PASS landing: title — "Tuvis World｜兔维斯世界 · Tuvis"
-PASS landing: six sections — 6
-PASS landing: four equipment — ["差异探测雷达","Bug 清除脉冲炮","代码编织终端","代码融合棱镜"]
-PASS landing: three stories — ["完美的一天，差一点","谁动了我的零件？","最厉害的武器"]
-PASS landing: two workshop links — ["/tuvis-website/zh/world/workshop","/tuvis-website/zh/world/workshop"]
-PASS landing: images loaded — []
-PASS landing: family sourceRect crops — {"w":"200%","h":"200%","left":"0%","top":"0%"}
-PASS landing: story dialog opens — "×\n完美的一天，差一点\n故事简介\n\n兔维斯试图用一整套自动化系统让今天变得完美无"
-PASS landing: deep-link reload
-```
-
-- 两个入口（W-01、W-06）均为同一路径 `/tuvis-website/zh/world/workshop`。
-- W-03 四张图使用 `content.equipment[].sourceRect`（`family.png` 1254×1254 的四格）以 SVG/CSS 裁切，未使用等分替代。
-- “查看简介”打开对话框展示完整 `summary`，Esc/关闭可用，关闭后焦点回到触发按钮（`WorldLanding.test.tsx`）。
-- 素材层已记录：`family.png` 在 x=627 边界处有相邻格少量渗色，Bug Buster 裁切左缘会带入邻格残段；这是提供素材本身，页面严格使用给定 `sourceRect`，未自行改裁切。
-
-### 2.3 `/en` 与内容语言
-
-```text
-PASS en landing: language note — "World content is currently provided in Chinese."
-PASS en landing: workshop links stay en — ["/tuvis-website/en/world/workshop","/tuvis-website/en/world/workshop"]
-PASS en landing: nav world entry
-PASS en workshop: language note and scene — {"note":"World content is currently provided in Chinese.","hotspots":12,"controls":["操作说明","重玩主线"]}
-```
-
-英文路径保留英文导航（`Tuvis World`）与语言切换；世界正文按中文内容交付并显示语言说明。
-
-### 2.4 路由与深链接
-
-```text
-$ for p in zh/world zh/world/workshop en/world en/world/workshop; do code=$(curl -s -o /tmp/route.html -w "%{http_code}" "http://127.0.0.1:4173/tuvis-website/$p"); echo "$p -> HTTP $code"; done
-zh/world -> HTTP 200
-zh/world/workshop -> HTTP 200
-en/world -> HTTP 200
-en/world/workshop -> HTTP 200
-```
-
-直接访问与刷新：浏览器脚本对 `/zh/world` 执行了 `Page.navigate` 后再刷新；对 `/zh/world/workshop` 执行 `Page.reload` 两次（刷新恢复存档与缩放复测），均重新渲染成功。服务端静态壳 `<title>` 为全站标题，运行时由页面设置：专题 `Tuvis World｜兔维斯世界 · Tuvis`，工坊 `让 Bug Buster 重新上线 · Tuvis Workshop`（浏览器读取 `document.title` 实际值）。
-
-## 3. 工坊（9.2）
-
-### 3.1 12 个热点与可达性
-
-热点 id、标签、靠近点（来自 `scene.json`），以及 `findPath(spawn, approach)` 测试结果：
-
-| # | id | 标签 | approach | 最短路径点数 | 结果 |
-|---|---|---|---|---|---|
-| 1 | `workbench` | 工作台 | 600,570 | 2 | PASS |
-| 2 | `toolbox` | 工具箱 | 415,650 | 3 | PASS |
-| 3 | `window` | 回路城 | 650,530 | 2 | PASS |
-| 4 | `posters` | 居民海报 | 920,550 | 2 | PASS |
-| 5 | `coffee` | 咖啡机 | 750,490 | 2 | PASS |
-| 6 | `books` | 故事书架 | 925,565 | 2 | PASS |
-| 7 | `rack` | 装备架 | 1190,650 | 2 | PASS |
-| 8 | `chair` | 坐一会儿 | 480,680 | 2 | PASS |
-| 9 | `lounge` | 休息角 | 1180,710 | 3 | PASS |
-| 10 | `table` | 休息桌 | 870,785 | 3 | PASS |
-| 11 | `door-hall` | 家中走廊 | 1080,585 | 2 | PASS |
-| 12 | `door-side` | 家中其他房间 | 1280,675 | 2 | PASS |
-
-逐项实测输出（临时证据测试，运行后删除，不进入产品代码）：
-
-```text
-HOTSPOT workbench approach=600,570 path=2 ok=true
-HOTSPOT toolbox approach=415,650 path=3 ok=true
-HOTSPOT window approach=650,530 path=2 ok=true
-HOTSPOT posters approach=920,550 path=2 ok=true
-HOTSPOT coffee approach=750,490 path=2 ok=true
-HOTSPOT books approach=925,565 path=2 ok=true
-HOTSPOT rack approach=1190,650 path=2 ok=true
-HOTSPOT chair approach=480,680 path=2 ok=true
-HOTSPOT lounge approach=1180,710 path=3 ok=true
-HOTSPOT table approach=870,785 path=3 ok=true
-HOTSPOT door-hall approach=1080,585 path=2 ok=true
-HOTSPOT door-side approach=1280,675 path=2 ok=true
-```
-
-同时 `src/world/scene/navigation.test.ts` 的 `reaches every hotspot approach point from spawn` 对 12 个热点逐项断言 `findPath !== null`，测试通过。路径每一段都经 `isSegmentClear` 复核；跨休息椅的直线 `[950,714]→[1190,714]` 被拒绝，绕行路径逐段验证。
-
-### 3.2 操作与导航（9.2 对应项）
-
-浏览器实测（真实 Chromium）：
-
-```text
-PASS workshop: 12 hotspots — ["工作台","工具箱","回路城","居民海报","咖啡机","故事书架","装备架","坐一会儿","休息角","休息桌","家中走廊","家中其他房间"]
-PASS workshop: ground click moves actor — {"left":698.514,"top":618.933,...}
-PASS workshop: unreachable keeps position and warns — "这里暂时过不去，换个位置试试。"
-PASS workshop: toolbox approaches then opens content
-PASS workshop: posters approaches then opens content
-PASS workshop: window approaches then opens content
-PASS workshop: books share story content
-PASS workshop: hall door explains destination
-PASS workshop: side door explains destination
-PASS workshop: coffee pose — "coffee"
-PASS workshop: sitting pose and depth — {"left":510,"top":520,"frame":"sit","z":626,"height":"190px"}
-PASS workshop: click cancels daily pose
-```
-
-- **点击地面移动**：点击后角色位置从出生点到目标点；点击坐标通过舞台实际 `getBoundingClientRect` 换算。
-- **点击物件先走近再触发**：工具箱/海报/窗均先移动到 `approach`，到达后由唯一 token 触发内容；测试与浏览器均验证。
-- **新目标取消旧事件**：`runtimeStore` 中旧 token 到达被忽略；`motion.test.tsx` 断言旧到达不写入 `pendingArrival`。
-- **跨障碍拒绝**：`navigation.test.ts` 拒绝穿过休息椅的直线，且绕行路径每段合法；`advanceMotion` 大帧间隔（5000ms）被钳制为 100ms/19px，不会穿模。
-- **面板暂停**：`setOverlay` 取消当前目标，`requestMove` 在面板打开时直接忽略；帧循环仅在 `overlay === null` 时推进。
-- **失焦停止**：`useSceneLoop` 监听 `window.blur` 与 `visibilitychange`，浏览器/集成测试验证 target 清空；组装面板在 blur 时取消拖拽。
-- **角色表现**：角色脚底有独立 SVG/CSS 投影；移动时 `.world-actor.is-moving` 触发 420ms 起伏，姿态切换有 170ms 淡入；`prefers-reduced-motion` 下关闭动画。
-- **重玩确认**：对话框支持 Esc/背景点击关闭，打开时焦点进入“取消”，关闭后回到“重玩主线”按钮；确认重玩同时清空 notice。
-- **缩放换算**：日志显示同一场景点在 1280×720@1、1920×1080@1.25、1280×720@2，以及运行中从 1280×720 直接改到 1600×900@1.5（不刷新）后点击均落在目标坐标：
-
-```text
-PASS workshop: click mapping 1280x720@1x — {"left":698.514,"top":618.933,...}
-PASS workshop: click mapping 1920x1080@1.25x — {"left":698.743,"top":619.423,...}
-PASS workshop: click mapping 1280x720@2x — {"left":698.514,"top":618.933,...}
-```
-
-### 3.3 遮挡、脚底、日常动作
-
-```text
-PASS workshop: actor behind lounge when farther — {"actor":618,"prop":745}
-PASS workshop: actor in front of lounge when nearer — {"actor":769,"prop":745}
-```
-
-角色按脚底 y 深度渲染，家具按 `scene.props[].depth` 渲染；`620 < 745` 时被休闲椅遮挡，`769 > 745` 时位于椅前。坐姿使用 `seatAnchorSource` 换算裁切内归一化锚点并落在 `seatPosition`，深度 626。咖啡/展示姿态使用独立帧，脚底保持在当前靠近点。与 `workshop-occlusion-behind/front.jpg` 描述的前后关系一致。
-
-场景在 1280×720 下按高度约束缩放并居中（实测舞台 630×420，`left=318`，底部 698 < 720），窗口更大时等比放大；点击换算始终使用实际显示矩形。
-
-## 4. 主线（9.2）
-
-浏览器端完整跑通（真实 Chromium，非 mock）：
-
-```text
-PASS workshop: three module slots collected
-PASS workshop: workbench repair panel
-PASS workshop: repair succeeds
-PASS workshop: assembly opens
-PASS workshop: assembly assets preloaded
-PASS workshop: three modules install and show complete
-PASS workshop: rack displays and completes quest — "主线完成 · Bug Buster 已陈列"
-PASS workshop: display pose at rack — "display"
-PASS workshop: versioned save — {"schemaVersion":1,"quest":{"collected":["sight","cell","emitter"],"cellRepaired":true,"installed":["sight","cell","emitter"],"displayedOnRack":true,"helpSeen":false}}
-PASS workshop: refresh restores completed quest — {"action":"主线完成 · Bug Buster 已陈列","rack":true}
-PASS workshop: replay clears quest — "还需寻找：..."
-PASS workshop: replay clears only this save — {"schemaVersion":1,"quest":{"collected":[],"cellRepaired":false,"installed":[],"displayedOnRack":false,"helpSeen":false}}
-```
-
-自动化测试证据：
-
-| 验收项 | 测试 / 结果 |
+| 检查 | 结果 |
 |---|---|
-| 三模块任意顺序（6 种） | 实测输出见下；`quest.test.ts` → `completes the quest for all six collection orders` PASS |
+| 单元 / 集成测试 | 15 个测试文件、136 条测试全部通过（42 条基线和 94 条世界新增） |
+| 类型检查 | `pnpm exec tsc --noEmit` 无输出，exit 0 |
+| 构建 | `pnpm build` exit 0，生成 `dist/` 与 `dist/404.html` |
+| 资源包校验 | `verify-pack.mjs` PASS；`audit-handoff.mjs` PASS |
+| 只读四路由探针 | 56/56 检查通过；失败请求 0、console error 0、外部请求 0 |
+| 真实交互驱动 | 54/54 probe 通过（主链路、取消、双输入、缩放、四条深链接） |
+
+六个基线测试文件与 `a9eeea6` 对比无改动：
 
 ```text
-ORDER sight -> cell -> emitter complete=true
-ORDER sight -> emitter -> cell complete=true
-ORDER cell -> sight -> emitter complete=true
-ORDER cell -> emitter -> sight complete=true
-ORDER emitter -> sight -> cell complete=true
-ORDER emitter -> cell -> sight complete=true
+$ git diff --stat a9eeea6..HEAD -- \
+    scripts/split-changelog.test.mjs src/demo/ledgerData.test.ts \
+    src/demo/player.test.ts src/i18n/parity.test.ts \
+    src/tokens.test.ts src/utils/download.test.ts
+（空输出）
 ```
-| 重复领取不增加 | `does not duplicate a module` PASS |
-| 未领取能源匣不能维修 | `ignores repair before the cell is collected` PASS |
-| 未集齐/未维修不能安装 | `ignores install until all modules are collected and the cell is repaired` PASS |
-| 三件安装后才能陈列 | `only places the finished weapon on the rack` PASS |
-| 拖拽组装 | `AssemblyPanel.test.tsx` → `drags a piece into the matching socket` PASS |
-| 点击零件→插槽组装 | `installs a module by selecting the piece and then its socket` PASS |
-| 不同显示尺寸吸附 | `succeeds at the same socket under different display sizes` PASS（550×360 / 1100×720 / 733×480） |
-| 错误插槽不消耗 | `does not consume a module when dropped on the wrong socket` PASS |
-| pointercancel/失焦回托盘 | `cancels a drag on pointercancel and on window blur` PASS |
-| 关闭不发 PLACE_ON_RACK | `never emits PLACE_ON_RACK when closed` PASS（该事件仅由装备架到达触发） |
-| 刷新恢复 | `WorkshopFlow.test.tsx` → 完整流程 + 卸载重挂载，恢复 `displayedOnRack=true` PASS |
-| 重复安装不消耗 | `quest.test.ts` → `does not consume the same module twice` PASS |
-| 不可达点击结束日常姿态 | `motion.test.tsx` → `ends a daily pose even when the new destination is unreachable` PASS |
-| 核心图未就绪不可玩 | `WorkshopFlow.test.tsx` → `does not mount a playable scene until core images resolve` PASS |
-| 重玩对话框 Esc/焦点 | `WorkshopFlow.test.tsx` → 完整流程中 Esc 关闭并断言焦点回到触发按钮 PASS |
-| 运行中缩放 | Chromium 实测 1280×720 → 1600×900@1.5 不刷新，点击落点误差 < 2 场景像素 PASS |
-| 重玩清主线 | 完整流程测试点击“重玩主线”→确认，`INITIAL_QUEST` 且存储回到新局 PASS |
-| 损坏/不可能存档 | `quest.test.ts` → 损坏 JSON、schema 2、未领取却已安装/陈列均安全重置 PASS |
-| 存储不可用 | `readQuest` getItem 抛错、`writeQuest` setItem 抛错；`completes even when storage.setItem throws` PASS |
-| 核心图片失败重试 | `workshop loading` → 首次 preload 失败显示错误，重试后进入场景，旧请求被忽略 PASS |
-| 组装素材失败重试 | `AssemblyPanel.test.tsx` → `retries preload failures and keeps the quest` PASS |
+
+## 3. 专题首页（9.1）
+
+| 验收项 | 结果 | 证据 |
+|---|---|---|
+| 导航可进入“兔维斯世界” | PASS | `nav.world`；`/zh/world`、`/en/world` HTTP 200，`qa-cdp.mjs` 导航成功 |
+| 独立标题、主视觉、内容层级 | PASS | `landing-zh-1280.png`；`WorldLanding.test.tsx` 的 W-01–W-06 用例 |
+| W-01–W-06 六模块真实图文 | PASS | `qa-cdp.mjs` 检查 `sections=6`、四装备卡、三故事卡、双工坊链接；六段图片均 `naturalWidth > 0` |
+| 四装备图鉴（`sourceRect` 裁切、身份色） | PASS | `WorldLanding.test.tsx`；`CropImage` 按 `sourceRect` 裁切，不使用等分替代 |
+| 三张故事卡与简介展开 | PASS | 对话框展示 `summary`；Esc/关闭后焦点回到触发按钮（`WorldLanding.test.tsx`） |
+| 两个工坊入口指向同一路径 | PASS | 两处链接均为 `/{lang}/world/workshop`（`qa-cdp.mjs` 与单测） |
+| `/zh/world`、`/en/world` 可访问 | PASS | 四路由探针；深链接直接打开与刷新均无失败请求/console error |
+| 英文界面 + 世界正文中文 + 语言说明 | PASS | `qa-cdp.mjs` 的 `en` 探针断言：角标 `W-02 · Meet Tuvis` … `W-06 · Workshop Experience`；H2 `Tuvis` / `Tuvis's Four Tools` / `Circuitown and the Invention Workshop` / `Stories from the Workshop`；两处 CTA `Enter Tuvis Workshop`；hero tag `Circuitown · Invention Workshop`；工坊返回链接 `Back to Tuvis World`、`Help`、`Quest progress`、`Replay story`、`Got it`；并显示 `World content is currently provided in Chinese.` |
+| 首屏与 W-06 进入同一 `/zh/world/workshop` | PASS | 两处 `href` 相同，单测逐项断言 |
+
+说明：英文页的章节正文、装备名、故事名与工坊任务文本来自中文内容包，按“世界正文中文 + 内容语言说明”交付；界面标签（章节标题与角标、CTA、按钮、状态、帮助）走 i18n。
+
+## 4. 工坊（9.2）
+
+| 验收项 | 结果 | 证据 |
+|---|---|---|
+| 固定斜俯视；房间与庭院/住宅外围连续；两处门/门洞 | 实现可见，人工走查 | `workshop-zh-1280.png`；场景含 `door-hall`、`door-side` 两个热点；连续性见人工验收清单 |
+| 点击地面移动 | PASS | `qa-world-interactions.mjs` 在两个视口点击场景点 `[650,720]`，角色到达 `[649.22,718.56]` / `[648.53,719.63]` |
+| 点击物件先走到 approach 再互动 | PASS | 两轮完整流程分别点击工具箱/海报/窗/工作台/装备架，均在到达后打开对应内容或完成事件 |
+| 新目标取消旧到达事件 | PASS | `motion.test.tsx` 断言旧 token 到达被忽略；`WorkshopFlow.test.tsx` 新增 blur 取消后旧 token 不触达 |
+| 12 个热点全部可达 | PASS | `navigation.test.ts` 的 `reaches every hotspot approach point from spawn`；`qa-cdp.mjs` 读到 12 个 `data-hotspot` |
+| 整条路径与每段移动不穿墙/家具 | PASS（单测） | `findPath` 逐段 `isSegmentClear`；绕行休息椅用例；`advanceMotion` 5000ms 帧间隔被钳制为 100ms/19px |
+| 角色不越界 | PASS（单测） | `isWalkable` 拒绝庭院/障碍点；不可达点击保留位置并提示 |
+| 脚底锚点深度排序、前后遮挡、投影 | 实现 + 人工验收 | 角色 `zIndex = position[1]`，家具 `zIndex = depth`；角色下方有独立 `.world-actor-shadow`；判据见人工清单 |
+| 面板打开暂停移动 | PASS | `runtimeStore.setOverlay` 清空 target；`WorkshopFlow.test.tsx` 断言 `.world-actor.is-moving` 消失 |
+| 关闭面板回到原状态 | PASS | 面板关闭只清 `overlay`，不重置位置/任务；焦点回到触发热点（C4 新增用例） |
+| 窗口失焦停止 | PASS | `useSceneLoop` 监听 `blur`/`visibilitychange`；`qa-world-interactions.mjs` 在工具箱移动途中触发 blur，断言无对话框、任务不变、角色停止 |
+| 缩放后点击换算正确 | PASS | 1280 视口舞台 750px、1600 视口舞台 900px；同一场景点在两视口落点差 `dx=0.68`、`dy=1.07` 场景像素（<2） |
+| 日常姿态（坐/持杯/展示） | PASS（单测） | `motion.test.tsx` 断言 sit/coffee/display 帧与高度；可见反馈列入人工清单 |
+| 切换新目标结束日常姿态 | PASS | `motion.test.tsx` 的 unreachable 用例同时断言 pose 回到朝向 |
+| Bug Buster 三模块任意顺序 | PASS | 单测覆盖全部 6 种顺序；浏览器两轮分别用 `sight→cell→emitter` 与 `cell→emitter→sight` |
+| 维修能源匣 | PASS | 浏览器点击“松动接口”→“执行检查”→“进入组装”；单测覆盖未领取不可维修 |
+| 拖拽与点击两种组装 | PASS | 第一轮点击三件，第二轮拖拽三件，均完成并陈列 |
+| 点击命中不被零件遮挡（P0） | PASS | 每件安装前 `elementFromPoint(socket 中心)` 均返回 `BUTTON.world-assembly-socket`；C1 单测守护 `has-selection` 类 |
+| 错误插槽不消耗 | PASS（单测） | `AssemblyPanel.test.tsx` 断言错误插槽不触发 `INSTALL`、零件回到托盘 |
+| 装备架陈列 | PASS | 浏览器到达装备架后 `.world-rack-display` 出现、任务栏显示“主线完成 · Bug Buster 已陈列”、pose=`display`；`rack-complete.png` 在关闭组装面板并到达装备架后捕获 |
+| 刷新恢复 | PASS（单测） | `WorkshopFlow.test.tsx` 卸载重挂载后 `displayedOnRack=true`；本轮浏览器未复测刷新恢复，列入人工清单 |
+| 重玩清主线 | PASS（单测） | 完整流程测试确认后回到 `INITIAL_QUEST` 且只清本功能存档键 |
+| 损坏/不可用存储安全 | PASS（单测） | 损坏 JSON、schema 2、不可能组合安全重置；`getItem`/`setItem` 抛错仍可完成 |
+| 加载失败可重试 | PASS（单测） | 工坊 preload 失败显示错误并重试成功；组装素材失败重试保留任务 |
+| 核心图未就绪不可玩 | PASS（单测） | preload 完成前不挂载可玩场景，完成后出现“工坊场景” |
+
+真实浏览器主链路输出（节选）：
+
+```text
+PASS assembly click sight: elementFromPoint hits socket — {"hitSocket":true,"tag":"BUTTON","className":"world-assembly-socket","aria":"插槽：瞄准模块"}
+PASS assembly click cell: elementFromPoint hits socket — {"hitSocket":true,"tag":"BUTTON","className":"world-assembly-socket","aria":"插槽：能源匣"}
+PASS assembly click emitter: elementFromPoint hits socket — {"hitSocket":true,"tag":"BUTTON","className":"world-assembly-socket","aria":"插槽：脉冲发射头"}
+PASS assembly: all three installed — ["sight","cell","emitter"]
+PASS rack: quest completes — "… 主线完成 · Bug Buster 已陈列"
+PASS rack: persisted completion — {"schemaVersion":1,"quest":{"collected":["sight","cell","emitter"],"cellRepaired":true,"installed":["sight","cell","emitter"],"displayedOnRack":true,"helpSeen":true}}
+PASS cancel: no dialog after blur — 0
+PASS cancel: quest unchanged — {"schemaVersion":1,"quest":{"collected":[],"cellRepaired":false,"installed":[],"displayedOnRack":false,"helpSeen":true}}
+PASS zoom: same scene point maps identically — {"dx":0.6835,"dy":1.066,"at1280":[649.2165,718.5603],"at1600":[648.533,719.6262]}
+PASS deep link zh/world: direct load + reload — {"failures":[],"errors":[]}
+PASS deep link zh/world/workshop: direct load + reload — {"failures":[],"errors":[]}
+PASS deep link en/world: direct load + reload — {"failures":[],"errors":[]}
+PASS deep link en/world/workshop: direct load + reload — {"failures":[],"errors":[]}
+```
+
+第二轮拖拽流程：
+
+```text
+PASS collect cell / emitter / sight: stored — ["cell","emitter","sight"]
+PASS assembly drag cell / sight / emitter: installed count — 1 / 2 / 3
+PASS rack: quest completes — "… 主线完成 · Bug Buster 已陈列"
+PASS rack: display pose — "display"
+```
 
 ## 5. 工程与发布（9.3）
 
-- 既有 6 个测试文件/42 条测试零回归；`git diff a9eeea6..HEAD -- <六个基线测试文件>` 均为空。
-- 新增测试文件：`scripts/import-world-pack.test.mjs`、`src/world/assets/loadWorldData.test.ts`、`src/world/landing/WorldLanding.test.tsx`、`src/world/scene/navigation.test.ts`、`src/world/scene/motion.test.tsx`、`src/world/scene/interaction.test.tsx`、`src/world/quest/quest.test.ts`、`src/world/quest/AssemblyPanel.test.tsx`、`src/world/WorkshopFlow.test.tsx`。
-- `pnpm test`：15 个测试文件、129 条测试全部通过（42 基线 + 87 新增）。
-- `pnpm exec tsc --noEmit`：无输出，exit 0。
-- `pnpm build`：exit 0，生成 `dist/`（含 `dist/404.html`）；构建中的既有网络同步曾改写 `src/content/*.json` 与 `public/manual/`，已 `git checkout` 还原，未进入任何功能提交。
-- 路由：`/tuvis-website/{zh,en}/world`、`/tuvis-website/{zh,en}/world/workshop` 静态服务均 HTTP 200；浏览器直接导航与刷新通过。
-- 运行依赖：页面只加载 `public/world/v1/` 下由资源包导入的 20 个文件与站点构建产物；无生图、模型/图像 API、游戏引擎或新增外部服务。未新增运行时依赖。
-- 无控制台异常：最终浏览器脚本 `errors: []`。
+- **基线 42 测试零改动**：见第 2 节空 diff。
+- **全量测试 / tsc / build**：15 文件 136 测试通过；tsc exit 0；build exit 0。
+- **`/tuvis-website/` 子路径与四条深链接刷新可开**：`qa-cdp.mjs` 直接导航四条路由；`qa-world-interactions.mjs` 对每条路由再执行 `Page.reload`，均无失败请求、无 console error、无外部请求。
+- **所有图片来自包内**：`verify-pack.mjs` PASS；`src/world/` 与 `public/world/v1/` 未发现 `http(s)://` 资源引用；浏览器四条路由外部请求为 0。
+- **运行时不依赖生图/模型 API/新服务**：同上；世界素材由 `scripts/import-world-pack.mjs` 校验 SHA-256 后复制到 `public/world/v1/`。
+- **验收记录**：本文档记录 HEAD、真实浏览器/视口、命令、未实测项与偏差。
 
 ## 6. 未实测项（不得计为通过）
 
 | 项 | 状态 / 原因 |
 |---|---|
-| Windows Chrome / Edge 实机 | 未实测。沙箱为 Linux，仅用 Chromium 146 设备模拟。 |
-| macOS Chrome / Safari 实机 | 未实测。无 macOS/Safari 环境。 |
-| Windows 125%/150% 系统显示缩放 | 未在真实 Windows 上验证；仅以 DPR 1.25 与视口缩放做浏览器模拟（点击换算通过）。 |
-| Mac Retina 硬件 | 未实测；仅 DPR 2 模拟截图/点击换算。 |
-| 真实网络资源失败/慢网 | 未实测真实断网；核心图与组装图失败通过注入失败的 loader 测试重试路径。 |
+| Windows Chrome / Edge 实机 | 未实测；本次为 macOS 上的 headless Chrome。 |
+| macOS Chrome 有头模式 / Safari 实机 | 未实测；仅 headless Chrome 155。 |
+| Windows 125%/150% 系统显示缩放、Mac Retina 实机 | 未实测；仅 DPR 1 的两个视口，无真实系统缩放。 |
+| 真实 OS 失焦（切换应用/最小化） | 未实测；自动化用页面内 `window.dispatchEvent(new Event("blur"))` 触发同一处理路径。 |
+| 真实断网/慢网 | 未实测；加载失败与重试通过注入失败的 loader 单测覆盖。 |
 | 触屏 / 移动端 | 需求面向电脑浏览器，未做触屏手势验收。 |
-| 键盘完整通关 | 面板按钮、热点、Esc、焦点恢复有测试；未做纯键盘从进入到完成的完整贯通验收。 |
-| 长时运行性能 / 内存 | 未做长时压测。 |
+| 纯键盘完整通关 | 面板 Esc、热点与焦点恢复有测试；未做纯键盘从进入到完成的贯通验收。 |
+| 长时运行性能 / 内存 | 未压测。 |
+| 刷新恢复、重玩清主线、日常姿态的浏览器复测 | 本轮以单测覆盖；列入人工验收清单。 |
+| 遮挡前后对照、庭院连续性、两扇门走查 | 本轮无自动化判据；列入人工验收清单，参照 blueprint QA 图。 |
 
-## 7. 结论边界
+## 7. 人工验收清单
 
-以上“通过”仅指列出的命令、自动化测试与 Chromium 模拟结果。Windows/macOS 实机、Safari、真实系统缩放与真实网络故障仍需按需求 8/9.3 在目标机器复核。
+在 `http://127.0.0.1:4173/tuvis-website/zh/world` 与 `/zh/world/workshop`（以及 `/en` 对应路径）执行：
 
-## 8. 部署模拟与工坊交互抽查（2026-10-19）
+1. **专题首页**：六段顺序与层级；四装备卡切换详情；三张故事卡“查看简介”打开/关闭后焦点回到按钮；首屏与 W-06 两个入口都进入同一工坊。
+2. **英文界面**：`/en/world` 的章节角标、`Read summary`、语言说明；`/en/world/workshop` 的 `Help`、`Quest progress`、`Got it`、维修/组装按钮为英文；世界正文保持中文。
+3. **移动与热点**：点击地面；依次点击 12 个热点，确认先走近再互动；途中点击新目标，旧目标不触发。
+4. **遮挡与锚点**：把角色走到休息椅/休息桌/装备架前后，对照
+   `tuvis-world/05_handoff/v1/qa/workshop-occlusion-behind.jpg` 与
+   `workshop-occlusion-front.jpg` 检查前后遮挡、脚底与投影；对照
+   `tuvis-world/05_handoff/v1/qa/navigation-overlay.jpg` 走查可行走区域，
+   `contact-sheet.jpg` 核对角色/家具/热点对齐。
+5. **日常姿态**：点击椅子、咖啡机、休息桌，确认坐下/持杯可见反馈；再点地面或热点，确认姿态结束并继续移动。
+6. **两扇门**：点击“家中走廊”和“家中其他房间”，确认显示去向说明、不切换场景；走查房间与庭院/住宅外围的连续关系。
+7. **主线（点击组装）**：工具箱→海报→窗收集三件；工作台选中松动接口→执行检查→进入组装；选中零件后点击对应插槽，确认插槽在零件之上可点；三件完成→返回工坊→装备架陈列。
+8. **主线（拖拽组装）**：重玩后换领取顺序，拖拽三件到插槽完成；错误插槽/错误顺序不消耗零件。
+9. **失焦与恢复（I-07）**：移动途中切换应用/最小化，确认停止且不误触互动；回到页面后继续点击可正常游玩。
+10. **刷新与重玩**：完成后刷新，确认装备架成品与任务状态恢复；“重玩主线”→取消不改变进度，确认后清主线且只清本功能存档。
+11. **缩放**：在 1280 与 1600 宽度、以及浏览器运行中调整窗口后点击同一场景点，角色落点一致（自动化已覆盖两视口，人工复核运行中缩放）。
+12. **加载失败**：断网或拦截核心图，确认错误提示与重试；核心图未就绪时不应出现可玩场景。
 
-**部署方式**：生产构建 `dist/` 由 `vite preview` 在 `http://127.0.0.1:4173/tuvis-website/` 提供，使用与 GitHub Pages 相同的 `/tuvis-website/` 子路径。浏览器 Chromium `146.0.7680.31`（CDP），视口 1280×900，DPR 1。
+## 8. 决策 / 偏差
 
-**抽查结果：9/9 PASS**
+1. **i18n 键集补充**：计划键集缺少若干已列入替换点的界面文案，C3 实际额外新增 8 个键：`world.help`（操作说明）、`world.gotIt`（知道了）、`world.looseInterface`（松动接口）、`world.assemblyPiece`（零件）、`world.assemblySocket`（插槽）、`world.rackNeedModules`、`world.rackNeedAssembly`、`world.rackPlaced`（装备架三种提示）。中文值均取自现行界面文案，英文为对应译文。英文 chrome 收口新增 14 个键：`world.questComplete`、`world.questRack`、`world.questReturnWorkbench`、`world.questGoWorkbench`、`world.enterWorkshop`、`world.heroTag`、`world.badgeIsometric`、`world.equipmentHeading`、`world.worldHeading`、`world.storiesHeading`、`world.reset`、`world.resetConfirm`、`world.unreachable`、`world.assemblyCompleteHint`。终审再新增 4 个键：`world.questRepairNeeded`、`world.questFind`、`world.assemblyHelp`、`world.characterHeading`；工作台任务文案收口新增 2 个键：`world.taskIntro`、`world.taskFindAt`。当前中英各 397 键，由 `i18n/parity.test.ts` 守护。
+2. **`world.assemblyClose` 合并两处按钮**：计划只给一个键，而原界面有“返回工坊”（完成态）与“稍后再装”（未完成态）。统一使用 `world.assemblyClose`，中文取“返回工坊”，英文 “Back to workshop”；未完成态不再出现“稍后再装”。
+3. **`world.repairDone` 的用途**：计划未说明。用作维修完成后的面板标题“能源匣已修复”；`world.cellFixed` 仍为状态句“接口已复位，供能检查通过。”。
+4. **未迁移的内容型中文**：模块名/来源（作为 `world.questFind`/`world.taskFindAt` 的插值）、内容面板正文、故事/装备名、`alt` 文本与场景 `aria-label` 仍来自内容包或固定内容，按“世界正文中文”处理；任务栏当前动作、工作台任务说明、重玩对话框、装备/世界/故事标题、两处 CTA、hero tag/badge、组装帮助与完成提示已走 i18n。
+5. **`content.ui.help/helpLines`**：组件已停止读取；`loadWorldData` 仍校验这两个字段以保持内容包契约，content JSON 未改。
+6. **C4 测试数量**：计划列 6 个边界领域；其中“点击组装语义”已在 C1 落地 2 条测试，C4 新增 5 条（取消≠到达、方向帧与脚底锚点、actorHeight、焦点归还、舞台缩放接线）。总数 129 → 136（C1 +2，C4 +5）。
+7. **取消用例的触发方式**：浏览器自动化使用页面内 `blur` 事件，覆盖 `useSceneLoop` 的取消路径；真实 OS 级失焦切换未自动化。
+8. **交互脚本范围**：`qa-world-interactions.mjs` 的中文路径跑完整点击/拖拽主链路；英文路径由 `qa-cdp.mjs` 只读断言界面语言、CTA、H2、返回链接与重玩按钮。工作台任务说明与组装帮助位于面板之后，只读探针不打开面板；本轮以英文路径手工走查确认工作台任务文案显示 `The Bug Buster body is on the workbench...` / `Look for it at ...`，组装面板显示 `Assemble the Bug Buster` 与英文帮助文案，交互脚本本身仍只跑中文主链路。
+9. **QA 脚本不入 `pnpm test`**：两个脚本依赖 preview 服务与带调试端口的 Chrome，需按第 1 节命令单独运行；`pnpm test` 保持零外部依赖。
+10. **选中态插槽边缘取舍**：选中零件后，插槽圆区（44px 直径）会压住零件边缘；从该边缘开始拖拽会命中插槽并得到“不匹配”提示。这是保证插槽在零件之上可点的已知交互取舍，零件主体区域仍可正常拖拽。
 
-| # | 交互 | 实际结果 | 截图 |
-|---|---|---|---|
-| 1 | 初始工坊 | 12 个热点，场景/角色/家具正常 | `01-initial.png` |
-| 2 | 点击地面 | 角色 (790,630) → (699,619) | `02-ground-move.png` |
-| 3 | 点击工具箱 | 走近后打开装备图鉴，瞄准模块变为已领取 | `03-toolbox-codex.png` |
-| 4 | 点击椅子 | 坐姿帧，深度 626 | `04-chair-sit.png` |
-| 5 | 点击家中走廊门 | 展示“家中走廊”去向，不切换场景 | `05-door-destination.png` |
-| 6 | 工作台维修 | 三模块集齐后打开能源匣维修面板 | `06-repair.png` |
-| 7 | 组装特写 | 主体、三零件、三插槽可见 | `07-assembly.png` |
-| 8 | 组装完成 | 三件安装后显示完整成品图 | `08-assembly-complete.png` |
-| 9 | 装备架陈列 | “主线完成 · Bug Buster 已陈列” | `09-rack-complete.png` |
+## 9. 截图索引
 
-截图与汇总图：
+| 文件 | 内容 |
+|---|---|
+| `docs/qa/screenshots/landing-zh-1280.png` | 中文专题首页首屏（1280×800） |
+| `docs/qa/screenshots/landing-en-1280.png` | 英文专题首页首屏（英文章节角标与按钮） |
+| `docs/qa/screenshots/workshop-zh-1280.png` | 工坊初始场景（12 热点、任务栏） |
+| `docs/qa/screenshots/workshop-zh-1600.png` | 1600×900 视口下的工坊 |
+| `docs/qa/screenshots/workbench-repair.png` | 能源匣维修完成、进入组装前 |
+| `docs/qa/screenshots/assembly-selected.png` | 选中瞄准模块，插槽高亮且可命中 |
+| `docs/qa/screenshots/assembly-complete.png` | 组装面板完成态：成品特写、完成提示与“返回工坊”按钮 |
+| `docs/qa/screenshots/rack-complete.png` | 关闭组装面板后到达装备架：架上 Bug Buster、任务栏“主线完成 · Bug Buster 已陈列” |
+| `docs/qa/screenshots/workshop-drag-complete.png` | 第二轮拖拽安装并完成装备架陈列后的房间状态 |
+
+重跑脚本后，4 张内容有更新（`landing-zh-1280.png`、`landing-en-1280.png`、`workbench-repair.png`、`workshop-zh-1280.png`）；其余 5 张与上轮字节一致（MD5 见下）。`rack-complete.png` 与 `workshop-drag-complete.png` 在关闭组装面板、角色到达装备架、完成文案出现后捕获。三张关键图的 MD5：
 
 ```text
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/01-initial.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/02-ground-move.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/03-toolbox-codex.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/04-chair-sit.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/05-door-destination.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/06-repair.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/07-assembly.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/08-assembly-complete.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/09-rack-complete.png
-/mnt/tos/workspace/tuvis-world-qa/deploy-spotcheck/contact-sheet.png
+assembly-complete.png       fd4545b4ded7fe1d824282c575556def
+rack-complete.png           9731bc8384403e6ff8e24fe0e2d55b87
+workshop-drag-complete.png  7657ab92edec9e6bda25408c5f3c7fc3
 ```
 
-**抽查发现并修复的缺陷**：舞台未建立层叠上下文，角色/家具/热点的 z-index（最高到 1000）盖在 z-index 60 的弹窗上；维修面板截图里出现角色与家具压住 SVG 示意。修复：`.world-stage { isolation: isolate; }`。复测：
-
-```text
-PASS modal paints above scene sprites — {"isolation":"isolate","dialogOnTop":true}
-```
-
-同时移除维修面板里误用的组装提示文案（`ui.assemblyHelp`），维修模式只保留“点击高亮的松动接口，再执行检查。”
+headless Chrome 的字体栅格与有头浏览器可能略有差异。

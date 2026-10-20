@@ -60,6 +60,21 @@ async function waitForStore(ref: StoreRef) {
   return ref.current! as StoreApi<RuntimeState>;
 }
 
+function setStageRect(element: HTMLElement, left: number, top: number, width: number, height: number) {
+  element.getBoundingClientRect = () =>
+    ({
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    }) as DOMRect;
+}
+
 async function visit(store: StoreApi<RuntimeState>, id: string) {
   const hotspot = bundle.scene.hotspots.find((entry) => entry.id === id);
   expect(hotspot).toBeDefined();
@@ -176,6 +191,69 @@ describe("workshop flow", () => {
       for (const event of events) store.getState().dispatchQuest(event);
     });
     expect(isComplete(store.getState().quest)).toBe(true);
+  });
+
+  // Kills a cancel that clears the target but still lets the old token arrive.
+  it("does not deliver an interaction when blur cancels a pending hotspot arrival", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    const store = await waitForStore(storeRef);
+    const toolbox = bundle.scene.hotspots.find((entry) => entry.id === "toolbox")!;
+
+    act(() => store.getState().requestMove(toolbox.approach, "toolbox"));
+    const token = store.getState().motion.target!.token;
+    fireEvent.blur(window);
+    expect(store.getState().motion.target).toBeNull();
+
+    // A stale arrival after cancel must not open the panel or grant the module.
+    act(() => store.getState().arrive(token, "toolbox"));
+    await act(async () => undefined);
+    expect(store.getState().pendingArrival).toBeNull();
+    expect(store.getState().overlay).toBeNull();
+    expect(store.getState().quest.collected).toEqual([]);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // Kills panels that focus their close button but never restore the trigger.
+  it("returns focus to the hotspot after workbench and assembly panels close", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    const store = await waitForStore(storeRef);
+    const hotspot = screen.getByRole("button", { name: "工作台" });
+    hotspot.focus();
+    expect(hotspot).toHaveFocus();
+
+    act(() => store.getState().setOverlay({ kind: "task" }));
+    await screen.findByRole("dialog");
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(hotspot).toHaveFocus();
+
+    act(() => store.getState().setOverlay({ kind: "assembly" }));
+    expect(await screen.findByRole("button", { name: "零件：瞄准模块" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(store.getState().overlay).toBeNull());
+    expect(hotspot).toHaveFocus();
+  });
+
+  // Kills a scene wired to a fixed/global rect instead of the rendered stage.
+  it("maps clicks through the rendered stage rect at two display sizes", async () => {
+    const storeRef: StoreRef = { current: null };
+    renderRuntime(memoryStorage(), storeRef);
+    const store = await waitForStore(storeRef);
+    const stage = document.querySelector(".world-stage") as HTMLElement;
+
+    const clickAndReadTarget = (rect: [number, number, number, number], client: [number, number]) => {
+      setStageRect(stage, ...rect);
+      fireEvent.click(stage, { clientX: client[0], clientY: client[1] });
+      const target = store.getState().motion.target;
+      expect(target).not.toBeNull();
+      return target!.path[target!.path.length - 1];
+    };
+
+    // Both client points map to scene point [800, 680] under their own rect.
+    expect(clickAndReadTarget([100, 50, 768, 512], [500, 390])).toEqual([800, 680]);
+    expect(clickAndReadTarget([100, 50, 1536, 1024], [900, 730])).toEqual([800, 680]);
   });
 
   it("pauses movement for panels, stops on blur, and Esc restores focus", async () => {

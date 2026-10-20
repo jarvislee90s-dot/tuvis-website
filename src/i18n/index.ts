@@ -17,3 +17,6 @@ export function applyLang(l: Lang): void {
   i18n.changeLanguage(l);
   document.documentElement.lang = l === "zh" ? "zh-CN" : "en";
 }
+
+/** Shared instance for non-React modules (scene interaction, QA helpers). */
+export { i18n };

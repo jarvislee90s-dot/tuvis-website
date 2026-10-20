@@ -11,7 +11,8 @@
 - 专题页：`/zh/world`、`/en/world`。W-01～W-06 六段图文：主视觉、角色、四装备图鉴、回路城设定、三篇故事档案、工坊入口。
 - 工坊：`/zh/world/workshop`、`/en/world/workshop`。固定斜俯视房间，点击地面移动、点击物件走近后互动；完成 Bug Buster 三模块收集、能源匣维修、拖拽/点击组装、装备架陈列，进度保存在浏览器 localStorage。
 - 素材与坐标唯一来源：`tuvis-world/05_handoff/v1/`（manifest / scene / content）。`node scripts/import-world-pack.mjs` 校验 SHA-256 后复制到 `public/world/v1/`，运行时不依赖生图、模型 API 或额外服务。
-- 世界正文按中文交付；`/en` 路径保留英文导航与界面，并标注内容语言。
+- 世界正文按中文交付；`/en` 路径保留英文导航与界面，并标注内容语言。界面文案由 `src/i18n/` 提供，中英键集保持 parity。
+- 验收记录与截图：`docs/qa/tuvis-world-desktop.md`、`docs/qa/screenshots/`。浏览器复验脚本：`node scripts/qa-cdp.mjs`（只读四路由探针）与 `node scripts/qa-world-interactions.mjs`（真实鼠标主链路、取消、双输入、缩放、深链接）。两者需要先启动 `pnpm preview --host 127.0.0.1 --port 4173` 与带 `--remote-debugging-port=9222` 的 Chrome。
 
 ## 本地开发
 
@@ -26,7 +27,7 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——或直接
 | `pnpm dev:sync` | 先同步（15s 预算）再起 | 带主仓最新内容起服务 |
 | `pnpm sync` | 手动同步 | 立刻拉主仓最新文档/日志/矩阵，失败自动用副本 |
 | `pnpm build` | 同步 + 构建 | 与 CI 同一条命令，本地仅预览验证 |
-| `pnpm test` | — | 129 条 vitest（i18n parity / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
+| `pnpm test` | — | 136 条 vitest（i18n parity / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
 | `pnpm sync:changelog` / `pnpm sync:manual` | 手动 | 单独同步某一类内容 |
 
 ## 更新机制
@@ -81,6 +82,7 @@ tuvis-website/
 ├── SPEC.md                  # 建站规格（v1.3，需求与决策记录）
 ├── docs/deploy/             # 部署 workflow 说明 + tuvis 仓侧触发器 + 上线检查单
 ├── docs/design/             # 演示/文档参考稿（remote-ui 定稿、p9~p13 参考图）
+├── docs/qa/                 # 兔维斯世界验收记录与真实浏览器截图
 ├── docs/superpowers/plans/  # P0~P13 与兔维斯世界计划、progress.md 全程记录
 ├── scripts/                 # 同步脚本（split-changelog / sync-user-manual）等
 ├── src/
@@ -89,7 +91,7 @@ tuvis-website/
 │   ├── demo/                # 交互演示引擎（四场景 + 剧本 player + 手机/终端仿真窗）
 │   ├── pages/               # Home / Demo / Docs / Changelog
 │   ├── content/             # 同步产物（changelog / capabilities / 手册索引）
-│   └── i18n/                # 中英双语（331 键 parity 测试覆盖）
+│   └── i18n/                # 中英双语（397 键 parity 测试覆盖）
 ├── public/manual/           # 用户手册同步副本（离线兜底，入 git）
 ├── brand/                   # 品牌资产（红线：不可改）
 └── legacy/                  # 旧草稿归档（红线：不可改）
@@ -103,7 +105,7 @@ tuvis-website/
 - **仓库改名牵一发动全身**：线上地址含仓库名（`.../tuvis-website/`），base 路径散布在 `vite.config.ts`、`src/router.tsx`、`scripts/make-404.mjs`、`DocsArticlePage`——改名前先说一声。
 - **`SITE_DISPATCH_PAT` 过期症状**：tuvis 仓 notify-website 红叉，但每日兜底不受影响；换新 PAT 即可。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
-- **质量基线**：129 条 vitest（含兔维斯世界与中英 i18n parity）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
+- **质量基线**：136 条 vitest（含兔维斯世界与中英 i18n parity）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
 - **红线**：`brand/`、`SPEC.md`、`legacy/` 不可改；全站零追踪脚本；下载 API 失败回退 Releases 列表页。
 - **演示数据 tuvis 化**：真实截图里的项目名/域名/会话内容一律不入站，演示语境全部模拟为 tuvis 生态。
 - **首页「关于」窗的当前版本刻意比最新 release 旧一版**（取 changelog 倒数第二条），保持「检测到新版本」的演示语义。

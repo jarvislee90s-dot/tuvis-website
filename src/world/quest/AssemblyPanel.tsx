@@ -203,12 +203,12 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
       : drag.center;
     const installedNow = tryInstall(drag.moduleId, center);
     setDrag(null);
-    if (!installedNow) setNotice("没有对准插槽，零件已回到托盘。");
+    if (!installedNow) setNotice(t("world.assemblyWrongSocket"));
   };
 
   const onSocketClick = (id: ModuleId) => {
     if (installed.includes(id) || selected !== id) {
-      if (selected !== id) setNotice("这个插槽与当前零件不匹配。");
+      if (selected !== id) setNotice(t("world.assemblyMismatch"));
       return;
     }
     const definition = scene.assembly.modules.find((module) => module.id === id);
@@ -237,16 +237,18 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
           ×
         </button>
         <h2 id="world-assembly-title" className="world-modal-title">
-          {complete ? "Bug Buster 组装完成" : "组装 Bug Buster"}
+          {complete ? t("world.assemblyComplete") : t("world.assemblyTitle")}
         </h2>
-        <p className="world-modal-body world-assembly-help">{content.ui.assemblyHelp}</p>
+        <p className="world-modal-body world-assembly-help">
+          {complete ? t("world.assemblyCompleteHint") : t("world.assemblyHelp")}
+        </p>
 
-        {loadState === "loading" ? <p aria-busy="true">正在加载组装零件…</p> : null}
+        {loadState === "loading" ? <p aria-busy="true">{t("world.assemblyLoading")}</p> : null}
         {loadState === "error" ? (
           <div role="alert" className="world-assembly-error">
-            <p>组装素材加载失败。</p>
+            <p>{t("world.assemblyError")}</p>
             <button type="button" className="world-btn world-btn-primary" onClick={() => setAttempt((n) => n + 1)}>
-              重试
+              {t("world.retry")}
             </button>
           </div>
         ) : null}
@@ -255,7 +257,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
           <>
             <div
               ref={stageRef}
-              className="world-assembly-stage"
+              className={`world-assembly-stage${selected !== null ? " has-selection" : ""}`}
               style={{ aspectRatio: `${stageW} / ${stageH}` }}
               data-assembly-stage
             >
@@ -305,7 +307,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
                         key={module.id}
                         type="button"
                         className={`world-assembly-piece ${selected === module.id ? "is-selected" : ""} ${drag?.moduleId === module.id ? "is-dragging" : ""}`}
-                        aria-label={`零件：${labelFor(module.id)}`}
+                        aria-label={`${t("world.assemblyPiece")}：${labelFor(module.id)}`}
                         aria-pressed={selected === module.id}
                         style={{
                           left: `${((center[0] - width / 2) / stageW) * 100}%`,
@@ -340,7 +342,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
                       key={`socket-${module.id}`}
                       type="button"
                       className="world-assembly-socket"
-                      aria-label={`插槽：${labelFor(module.id)}`}
+                      aria-label={`${t("world.assemblySocket")}：${labelFor(module.id)}`}
                       style={{
                         left: `${(module.socket[0] / stageW) * 100}%`,
                         top: `${(module.socket[1] / stageH) * 100}%`,
@@ -354,7 +356,7 @@ export function AssemblyPanel({ bundle, quest, onEvent, onClose }: AssemblyPanel
             {notice ? <p className="world-scene-notice" role="status">{notice}</p> : null}
             <div className="world-assembly-actions">
               <button type="button" className="world-btn world-btn-primary" onClick={close}>
-                {complete ? "返回工坊" : "稍后再装"}
+                {t("world.assemblyClose")}
               </button>
             </div>
           </>

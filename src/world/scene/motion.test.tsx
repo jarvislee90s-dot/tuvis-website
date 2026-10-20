@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { bundle, scene } from "../testFixtures";
 import type { Point } from "../types";
 import { advanceMotion, findPath, type MotionState } from "./navigation";
 import { isSegmentClear } from "./geometry";
-import { createRuntimeStore } from "./runtimeStore";
+import { createRuntimeStore, RuntimeStoreContext } from "./runtimeStore";
+import { SceneView } from "./SceneView";
 import { Sprite } from "./Sprite";
 
 describe("advanceMotion", () => {
@@ -121,6 +122,68 @@ describe("runtimeStore", () => {
     store.getState().requestMove([40, 40]);
     expect(store.getState().pose).toBe("se");
     expect(store.getState().notice).toBe("unreachable");
+  });
+});
+
+function renderScene() {
+  const store = createRuntimeStore(scene);
+  const view = render(
+    <RuntimeStoreContext.Provider value={store}>
+      <SceneView bundle={bundle} />
+    </RuntimeStoreContext.Provider>,
+  );
+  return { store, ...view };
+}
+
+function actorFrame(container: HTMLElement) {
+  return container.querySelector(".world-actor svg[data-frame]") as SVGElement | null;
+}
+
+describe("character presentation", () => {
+  // Kills a renderer that always draws one standing frame or lets the foot
+  // anchor move between direction frames.
+  it("follows the movement direction and keeps the foot anchor fixed", () => {
+    const { store, container } = renderScene();
+
+    act(() => store.getState().requestMove(scene.nav.nodes.window));
+    expect(store.getState().motion.direction).toBe("nw");
+    expect(actorFrame(container)).toHaveAttribute("data-frame", "nw");
+
+    act(() => store.getState().requestMove(scene.nav.nodes.posters));
+    expect(store.getState().motion.direction).toBe("ne");
+    expect(actorFrame(container)).toHaveAttribute("data-frame", "ne");
+
+    const left = actorFrame(container)!.style.left;
+    const top = actorFrame(container)!.style.top;
+    for (const direction of ["sw", "nw", "ne", "se"] as const) {
+      act(() => store.setState({ pose: direction }));
+      const svg = actorFrame(container)!;
+      expect(svg).toHaveAttribute("data-frame", direction);
+      expect(svg.style.left).toBe(left);
+      expect(svg.style.top).toBe(top);
+    }
+  });
+
+  // Kills reusing actorHeight for action poses, or action heights while standing.
+  it("uses actorHeight while standing and action heights for daily poses", () => {
+    const { store, container } = renderScene();
+    const heightFor = (height: number) => `${(height / scene.size[1]) * 100}%`;
+
+    expect(actorFrame(container)).toHaveAttribute("data-frame", "se");
+    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actorHeight));
+
+    act(() => store.setState({ pose: "coffee" }));
+    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.coffee.height));
+
+    act(() => store.setState({ pose: "display" }));
+    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.display.height));
+
+    act(() => store.setState({ pose: "sit" }));
+    expect(actorFrame(container)).toHaveAttribute("data-frame", "sit");
+    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actions.sit.height));
+
+    act(() => store.setState({ pose: "nw" }));
+    expect(actorFrame(container)!.style.height).toBe(heightFor(scene.actorHeight));
   });
 });
 
