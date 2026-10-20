@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LEDGERS, totalTokens, hitRate, formatCN, formatInt, smoothPath, type RangeKey } from "./ledgerData";
+import { LEDGERS, totalTokens, hitRate, formatCN, formatUnits, formatInt, smoothPath, type RangeKey } from "./ledgerData";
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -68,5 +68,46 @@ describe("ledger v4 invariants", () => {
     expect(LEDGERS.custom).toBe(LEDGERS.last30d);
     expect(LEDGERS.last30d.trend.labels[0]).toBe("9/12");
     expect(LEDGERS.last30d.trend.labels.at(-1)).toBe("10/11");
+  });
+});
+
+describe("formatUnits 语种化单位（zh 万/亿不动；en K/M/B，D3）", () => {
+  it("en 三档：两位小数 + 单位前空格", () => {
+    expect(formatUnits(4_374_410_324, "en")).toBe("4.37 B");
+    expect(formatUnits(17_951_000, "en")).toBe("17.95 M");
+    expect(formatUnits(999, "en")).toBe("999");
+  });
+  it("en 原数分支镜像 zh：Math.round 且无千分位", () => {
+    expect(formatUnits(999.5, "en")).toBe("1000");
+    expect(formatUnits(0, "en")).toBe("0");
+    expect(formatUnits(-999, "en")).toBe("-999");
+  });
+  it("en 档界：1e3/1e6/1e9 恰入档；999_999 舍入不跨档", () => {
+    expect(formatUnits(1e3, "en")).toBe("1.00 K");
+    expect(formatUnits(1e4, "en")).toBe("10.00 K");
+    expect(formatUnits(999_999, "en")).toBe("1000.00 K");   // 机械口径：四舍五入不触发跨档进位
+    expect(formatUnits(1e6, "en")).toBe("1.00 M");
+    expect(formatUnits(1e9, "en")).toBe("1.00 B");
+  });
+  it("en 负数按 Math.abs 判档、输出保留负号（与 zh 按原值判档刻意不同）", () => {
+    expect(formatUnits(-1_234, "en")).toBe("-1.23 K");
+    expect(formatUnits(-17_951_000, "en")).toBe("-17.95 M");
+    expect(formatUnits(-4_374_410_324, "en")).toBe("-4.37 B");
+  });
+  it("zh 全档回归：字面量逐条冻结（B18 口径红线）", () => {
+    // 逐条字面量冻结——勿改回 formatUnits(v,"zh") === formatCN(v) 自比：同一实现互为镜像，零守护力
+    const CASES = [
+      [0, "0"], [608, "608"], [999, "999"], [999.5, "1000"],
+      [1e4, "1.00万"], [17_951_000, "1795.10万"], [1e8, "1.00亿"], [4_374_410_324, "43.74亿"],
+      [-1_234, "-1234"], [-4_374_410_324, "-4374410324"],   // zh 负数恒落原数分支（现状不变）
+    ] as const;
+    for (const [v, s] of CASES) expect(formatUnits(v, "zh")).toBe(s);
+  });
+  it("formatCN 别名：字面量输出（非自比）", () => {
+    expect(formatCN(608)).toBe("608");
+    expect(formatCN(1e4)).toBe("1.00万");
+    expect(formatCN(1e8)).toBe("1.00亿");
+    expect(formatCN(4_374_410_324)).toBe("43.74亿");
+    expect(formatCN(-1_234)).toBe("-1234");
   });
 });

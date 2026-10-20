@@ -28,7 +28,7 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 | `pnpm dev:sync` | 先同步（15s 预算）再起 | 带主仓最新内容起服务 |
 | `pnpm sync` | 手动同步 | 立刻拉主仓最新文档/日志/矩阵，失败自动用副本 |
 | `pnpm build` | 同步 + 构建 | 与 CI 同一条命令，本地仅预览验证 |
-| `pnpm test` | — | 136 条 vitest（i18n parity / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
+| `pnpm test` | — | vitest（i18n parity / 零 Han 门禁 / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
 | `pnpm sync:changelog` / `pnpm sync:manual` | 手动 | 单独同步某一类内容 |
 
 ### macOS 一键启动 / 关闭
@@ -51,7 +51,8 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 ```mermaid
 flowchart LR
     subgraph SRC["tuvis 主仓（唯一真值）"]
-        A["CHANGELOG.md"]
+        A["CHANGELOG.md（中文）"]
+        A2["CHANGELOG.en.md（英文）"]
         B["docs/capabilities.json"]
         C["docs/user-manual/（zh/en/img）"]
     end
@@ -69,11 +70,12 @@ flowchart LR
 
 > 注意：**push main 只存档、永不部署**。部署仅由 `v*` tag 触发（tag 模型详见 [docs/deploy/README.md](docs/deploy/README.md)）。
 
-### 三源 → 前端消费位置
+### 同步源 → 前端消费位置
 
 | 同步源（tuvis 主仓） | 构建产物 | 前端消费位置 |
 |---|---|---|
-| `CHANGELOG.md` | `src/content/changelog.json` | ① 首页 Hero 徽章 `vX.Y.Z · 开源` ② /changelog 页 ③ 演示手机看板品牌行 ④ 首页「关于」窗版本号 |
+| `CHANGELOG.md`（纯中文） | `src/content/changelog.json` | ① 首页 Hero 徽章 `vX.Y.Z · 开源` ② /zh/changelog 页 ③ 演示手机看板品牌行 ④ 首页「关于」窗版本号 |
+| `CHANGELOG.en.md`（纯英文） | `src/content/changelog.en.json` | /en/changelog 页（只列已完成英文翻译的版本，不回落中文；两版彻底分家） |
 | `docs/capabilities.json` | `src/content/capabilities.json` | 首页八工具兼容矩阵（经键名/覆盖/取值域三重闸门校验） |
 | `docs/user-manual/`（45 文件） | `public/manual/` | /docs 全部 13 篇手册（中英）与配图 |
 
@@ -119,7 +121,7 @@ tuvis-website/
 - **仓库改名牵一发动全身**：线上地址含仓库名（`.../tuvis-website/`），base 路径散布在 `vite.config.ts`、`src/router.tsx`、`scripts/make-404.mjs`、`DocsArticlePage`——改名前先说一声。
 - **`SITE_DISPATCH_PAT` 过期症状**：tuvis 仓 notify-website 红叉，但每日兜底不受影响；换新 PAT 即可。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
-- **质量基线**：136 条 vitest（含兔维斯世界与中英 i18n parity）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
+- **质量基线**：vitest（含兔维斯世界、中英 i18n parity 与零 Han 门禁）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
 - **红线**：`brand/`、`SPEC.md`、`legacy/` 不可改；全站零追踪脚本；下载 API 失败回退 Releases 列表页。
 - **演示数据 tuvis 化**：真实截图里的项目名/域名/会话内容一律不入站，演示语境全部模拟为 tuvis 生态。
 - **首页「关于」窗的当前版本刻意比最新 release 旧一版**（取 changelog 倒数第二条），保持「检测到新版本」的演示语义。

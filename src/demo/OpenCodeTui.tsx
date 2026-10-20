@@ -1,8 +1,10 @@
+import { useLang } from "@/i18n/useLang";
 import { TuiShell } from "./TuiShell";
 
 /** OpenCode TUI 窗（P13 新增，站内近似模拟——暂无官方截图基准，用户提供截图后再校准）：
  *  灰调终端（品牌灰 #6B6B6B 系）——灰框欢迎盒 + MCP 行 + ✻ 用户行 + 斜体思考 + 路径高亮回复 +
- *  > █ 输入框 + 底部三段状态栏，结构对齐 KimiShellTui 的七段式。内容 tuvis 语境硬编码（不入 i18n）。 */
+ *  > █ 输入框 + 底部三段状态栏，结构对齐 KimiShellTui 的七段式。
+ *  欢迎盒/MCP/状态栏为语言无关的真实产品英文 UI——留常量，不进 COPY */
 const WELCOME = {
   title: "OpenCode",
   version: "v0.6.0",
@@ -13,17 +15,6 @@ const WELCOME = {
   mcp: "MCP: 1 connected",
 };
 const MCP = ["● tuvis-remote MCP server connected"];
-const SESSION = {
-  user: "托盘图标三态怎么组织状态机？",
-  think: "Thinking… 先盘现有 tray 菜单与三态素材，再定状态归一",
-  reply: [
-    "建议用一个枚举收口三态，渲染层只查表（src/tray/states.ts）：",
-    "• green = 全部空闲，yellow = 有会话等待批准，red = 有会话出错",
-    "• 状态源唯一：看板 store 派生，托盘只订阅不自行计算",
-    "• 切换走防抖 300ms，避免多会话同帧抖动",
-    "要先把状态表写进 src/tray/states.ts 吗？",
-  ],
-};
 const PATH_SPLIT = /(src\/tray\/states\.ts)/;
 const STATUS = {
   model: "GLM-5.3-Flash",
@@ -32,8 +23,40 @@ const STATUS = {
   context: "context: 6% (58k/977k)",
 };
 
+/** 批次 3 COPY 模式（T3.3；模板说明见 copy.parity.test.ts 头注释）：
+ *  仿真会话三段（用户行/思考行/回复）随语言变化，收进 COPY.{zh,en}；en 以 `: typeof ZH` 互校；
+ *  zh 逐字保留现状（红线）。en 回复行内的路径与 zh 相同（PATH_SPLIT 高亮依赖）。 */
+const ZH = {
+  session: {
+    user: "托盘图标三态怎么组织状态机？",
+    think: "Thinking… 先盘现有 tray 菜单与三态素材，再定状态归一",
+    reply: [
+      "建议用一个枚举收口三态，渲染层只查表（src/tray/states.ts）：",
+      "• green = 全部空闲，yellow = 有会话等待批准，red = 有会话出错",
+      "• 状态源唯一：看板 store 派生，托盘只订阅不自行计算",
+      "• 切换走防抖 300ms，避免多会话同帧抖动",
+      "要先把状态表写进 src/tray/states.ts 吗？",
+    ],
+  },
+};
+const EN: typeof ZH = {
+  session: {
+    user: "How should the tray icon's three states be organized as a state machine?",
+    think: "Thinking... first the existing tray menu and the three-state assets, then the state model",
+    reply: [
+      "I'd funnel the three states into one enum and let the view just look it up (src/tray/states.ts):",
+      "• green = all idle, yellow = a session awaits approval, red = a session errored",
+      "• Single source of truth: derived in the board store; the tray only subscribes, never computes",
+      "• Debounce transitions by 300ms so concurrent sessions don't flicker in the same frame",
+      "Want me to write the state table into src/tray/states.ts first?",
+    ],
+  },
+};
+export const COPY = { zh: ZH, en: EN } as const;
+
 /** OpenCode TUI 窗：TuiShell 壳/拖动横滚/右键菜单/灯位全保留；底色 #232323、品牌灰框。 */
 export function OpenCodeTui({ className = "", onClose }: { className?: string; onClose?: () => void }) {
+  const SESSION = COPY[useLang()].session;
   return (
     <TuiShell bodyClassName="bg-[#232323] text-[#D4D4D4]" className={className} onClose={onClose}
       footer={

@@ -172,9 +172,9 @@ src/components/demo/
 
 ### 6.2 /changelog 更新日志
 
-- 实现：`scripts/split-changelog.mjs` 构建时解析主仓 `CHANGELOG.md` → 结构化 JSON → 页面渲染（版本锚点、Added/Changed/Fixed 折叠、latest 置顶）。cc-switch 有同款脚本可参考。
-- 同步方式 v1：`npm run sync:changelog` 从本地主仓路径拷贝（脚本带路径参数）；后期可换 GitHub Action 定期拉取。
-- 语言：内容中文为主；英文页显示中文原文 + 每版本一句话英文摘要（`version-summary.en.json` 手工维护，13 个版本一次性补齐）。
+- 实现：`scripts/split-changelog.mjs` 构建时**按中英双文件**解析主仓 `CHANGELOG.md`（→ `src/content/changelog.json`，条目键 `zh`）与 `CHANGELOG.en.md`（→ `src/content/changelog.en.json`，条目键 `en`），产物入 git 作离线兜底；页面按 URL 语言各读各的产物（版本锚点、分区渲染），无跨语言回落。
+- 同步方式：构建时经 `api.github.com` contents 通道拉取（`pnpm sync:changelog`），另有 `--in` / `--in-en` 本地回退与 `--offline` 全离线；失败语义 = 警告 + 保留上次产物 + 退出 0。英文产物另设语言纯度闸门（出现 Han / 中文排版字符即拒绝落盘，页面宁可旧也不冒充英文）。
+- 语言（2026-10-17 用户裁决，主仓据此拆分双文件）：/zh/changelog 只显示中文、/en/changelog 只显示英文——英文页仅列已完成翻译的版本，未译版本不出现也不留占位，页首说明给出中文版入口（说明里的「vX.Y.Z 起」锚点随数据自动跟随，不写死）。
 
 ---
 
@@ -313,6 +313,6 @@ tuvis-website/
 | E3 | 四支推广视频嵌入 | VideoMaker 出片 | 按决策 19：嵌 /demo 对应场景与 /docs，首页不放 |
 | E4 | FAQ 区 | Issues/Discussions 问题积累后 | 决策 11 的回补通道 |
 | E5 | 用户评价区 | 真实用户反馈出现（经授权） | 决策 10 的回补通道 |
-| E6 | 英文 changelog 全文翻译 | 有国际流量后 | 替代 v1「中文原文 + 每版英文摘要」方案 |
+| E6 | ~~英文 changelog 全文翻译~~ ✅ **已落地**（2026-10-17：主仓拆分出纯英文 `CHANGELOG.en.md`，网站 /en 只读英文版、未译版本不出现） | — | 替代 v1「中文原文 + 每版英文摘要」方案：中英两版彻底分家，不回落中文（契约见 §6.2） |
 | E7 | D3/D4 回补（仅当 R1 触发过压缩） | 一期超期走了最小站上线 | 补全 Demo 四场景 |
 | E8 | 高清多状态吉祥物立绘（黄/红全身透明版、≥2x 分辨率） | 需要更大展示位/印刷物料，或对裁切版观感不满意时 | 依据品牌系统 v1.0 冻结规范生成；当前网页展示尺寸下 `extracted/` 裁切版已够用 |

@@ -1,17 +1,20 @@
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlayIcon, PauseIcon } from "../components/Icons";
+import { useLang } from "@/i18n/useLang";
 import { useScriptPlayer, timeline } from "./player";
 import type { Step } from "./types";
 
 export function PlayerFrame({ steps, children, id, reset }: {
   steps: Step[]; children: ReactNode; id: string; reset?: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const p = useScriptPlayer(steps, reset);
   const [hover, setHover] = useState<number | null>(null);
   const { offsets, total } = timeline(steps);
-  const lang = i18n.language === "zh" ? "zh" : "en";
+  // 步条文案语言走 useLang（en* → en，其余 → zh；须在 /:lang 路由树内渲染）：URL 权威，切语首帧不滞后
+  // （i18next 实例语言由 LangLayout effect 才更新）
+  const lang = useLang();
 
   return (
     <div id={id} className="scroll-mt-20">
