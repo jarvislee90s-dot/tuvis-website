@@ -30,7 +30,6 @@ export function sanitizeQuest(value: unknown): QuestState {
     value.displayedOnRack === true && MODULE_IDS.every((id) => installed.includes(id));
   return {
     collected,
-    cellRepaired: value.cellRepaired === true && collected.includes("cell"),
     installed,
     displayedOnRack,
     helpSeen: value.helpSeen === true,

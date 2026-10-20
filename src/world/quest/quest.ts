@@ -4,7 +4,6 @@ export const MODULE_IDS: readonly ModuleId[] = ["sight", "cell", "emitter", "bod
 
 export type QuestState = {
   collected: ModuleId[];
-  cellRepaired: boolean;
   installed: ModuleId[];
   displayedOnRack: boolean;
   helpSeen: boolean;
@@ -14,11 +13,10 @@ export type QuestState = {
 
 export type QuestEvent =
   | { type: "COLLECT" | "INSTALL"; moduleId: ModuleId }
-  | { type: "REPAIR_CELL" | "PLACE_ON_RACK" | "HELP_SEEN" | "TRY_WEAPON" | "RESET" };
+  | { type: "PLACE_ON_RACK" | "HELP_SEEN" | "TRY_WEAPON" | "RESET" };
 
 export const INITIAL_QUEST: QuestState = {
   collected: [],
-  cellRepaired: false,
   installed: [],
   displayedOnRack: false,
   helpSeen: false,
@@ -57,10 +55,6 @@ export function questReducer(state: QuestState, event: QuestEvent): QuestState {
         return { ...state, collected, installed: addOnce(state.installed, "body") };
       }
       return { ...state, collected };
-    }
-    case "REPAIR_CELL": {
-      if (!state.collected.includes("cell") || state.cellRepaired) return state;
-      return { ...state, cellRepaired: true };
     }
     case "INSTALL": {
       if (!isModuleId(event.moduleId) || !canAssemble(state)) return state;

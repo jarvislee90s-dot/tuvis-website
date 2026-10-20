@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import "@/i18n";
 import { bundle, scene } from "../testFixtures";
 import type { QuestState } from "../quest/quest";
@@ -15,12 +15,8 @@ function allCollected(): QuestState {
   );
 }
 
-function repaired(): QuestState {
-  return questReducer(allCollected(), { type: "REPAIR_CELL" });
-}
-
 // Installing no longer waits for a repair: the tray opens once every module
-// is in hand. `repaired()` stays for the retained repair-mode panel tests.
+// is in hand. `allCollected()` stays for the retained repair-mode panel tests.
 function installedAll(): QuestState {
   return MODULE_IDS.reduce(
     (state, moduleId) => questReducer(state, { type: "INSTALL", moduleId }),
@@ -199,7 +195,7 @@ describe("resolveHotspot", () => {
   });
 
   it("places the finished weapon on the rack only after all installs", () => {
-    const early = resolveHotspot("rack", bundle, repaired());
+    const early = resolveHotspot("rack", bundle, allCollected());
     expect(early.questEvent).toBeUndefined();
     expect(early.message).toBeTruthy();
 
@@ -227,55 +223,12 @@ describe("daily poses", () => {
 describe("WorkbenchPanel", () => {
   it("lists missing modules in task mode", () => {
     render(
-      <WorkbenchPanel
-        bundle={bundle}
-        quest={INITIAL_QUEST}
-        mode="task"
-        onEvent={() => undefined}
-        onOpenAssembly={() => undefined}
-        onClose={() => undefined}
-      />,
+      <WorkbenchPanel bundle={bundle} onClose={() => undefined} />,
     );
     expect(screen.getByText("在工具箱里寻找")).toBeInTheDocument();
     expect(screen.getByText("在沙发上寻找")).toBeInTheDocument();
     // The emitter's hint follows the pack data: it now sits on the rack's
     // top shelf, no longer on the stories bookshelf.
     expect(screen.getByText("在货架顶上寻找")).toBeInTheDocument();
-  });
-
-  it("repairs after selecting the loose interface", () => {
-    const onEvent = vi.fn();
-    render(
-      <WorkbenchPanel
-        bundle={bundle}
-        quest={allCollected()}
-        mode="repair"
-        onEvent={onEvent}
-        onOpenAssembly={() => undefined}
-        onClose={() => undefined}
-      />,
-    );
-    const check = screen.getByRole("button", { name: "执行检查" });
-    expect(check).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "松动接口" }));
-    fireEvent.click(check);
-    expect(onEvent).toHaveBeenCalledWith({ type: "REPAIR_CELL" });
-  });
-
-  it("opens assembly once the cell is repaired", () => {
-    const onOpenAssembly = vi.fn();
-    render(
-      <WorkbenchPanel
-        bundle={bundle}
-        quest={repaired()}
-        mode="repair"
-        onEvent={() => undefined}
-        onOpenAssembly={onOpenAssembly}
-        onClose={() => undefined}
-      />,
-    );
-    expect(screen.getByText("接口已复位，供能检查通过。")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "进入组装" }));
-    expect(onOpenAssembly).toHaveBeenCalled();
   });
 });

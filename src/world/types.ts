@@ -13,13 +13,12 @@ export type ContentOverlay =
   | { kind: "equipment"; id?: string }
   | { kind: "world"; id?: string }
   | { kind: "stories"; id?: string }
-  | { kind: "door"; id?: string }
-  | { kind: "help" };
+  | { kind: "door"; id?: string };
 
 export type Overlay =
   | null
   | ContentOverlay
-  | { kind: "task" | "repair" | "assembly" }
+  | { kind: "task" | "assembly" }
   | { kind: "workbenchGun" }
   | { kind: "pickup"; moduleId: ModuleId };
 

@@ -218,7 +218,6 @@ describe("workshop flow", () => {
     expect(saved.schemaVersion).toBe(1);
     expect(saved.quest.displayedOnRack).toBe(true);
     // The run never repaired the cell, and the save must keep it that way.
-    expect(saved.quest.cellRepaired).toBe(false);
     // The test fire was recorded in the save too.
     expect(saved.quest.weaponTried).toBe(true);
     // All four pieces are in the save: the seated body plus the three installs.
@@ -265,7 +264,6 @@ describe("workshop flow", () => {
         { type: "COLLECT", moduleId: "cell" },
         { type: "COLLECT", moduleId: "emitter" },
         { type: "COLLECT", moduleId: "body" },
-        { type: "REPAIR_CELL" },
         { type: "INSTALL", moduleId: "sight" },
         { type: "INSTALL", moduleId: "cell" },
         { type: "INSTALL", moduleId: "emitter" },
@@ -477,7 +475,7 @@ describe("workshop flow", () => {
     act(() => store.getState().requestMove(bundle.scene.nav.nodes.center));
     expect(store.getState().motion.target).not.toBeNull();
     await waitFor(() => expect(document.querySelector(".world-actor.is-moving")).not.toBeNull());
-    act(() => store.getState().setOverlay({ kind: "help" }));
+    act(() => store.getState().setOverlay({ kind: "task" }));
     expect(store.getState().motion.target).toBeNull();
     expect(document.querySelector(".world-actor.is-moving")).toBeNull();
     await screen.findByRole("dialog");
@@ -487,7 +485,7 @@ describe("workshop flow", () => {
     const helpButton = screen.getByRole("button", { name: "音乐：开" });
     helpButton.focus();
     act(() => store.getState().setOverlay(null));
-    act(() => store.getState().setOverlay({ kind: "help" }));
+    act(() => store.getState().setOverlay({ kind: "task" }));
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(store.getState().overlay).toBeNull());
     expect(helpButton).toHaveFocus();

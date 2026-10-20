@@ -46,7 +46,7 @@ const GRID_MODULES = MODULE_IDS.filter((id) => id !== "body");
 function repaired(): QuestState {
   let state = INITIAL_QUEST;
   for (const moduleId of MODULE_IDS) state = questReducer(state, { type: "COLLECT", moduleId });
-  return questReducer(state, { type: "REPAIR_CELL" });
+  return state;
 }
 
 function installedAll(): QuestState {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "zustand";
-import type { ContentOverlay, Hotspot, Point, SceneDefinition, WorldBundle, WorldManifest } from "../types";
+import type { ContentOverlay, Hotspot, Point, Rect, SceneDefinition, WorldBundle, WorldManifest } from "../types";
 import { assetUrl } from "../assets/loadWorldData";
 import { ContentPanel } from "../content/ContentPanel";
 import { AssemblyPanel } from "../quest/AssemblyPanel";
@@ -92,6 +92,48 @@ function pendingPickups(bundle: WorldBundle, collected: readonly string[]): Hots
   );
 }
 
+type AtlasCropProps = {
+  frame: { sourceRect: Rect };
+  asset: { path: string; width: number; height: number };
+  rect: Rect;
+  stage: Point;
+  alt: string;
+  className?: string;
+} & Record<string, unknown>;
+
+/** Render one atlas frame inside a scene-coordinate placement rect. */
+function AtlasCrop({ frame, asset, rect, stage, alt, className, ...rest }: AtlasCropProps) {
+  const [x, y, w, h] = rect;
+  const [sx, sy, sw, sh] = frame.sourceRect;
+  return (
+    <div
+      className={className}
+      style={{
+        position: "absolute",
+        left: `${(x / stage[0]) * 100}%`,
+        top: `${(y / stage[1]) * 100}%`,
+        width: `${(w / stage[0]) * 100}%`,
+        height: `${(h / stage[1]) * 100}%`,
+      }}
+      {...rest}
+    >
+      <img
+        src={assetUrl(asset.path)}
+        alt={alt}
+        draggable={false}
+        style={{
+          position: "absolute",
+          width: `${(asset.width / sw) * 100}%`,
+          height: `${(asset.height / sh) * 100}%`,
+          left: `${(-sx / sw) * 100}%`,
+          top: `${(-sy / sh) * 100}%`,
+          maxWidth: "none",
+        }}
+      />
+    </div>
+  );
+}
+
 export function SceneView({ bundle }: SceneViewProps) {
   const { scene, manifest, content } = bundle;
   const { t } = useTranslation();
@@ -144,14 +186,12 @@ export function SceneView({ bundle }: SceneViewProps) {
   const moving = motion.target !== null;
   const rackFrame = manifest.frames[scene.rackDisplay.frame];
   const rackAsset = rackFrame ? manifest.assets[rackFrame.asset] : undefined;
-  const [rackX, rackY, rackW, rackH] = scene.rackDisplay.rect;
   const contentOverlay: ContentOverlay | null =
     overlay &&
     (overlay.kind === "equipment" ||
       overlay.kind === "world" ||
       overlay.kind === "stories" ||
-      overlay.kind === "door" ||
-      overlay.kind === "help")
+      overlay.kind === "door")
       ? overlay
       : null;
   const closeOverlay = () => {
@@ -233,6 +273,9 @@ export function SceneView({ bundle }: SceneViewProps) {
     if (moving) setEmoteMenu(false);
   }, [moving]);
 
+  const wbFrame = assembled ? manifest.frames[scene.workbenchDisplay.frame] : undefined;
+  const wbAsset = wbFrame ? manifest.assets[wbFrame.asset] : undefined;
+
   const pickups = pendingPickups(bundle, quest.collected);
 
   return (
@@ -264,63 +307,27 @@ export function SceneView({ bundle }: SceneViewProps) {
         ))}
 
         {quest.displayedOnRack && rackFrame && rackAsset ? (
-          <div
+          <AtlasCrop
             className="world-rack-display"
-            style={{
-              left: `${(rackX / scene.size[0]) * 100}%`,
-              top: `${(rackY / scene.size[1]) * 100}%`,
-              width: `${(rackW / scene.size[0]) * 100}%`,
-              height: `${(rackH / scene.size[1]) * 100}%`,
-            }}
-          >
-            <img
-              src={assetUrl(rackAsset.path)}
-              alt="Bug Buster"
-              style={{
-                position: "absolute",
-                width: `${(rackAsset.width / rackFrame.sourceRect[2]) * 100}%`,
-                height: `${(rackAsset.height / rackFrame.sourceRect[3]) * 100}%`,
-                left: `${(-rackFrame.sourceRect[0] / rackFrame.sourceRect[2]) * 100}%`,
-                top: `${(-rackFrame.sourceRect[1] / rackFrame.sourceRect[3]) * 100}%`,
-                maxWidth: "none",
-              }}
-            />
-          </div>
+            frame={rackFrame}
+            asset={rackAsset}
+            rect={scene.rackDisplay.rect}
+            stage={scene.size}
+            alt="Bug Buster"
+          />
         ) : null}
 
-        {quest.installed.length === MODULE_IDS.length && action?.kind !== "fire"
-          ? (() => {
-              const wbFrame = manifest.frames[scene.workbenchDisplay.frame];
-              const wbAsset = wbFrame ? manifest.assets[wbFrame.asset] : undefined;
-              if (!wbFrame || !wbAsset) return null;
-              const [bx, by, bw, bh] = scene.workbenchDisplay.rect;
-              return (
-                <div
-                  className="world-rack-display"
-                  data-workbench-display
-                  style={{
-                    left: `${(bx / scene.size[0]) * 100}%`,
-                    top: `${(by / scene.size[1]) * 100}%`,
-                    width: `${(bw / scene.size[0]) * 100}%`,
-                    height: `${(bh / scene.size[1]) * 100}%`,
-                  }}
-                >
-                  <img
-                    src={assetUrl(wbAsset.path)}
-                    alt="Bug Buster"
-                    style={{
-                      position: "absolute",
-                      width: `${(wbAsset.width / wbFrame.sourceRect[2]) * 100}%`,
-                      height: `${(wbAsset.height / wbFrame.sourceRect[3]) * 100}%`,
-                      left: `${(-wbFrame.sourceRect[0] / wbFrame.sourceRect[2]) * 100}%`,
-                      top: `${(-wbFrame.sourceRect[1] / wbFrame.sourceRect[3]) * 100}%`,
-                      maxWidth: "none",
-                    }}
-                  />
-                </div>
-              );
-            })()
-          : null}
+        {assembled && action?.kind !== "fire" && wbFrame && wbAsset ? (
+          <AtlasCrop
+            className="world-rack-display"
+            data-workbench-display
+            frame={wbFrame}
+            asset={wbAsset}
+            rect={scene.workbenchDisplay.rect}
+            stage={scene.size}
+            alt="Bug Buster"
+          />
+        ) : null}
 
         <span
           className="world-actor-shadow"
@@ -516,15 +523,8 @@ export function SceneView({ bundle }: SceneViewProps) {
         />
       ) : null}
 
-      {overlay && (overlay.kind === "task" || overlay.kind === "repair") ? (
-        <WorkbenchPanel
-          bundle={bundle}
-          quest={quest}
-          mode={overlay.kind}
-          onEvent={(event) => store.getState().dispatchQuest(event)}
-          onOpenAssembly={() => store.getState().setOverlay({ kind: "assembly" })}
-          onClose={closeOverlay}
-        />
+      {overlay?.kind === "task" ? (
+        <WorkbenchPanel bundle={bundle} onClose={closeOverlay} />
       ) : null}
 
       {overlay?.kind === "assembly" ? (

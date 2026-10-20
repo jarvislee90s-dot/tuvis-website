@@ -81,18 +81,11 @@ describe("questReducer", () => {
   it("does not consume the same module twice", () => {
     let state = INITIAL_QUEST;
     for (const moduleId of MODULE_IDS) state = questReducer(state, { type: "COLLECT", moduleId });
-    state = questReducer(state, { type: "REPAIR_CELL" });
     state = questReducer(state, { type: "INSTALL", moduleId: "sight" });
     const afterFirst = state;
     state = questReducer(state, { type: "INSTALL", moduleId: "sight" });
     expect(state).toEqual(afterFirst);
     expect(state.installed).toEqual(["body", "sight"]); // body seated by its pickup
-  });
-
-  it("ignores repair before the cell is collected", () => {
-    let state = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "sight" });
-    state = questReducer(state, { type: "COLLECT", moduleId: "emitter" });
-    expect(questReducer(state, { type: "REPAIR_CELL" })).toEqual(state);
   });
 
   it("ignores install until every module including the body is collected", () => {
@@ -106,20 +99,17 @@ describe("questReducer", () => {
     expect(canAssemble(state)).toBe(true);
   });
 
-  it("installs once all modules are collected, without repairing the cell", () => {
+  it("installs once all modules are collected", () => {
     let state = INITIAL_QUEST;
     for (const moduleId of MODULE_IDS) state = questReducer(state, { type: "COLLECT", moduleId });
     expect(canAssemble(state)).toBe(true);
-    expect(state.cellRepaired).toBe(false);
     const installed = questReducer(state, { type: "INSTALL", moduleId: "cell" });
-    expect(installed.cellRepaired).toBe(false);
     expect(installed.installed).toEqual(["body", "cell"]);
   });
 
   it("only places the finished weapon on the rack", () => {
     let state = INITIAL_QUEST;
     for (const moduleId of MODULE_IDS) state = questReducer(state, { type: "COLLECT", moduleId });
-    state = questReducer(state, { type: "REPAIR_CELL" });
     state = questReducer(state, { type: "INSTALL", moduleId: "sight" });
     expect(questReducer(state, { type: "PLACE_ON_RACK" }).displayedOnRack).toBe(false);
     state = questReducer(state, { type: "INSTALL", moduleId: "cell" });
@@ -188,7 +178,6 @@ describe("persistence", () => {
       schemaVersion: 1,
       quest: {
         collected: [],
-        cellRepaired: true,
         installed: ["sight", "cell", "emitter"],
         displayedOnRack: true,
         helpSeen: true,
@@ -196,7 +185,6 @@ describe("persistence", () => {
     }));
     expect(decoded).toEqual({
       collected: [],
-      cellRepaired: false,
       installed: [],
       displayedOnRack: false,
       helpSeen: true,
@@ -209,7 +197,6 @@ describe("persistence", () => {
   it("keeps installed modules in a save that never repaired the cell", () => {
     const finished = {
       collected: ["sight", "cell", "emitter", "body"],
-      cellRepaired: false,
       installed: ["sight", "cell", "emitter", "body"],
       displayedOnRack: true,
       helpSeen: false,
@@ -223,7 +210,6 @@ describe("persistence", () => {
       sanitizeQuest({ collected: ["emitter", "sight", "cell", "body"], installed: ["body", "cell"] }),
     ).toEqual({
       collected: ["emitter", "sight", "cell", "body"],
-      cellRepaired: false,
       installed: ["body", "cell"],
       displayedOnRack: false,
       helpSeen: false,
@@ -234,7 +220,6 @@ describe("persistence", () => {
   it("round-trips a legitimate partial save", () => {
     const storage = memoryStorage();
     let state = questReducer(INITIAL_QUEST, { type: "COLLECT", moduleId: "cell" });
-    state = questReducer(state, { type: "REPAIR_CELL" });
     state = questReducer(state, { type: "COLLECT", moduleId: "sight" });
     expect(writeQuest(storage, state)).toBe(true);
     expect(readQuest(storage)).toEqual(state);
@@ -255,7 +240,6 @@ describe("persistence", () => {
   it("deduplicates and drops unknown modules while sanitizing", () => {
     expect(sanitizeQuest({ collected: ["sight", "sight", "bogus"], helpSeen: "yes" })).toEqual({
       collected: ["sight"],
-      cellRepaired: false,
       installed: [],
       displayedOnRack: false,
       helpSeen: false,
@@ -277,12 +261,11 @@ describe("event contract", () => {
     const events: QuestEvent[] = [
       { type: "COLLECT", moduleId: "sight" },
       { type: "INSTALL", moduleId: "cell" },
-      { type: "REPAIR_CELL" },
       { type: "PLACE_ON_RACK" },
       { type: "HELP_SEEN" },
       { type: "TRY_WEAPON" },
       { type: "RESET" },
     ];
-    expect(events).toHaveLength(7);
+    expect(events).toHaveLength(6);
   });
 });

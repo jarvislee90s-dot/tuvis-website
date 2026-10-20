@@ -140,8 +140,8 @@ describe("runtimeStore", () => {
     const store = createRuntimeStore(scene);
     store.getState().requestMove(scene.nav.nodes.rack, "rack");
     expect(store.getState().motion.target).not.toBeNull();
-    store.getState().setOverlay({ kind: "help" });
-    expect(store.getState().overlay).toEqual({ kind: "help" });
+    store.getState().setOverlay({ kind: "task" });
+    expect(store.getState().overlay).toEqual({ kind: "task" });
     expect(store.getState().motion.target).toBeNull();
   });
 
