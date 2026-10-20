@@ -1,0 +1,11 @@
+状态：CANDIDATE。独立完整装备特写，供用户审阅；不自动冻结新增模块外观。
+日期：2026-10-18（Asia/Shanghai）
+工具：内置 image_gen，transparent_background=true。
+参考：tuvis-world/02_references/equipment_family_concept.png 右上角橙色 Bug Buster。
+限制：这是单张成品图片，不是分层零件、3D 模型、组装动画或已验证的游戏资产包。
+
+Generate one isolated close-up asset candidate of the original fictional cartoon sci-fi tool Bug Buster (Bug 清除脉冲炮), on a truly transparent background. Use ONLY the TOP RIGHT orange device from equipment_family_concept.png as the visual identity reference. The red winged radar at top left and all blue/green tools are NOT the target. Preserve the short chunky silver-white and graphite pulse-cannon silhouette, oversized wide hexagonal orange emitter muzzle, glowing concentric orange energy rings and orange primary identity color, with only small cyan engineering accents. Friendly, high quality bright 3D animation/toy rendering for Tuvis's inventor workshop; NOT a realistic firearm, NOT a technical construction diagram.
+
+Purpose: fixed-angle hero close-up/reference for a 2.5D browser-game assembly screen. Present the complete device alone, clean left-facing three-quarter side view, showing its body and front muzzle clearly at the same time. Fully contained, no clipping, at least 12 percent transparent padding around entire silhouette. No floor or cast shadow. No hands, character, stand, background, labels, text, logo, watermark, inset images, multiple views, disassembled parts or exploded diagrams.
+
+Exploratory visual refinement requested by user: keep familiar modular assembly cues, using a compact detachable-looking top aim/sensor module, a front pulse emitter module, and a clearly fictional orange energy-cell cassette mounted below/at rear of body. These are large simple external toy-like modules, not detailed real weapon internals. Integrate them tastefully without changing the reference's chunky identity. Include a simple dark ergonomic grip. No bullets, cartridges, ammo belt or realistic gun mechanisms. The image is a CANDIDATE assembled asset, not approved canon and not a ready-to-use layered or rigged model. Landscape composition around 3:2.

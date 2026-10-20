@@ -13,6 +13,7 @@ export function TopBar() {
   const lang = useLang();
   const links = [
     { to: `/${lang}`, key: "nav.home" },
+    { to: `/${lang}/world`, key: "nav.world" },
     { to: `/${lang}#product`, key: "nav.product" },
     { to: `/${lang}#features`, key: "nav.features" },
     { to: "demo", key: "nav.demo" },

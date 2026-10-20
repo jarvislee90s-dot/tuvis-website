@@ -1,0 +1,13 @@
+Tool: built-in image_gen
+Date: 2026-10-19 Asia/Shanghai
+Reference images: tuvis-world/03_exploration/workshop-isometric-direction-v1.png
+Purpose: prepared image resource; no image generation is required by the cloud implementer.
+
+Production background for Tuvis World 2.5D workshop, REVISED HOUSE SETTING. Preserve reference's approved warm bright premium 3D animation style, fixed elevated ISOMETRIC camera looking down40degrees, two-wall cutaway interior, silver/graphite/cyan tech, orange light and greenery. The workshop is ONE ROOM in Tuvis's larger HOME. It is a grounded architectural room, not a floating platform, rooftop suspended over a city, balcony hanging in space or a standalone dollhouse in dark void.
+
+Show the room physically integrated with continuing home walls and a grounded surrounding courtyard/garden path: near outside edges meet solid foundation and visible planted GROUND/PAVING at the same level. A little neighboring residential facade and garden/courtyard context continues to canvas edges. The distant futuristic city is visible beyond the large left window. Do NOT show open sky or a city drop BELOW the room, no hanging platform or dark empty border.
+
+Include TWO clear architectural DOORS/DOORWAYS opening from the workshop toward other parts of the home. One doorway suggests a warmly lit internal corridor beyond, and another closed household door suggests another room. Doors have visible frames/thresholds, and free floor in front so a character can approach. No names or labels. They should look like future expansion exits, while the current playable space remains the workshop. Enlarge/rearrange wall storage modestly to make doors believable rather than hiding them behind furniture.
+
+Room facilities: left workbench under large window, toolbox near its front-left corner; coffee station along back/right wall, illustrated residents posters on a remaining wall section; empty equipment display rack and books on right. The center is open floor. Remove all live characters and little robots from the room. Poster portraits okay. Also do NOT render the free-standing desk chair, orange lounge armchair or round low coffee table: code will place separate furniture sprites onto clear floor later. Keep room proportions and furniture sizes coherent, not an enormous empty foreground. Use clear structural perimeter walls/rails/planters where people should not walk; those obstacles ground the scene and make boundaries legible. No large central furniture or floor clutter.
+One clean opaque landscape3:2 scene around1536x1024, no text/UI/watermarks, no other images or inset diagrams.

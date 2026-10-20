@@ -1,0 +1,6 @@
+Status: CANDIDATE artwork prepared for desktop 2.5D implementation; not user-approved final art.
+Tool: built-in image_gen
+Date: 2026-10-18 Asia/Shanghai
+Reference images: tuvis-world/03_exploration/bug-buster-closeup-v1.png
+
+Use reference as identity for an isolated exterior module of the ORIGINAL FICTIONAL cartoon energy tool Bug Buster. Bright premium toy/3D animated style, white-silver shell, graphite structure, orange energy and small cyan accents. Same left-facing three-quarter camera as the complete device. Truly transparent background, centered isolated single object, whole silhouette in frame with wide transparent padding, no ground, no cast shadow, no background haze, no text/labels/UI, no other parts or assembly diagrams, no realism or real gun internals. Landscape canvas approximately 1536x1024. Extract/recreate ONLY the SMALL TOP aim/sensor module visible on top of reference. Compact horizontal silver-white/graphite rounded rectangular optical module; its small warm orange hexagonal FRONT aperture faces LEFT/front; small orange circle on the right-side rear; bottom dark mounting foot. No complete gun, no handle, no large orange muzzle, no energy cell. One small clean aim/sensor module alone enlarged for useful resolution. Preserve reference contour.

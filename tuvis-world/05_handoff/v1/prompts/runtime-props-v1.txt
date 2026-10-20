@@ -1,0 +1,12 @@
+Tool: built-in image_gen
+Date: 2026-10-19 Asia/Shanghai
+Reference images: tuvis-world/03_exploration/workshop-isometric-direction-v1.png
+Purpose: prepared image resource; no image generation is required by the cloud implementer.
+
+Create ONE transparent production FURNITURE ATLAS for the inventor workshop in reference. Exactly THREE equal-width invisible cells side by side, landscape3:2 around1536x1024. No labels, borders, grid, UI or background; exactly ONE standalone furniture object centered in EACH cell, entirely inside its cell with generous padding. Same orthographic elevated ISOMETRIC camera looking down40 degrees and same warm light direction as reference. Visible top surfaces, coherent axis directions. Bright premium animated-film 3D render, silver-white and graphite hardware, orange upholstery, small cyan accents, warm wood and greenery.
+
+LEFT CELL: a single orange-padded inventor SWIVEL CHAIR with silver-white back shell, dark metal stem and five caster legs, facing diagonally upper-left toward workbench; show its rear/side as appropriate for that facing, consistent with chair in reference. Seat is clear and empty, no rabbit or person. Keep the chair's top of seat visible.
+MIDDLE CELL: a single comfortable orange LOUNGE ARMCHAIR like the lower-right chair in reference, silver/graphite tech outer structure, orange cushions, one plain off-white small cushion, chair opening faces diagonally LOWER-LEFT toward viewer. No side table, rug or other objects.
+RIGHT CELL: one low ROUND WOODEN COFFEE TABLE on simple graphite legs, seen from same elevated camera, with a small green potted plant on it and one plain off-white mug. Table is one combined prop for occlusion, no floor or rug.
+
+No cast floor shadow, floor patch, room, wall, people or robots. Truly transparent alpha outside each object. Furniture forms fully visible, not cropped and not touching adjacent cells. These independent transparent layers will be placed over a separately rendered clean background.

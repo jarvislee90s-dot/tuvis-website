@@ -848,3 +848,259 @@
 # P17 三处小修（2026-10-12，用户反馈直改批次）
 
 ① 下载卡：删「↓ Windows/macOS」残留小字，改为匹配系统按钮 ring 高亮 + 「当前系统」角标（UA 检测）。② ClaudeTui multiselect 场景删「问 我一道多选题」用户行（真实截图残留，tuvis 化规则）。③ D2 终端 md+ 改绝对定位填充——高度恒等于手机（737px），场景切换内容变高不再撑大行高。浏览器断言全过（diff=0、无用户行、ring 生效、无 ↓ 行）；27 测试 + 构建绿。
+
+# Tuvis World Task 1：可验证的资源接入与开发环境（2026-10-19）
+
+**环境自检**
+- Node `v22.22.3`；npm `10.9.8`；pnpm 安装前不存在，`npm install --global pnpm@10.20.0 --registry=https://registry.npmjs.org` 后为 `10.20.0`（全局 bin 在 `/.npm-global/bin`，已软链到 `/usr/local/bin/pnpm`）。
+- 官方 npm registry 可达（`npm view --registry=https://registry.npmjs.org pnpm@10.20.0 version` → 10.20.0）；项目依赖使用官方 registry 安装。默认 npm registry 为 `https://registry.npmmirror.com`，未用于本次安装。
+- 仓库由附件 ZIP 解包到本地工作目录；基线 HEAD `a9eeea6`。输入附件只读未写入。
+- `verify-pack.mjs`：PASS 17 images / 15 frames / 12 hotspots / 18 connected nodes / 47 files；`audit-handoff.mjs`：两项 PASS。
+- 基线 `pnpm test`：6 files / 42 tests 全通过（测试环境启动较慢，约 5 分钟，后续按需单文件运行）。
+
+**变更文件**
+- 新增：`.nvmrc`、`scripts/import-world-pack.mjs`、`scripts/import-world-pack.test.mjs`、`src/world/types.ts`、`src/world/testFixtures.ts`、`src/world/assets/loadWorldData.ts`、`src/world/assets/loadWorldData.test.ts`、`public/world/v1/`（20 文件，35 MB）。
+- 修改：`package.json`（packageManager → pnpm@10.20.0）、`tsconfig.json`（resolveJsonModule，供测试夹具导入包内 JSON）。
+
+**测试输出摘要**
+- `node scripts/import-world-pack.mjs` → copied 20 files to public/world/v1。
+- `pnpm exec vitest run scripts/import-world-pack.test.mjs src/world/assets/loadWorldData.test.ts` → 2 files / 12 tests PASS（真实包 SHA 一致、篡改字节拒绝、`../outside.png` 拒绝且不复制）。
+- `pnpm exec tsc --noEmit` → exit 0。
+
+**与计划的偏差**
+- `pnpm install` 未改变 `pnpm-lock.yaml`（现有锁文件与 semver 范围兼容）；未新增运行时依赖。
+- 计划中“首页 loadWorldContent 仅请求 manifest/content”与测试均已落实；`preloadCoreAssets` 使用 `manifest.coreAssets`（room/directions/actions/props）。
+
+# Tuvis World Task 2：可独立浏览的专题首页（2026-10-19）
+
+**变更文件**
+- 新增：`src/pages/WorldPage.tsx`、`src/pages/WorkshopPage.tsx`（Task 2 静态壳，Task 5 替换）、`src/world/landing/WorldLanding.tsx`、`src/world/content/ContentPanel.tsx`、`src/world/world.css`、`src/world/landing/WorldLanding.test.tsx`。
+- 修改：`src/router.tsx`（/:lang/world 与 /:lang/world/workshop，React.lazy + Suspense）、`src/components/layout/TopBar.tsx`（nav.world）、`src/i18n/zh.json`、`src/i18n/en.json`（+7 键，中英一致）。
+
+**实现要点**
+- W-01～W-06 按需求顺序；四装备用 `family` 原图与 `content.equipment[].sourceRect` 精确裁切（绝对定位 + 比例换算，不切图）；图鉴统一详情区随卡片选择更新。
+- 两个“进入兔维斯工坊”都指向 `/{lang}/world/workshop`；W-05 三个“查看简介”打开共享 ContentPanel，Esc/关闭可退出并恢复触发按钮焦点。
+- 首页仅调用 `loadWorldContent`（manifest + content），不加载 scene.json 或工坊图片；图片按需 lazy 加载，hero/city 首屏优先。
+- 英文路径保留英文界面键，并显示世界内容语言说明。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/landing/WorldLanding.test.tsx src/i18n/parity.test.ts` → 2 files / 7 tests PASS。
+- `pnpm exec tsc --noEmit` → exit 0。
+
+**与计划的偏差**
+- 无。浏览器视觉复核留待 Task 9（本环境暂无已配置的自动化浏览器工具，届时核实并按实际能力记录）。
+
+# Tuvis World Task 3：场景坐标、碰撞与可达路径（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/scene/geometry.ts`、`src/world/scene/navigation.ts`、`src/world/scene/navigation.test.ts`。
+
+**实现要点**
+- `toScenePoint` 用实际渲染矩形（含 letterbox/缩放）换算，不用窗口尺寸。
+- `isWalkable`：脚底中心在 walkable 多边形内，且与每个家具障碍距离 ≥ `footRadius=12`（walkable 已含外围安全余量，不重复内缩）。
+- `isSegmentClear`：两端可走、整段不与 walkable 边界相交、与每个障碍的段-多边形距离 ≥ footRadius；不是仅采样终点。
+- `findPath`：起点/终点接入人工通道图（仅采用 `scene.nav.edges` 且逐边几何复核），Dijkstra 求最短；返回前逐段复核，任何不合法段返回 null。
+- `directionFor` 返回四向斜视角；零距离保持当前朝向，轴向移动优先保持同向对角。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/scene/navigation.test.ts` → 17 tests PASS（含 12 热点全部可达、跨休息椅直线被拒、绕行路径逐段合法、花园点 null、坐标换算三例）。
+- `pnpm exec tsc --noEmit` 在 Task 2 后已为 0；本任务新增文件由同一命令覆盖（最终 Task 9 复跑）。
+
+**与计划的偏差**
+- 节点图采用计划规定的 `nav.edges` 作为通道边（而非任意可见性连边），更符合“人工标注通道图”；临时起终点仍与所有可直视节点连接。
+
+# Tuvis World Task 4：主线状态与可靠存档（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/quest/quest.ts`、`src/world/quest/persistence.ts`、`src/world/quest/quest.test.ts`。
+
+**实现要点**
+- `questReducer`：COLLECT 去重且只接受 sight/cell/emitter；REPAIR_CELL 需已领取 cell；INSTALL 需三模块集齐且能源匣已修；PLACE_ON_RACK 需三件已安装；RESET 回 `INITIAL_QUEST`；HELP_SEEN 独立记录。
+- 存档 key `tuvis-world-v1`，外层 `schemaVersion=1`；`decodeQuest` 对损坏 JSON、未知版本、非法字段安全重置；`sanitizeQuest` 清理“未领取/未维修却已安装/已陈列”的不可能状态。
+- `readQuest`/`writeQuest` 捕获存储异常；写入失败返回 false，不阻断会话内游玩；重玩仅回写本专区 key。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/quest/quest.test.ts` → 17 tests PASS（六种领取顺序、重复领取、过早维修/安装/陈列、损坏与不可能存档、受限存储、重玩隔离）。
+- `pnpm exec tsc --noEmit` → exit 0。
+
+**与计划的偏差**
+- 无。
+
+# Tuvis World Task 5：工坊显示、移动与唯一到达事件（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/scene/Sprite.tsx`、`src/world/scene/SceneView.tsx`、`src/world/scene/runtimeStore.ts`、`src/world/scene/useSceneLoop.ts`、`src/world/scene/motion.test.tsx`。
+- 修改：`src/world/scene/navigation.ts`（MotionState/advanceMotion）、`src/pages/WorkshopPage.tsx`（加载数据 + 核心图片预载 + 运行时 Store + SceneView）、`src/world/world.css`、`src/i18n/{zh,en}.json`（+1 key）。
+
+**实现要点**
+- Sprite 用 SVG viewBox 精确裁切 `sourceRect`，以 `anchor` 为 CSS 原点；角色切 nw/se 时位置不变。家具按 `scene.props[].depth`、角色按脚底 y 排序，支持前后遮挡。
+- 帧循环每帧最多推进 100ms（19px），逐段 `isSegmentClear` 复核；到达 token 必须等于最新请求，旧目标/旧到达事件自动失效。
+- 面板打开（setOverlay 非空）取消移动；窗口 blur / 标签隐藏取消目标。点击坐标通过舞台实际 `getBoundingClientRect` 换算。
+- 12 个热点为可聚焦按钮，先走向 `approach`，到达后才触发内容（Task 6 接入）。
+- 工坊进入时 `loadWorldData` + `preloadCoreAssets`（room/directions/actions/props），失败显示错误与重试。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/scene/motion.test.tsx src/world/scene/navigation.test.ts` → 2 files / 25 tests PASS（大帧间隔不穿越、到达仅一次、新目标使旧 token 失效、面板暂停、不可达反馈、Sprite 裁切/脚底锚点不变）。
+- `pnpm exec tsc --noEmit` → exit 0。
+- 已用 vision 工具核对 occlusion-behind/front：角色 y 小于家具 depth 时被椅子遮挡、大于时在前；与按地面 depth 排序一致。
+
+**与计划的偏差**
+- `motion.test.ts` 改为 `motion.test.tsx`（含 Sprite JSX 渲染断言）；`navigation-overlay.jpg` 视觉读图两次超时，未作为依据，碰撞/导航以 `scene.json` + 几何测试为准。
+
+# Tuvis World Task 6：物件内容、家中出口与日常姿态（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/scene/interaction.ts`、`src/world/scene/interaction.test.tsx`、`src/world/quest/QuestBar.tsx`、`src/world/quest/WorkbenchPanel.tsx`。
+- 修改：`src/world/scene/SceneView.tsx`（到达事件 → resolveHotspot、任务栏、内容/工作台面板、装备架成品图）、`src/world/world.css`、`src/world/scene/runtimeStore.ts`（Task 5 已含 setPose；本任务未改行为）。
+
+**实现要点**
+- `resolveHotspot` 仅按 `scene.hotspots[].kind/contentId/moduleId` 分支：工具箱→图鉴+瞄准模块；海报→居民+能源匣；窗→回路城+发射头；书架→故事；椅子→sit；咖啡机/桌→coffee；工作台按“缺模块→task / 未修→repair / 已修→assembly”；装备架在三件安装后发 PLACE_ON_RACK + display，未完成时给任务提示。
+- 两扇门返回 `content.doors` 说明与 nextSceneId 数据，不切换场景。
+- 到达事件只在 token 有效时由 SceneView 处理一次，处理完清空 pendingArrival；新移动覆盖日常姿态。
+- 坐姿按 `seatAnchorSource` 换算裁切内归一化锚点，定位 `seatPosition`、深度 `actions.sit.depth`；导航脚底仍留在椅子靠近点。
+- QuestBar 显示三槽状态与唯一当前动作；WorkbenchPanel 提供任务清单、SVG 接口示意、选中松动接口后“执行检查”、修复后“进入组装”。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/scene/interaction.test.tsx src/world/landing/WorldLanding.test.tsx` → 2 files / 18 tests PASS。
+- `pnpm exec tsc --noEmit` → exit 0。
+
+**与计划的偏差**
+- 组装 overlay 在本任务先渲染占位对话框，Task 7 立即替换为 AssemblyPanel（保持 Task 独立可回滚）。
+
+# Tuvis World Task 7：能源匣维修与双输入组装（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/quest/AssemblyPanel.tsx`、`src/world/quest/AssemblyPanel.test.tsx`。
+- 修改：`src/world/scene/SceneView.tsx`（assembly overlay → AssemblyPanel）、`src/world/world.css`、`src/world/quest/WorkbenchPanel.tsx`（Task 6 已含维修界面，本任务未再改）。
+
+**实现要点**
+- 组装舞台 `1100×720`，主体/零件/插槽/成品全部读取 `scene.assembly`；显示坐标按舞台实际矩形换算，同一 socket 在 550×360、1100×720、733×480 下均可吸附。
+- 拖拽（Pointer Events + setPointerCapture）与“点零件→点插槽”共用同一安装判断；错误插槽、pointercancel、window blur、Esc 均不发 INSTALL 事件，模块不被消耗。
+- 打开时 preload body/emitter/sight/cell/complete 五张装备图，失败显示重试且保留任务状态；三件安装后切换 `gunComplete` 成品图。
+- 关闭/返回只清本地拖拽与选中，不发 PLACE_ON_RACK；该事件仍只由装备架到达触发。
+- 维修界面（WorkbenchPanel）用代码 SVG 绘制接口两态；选中松动接口后“执行检查”发 REPAIR_CELL，修复后显示“进入组装”。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/quest/AssemblyPanel.test.tsx src/world/quest/quest.test.ts` → 2 files / 25 tests PASS。
+- `pnpm exec tsc --noEmit` → exit 0。
+- `assembly-layout.jpg` vision 读取超时，未作为视觉依据；布局以 `scene.assembly` 数值为准（已在 progress 记录）。
+
+**与计划的偏差**
+- 计划要求本任务修改 WorkbenchPanel；实际维修选择器在 Task 6 已按接口落地，本任务无需再改。
+
+# Tuvis World Task 8：加载重试、存档集成与完整流程（2026-10-19）
+
+**变更文件**
+- 新增：`src/world/WorkshopFlow.test.tsx`。
+- 修改：`src/pages/WorkshopPage.tsx`（导出 WorkshopRuntime；读取/写入版本化存档；重玩确认；首次操作说明；操作说明按钮）、`src/world/scene/runtimeStore.ts`（面板打开时拒绝新移动）、`src/world/scene/useSceneLoop.ts`（Task 5 已含失焦/隐藏取消，本任务未再改）、`src/world/assets/loadWorldData.ts`（Task 1 已含加载接口，本任务未再改）、`src/world/content/ContentPanel.tsx`（Task 2 已含 Esc/焦点恢复，本任务未再改）、`src/world/quest/AssemblyPanel.tsx`（纯点击不再触发吸附，仅拖拽位移后松手才吸附）、`src/world/world.css`。
+
+**实现要点**
+- WorkshopRuntime 挂载时 `readQuest` 恢复；store 订阅仅在 `quest` 引用变化时 `writeQuest`，移动帧不写存储。
+- 首次进入且未 helpSeen：显示两条操作说明 + “知道了”；操作说明按钮随时打开 help 面板；重玩按钮先弹确认，确认后只重置本专区任务并回写本 key。
+- 存储 getItem/setItem 抛错或不可用时仍可在内存中完成主线。
+- 加载状态明确 loading/error/ready；重试自增请求号并忽略旧 Promise；核心图片 preload 完成后才挂载 SceneView/移动循环。
+- 面板打开时 `requestMove` 直接忽略，配合帧循环 `overlay===null` 双重暂停。
+- 集成测试覆盖：三模块任意路径领取 → 维修 → 点击安装三件 → 成品 → 装备架陈列 → 刷新恢复 → 重玩；核心图片失败重试；setItem 抛错仍完成；面板暂停、blur 清目标、Esc 关闭并恢复焦点。
+
+**测试输出摘要**
+- `pnpm exec vitest run src/world/WorkshopFlow.test.tsx` → 4 tests PASS。
+- `pnpm test` 全量 → 15 files / **126 tests PASS**（基线 42 + 新增 84）。
+- `pnpm exec tsc --noEmit` → exit 0。
+- 加固后复跑 AssemblyPanel/WorkshopFlow/motion → 20 tests PASS。
+
+**与计划的偏差**
+- 为集成测试可驱动，`WorkshopRuntime` 增加可选 `storage` 与 `storeRef` 测试钩子（生产路径默认使用 localStorage，不影响页面接口）。
+
+# Tuvis World Task 9：静态构建、桌面验证与交付记录（2026-10-19）
+
+**变更文件**
+- 新增：`docs/qa/tuvis-world-desktop.md`。
+- 修改：`README.md`（专区入口、素材导入、测试基线说明）、`src/pages/WorkshopPage.tsx`（工作区居中容器）、`src/world/landing/WorldLanding.tsx` + `WorldLanding.test.tsx`（标题中文名不拆行；可访问名称允许空白）、`src/world/scene/Sprite.tsx`（百分比定位随舞台缩放；SVG 裁切关闭 overflow 防止整张图集外溢）、`src/world/scene/SceneView.tsx`（传入舞台尺寸）、`src/world/scene/motion.test.tsx`、`src/world/world.css`（舞台按视口高度约束并居中、任务栏 keep-all、紧凑工坊头部）、`tsconfig.json`（恢复原格式，仅保留 resolveJsonModule）。
+
+**验证输出摘要**
+- `node verify-pack.mjs` / `audit-handoff.mjs`：全部 PASS（17 images / 15 frames / 12 hotspots / 18 nodes；映射 17/17）。
+- `pnpm test`：15 files / **126 tests passed**，exit 0（含基线 42；基线 6 个测试文件 `git diff a9eeea6..HEAD --` 均为空）。
+- `pnpm exec tsc --noEmit`：无输出，exit 0。
+- `pnpm build`：exit 0，`dist/index.html`、`dist/404.html` 生成，`dist/` 47 MB。
+- Chromium 146 CDP 浏览器验收：**46/46 checks passed**，`errors: []`；覆盖六模块、深链接刷新、/en 语言说明、12 热点、地面/物件移动、不可达反馈、两门、日常姿态、维修/组装/陈列、刷新恢复、重玩、遮挡前后、三种视口/DPR 点击换算。
+- 逐热点路径输出与六种领取顺序输出见 `docs/qa/tuvis-world-desktop.md`；临时证据测试已删除，不进入产品代码。
+
+**视觉修正记录**
+- 1280×720 下工坊原先需要滚动且角色使用场景像素绝对定位，缩放后会跑出舞台；已改为舞台按 `min(100%, (100vh - 300px) * 1.5)` 缩放并居中，Sprite 改用百分比坐标。实测舞台 630×420、left=318、bottom=698<720，点击换算仍精确落点。
+- Sprite 的 SVG 曾因 `overflow: visible` 把整张四向图集渲染出来（截图可见 4 个兔子）；改为 `overflow: hidden` 后，隐藏角色前后的像素差仅覆盖单个角色包围盒。
+
+**与计划的偏差**
+- `pnpm install --frozen-lockfile` 在本卷持续失败：`EPERM: operation not permitted, unlink '.../_tmp_*'`（pnpm 在 store 路径探测时无法删除仓库根临时文件），与锁文件内容无关；首次 `pnpm install` 成功，锁文件未变，依赖、测试与构建不受影响。该环境限制已写入验收记录。
+- `family.png` 在 x=627 图集边界存在相邻格少量渗色，按 `content.sourceRect` 裁切时 Bug Buster 左缘会带入邻格残段；未自行改裁切，已在验收记录标注。
+- 浏览器验收为 Linux Chromium 146 + CDP 设备模拟；Windows/macOS/Safari/真实系统缩放/真实断网未实测，已在验收记录逐项标注。
+
+# Tuvis World 严格自查与修复（2026-10-19）
+
+**审查方式**：逐文件阅读 + `wc -l` + 调用链 grep + 全量测试 + Chromium CDP 浏览器复核。`tsc --noEmit` 开启 `noUnusedLocals`；仓库无 ESLint/Biome/Prettier 配置（`ls -a | grep -Ei "eslint|biome|prettier"` 无输出，`package.json` 无 lint 脚本）。
+
+**逐模块结论**
+- `geometry.ts`（134 行）/`navigation.ts`（182 行）：纯几何与寻路，无 React/Zustand 依赖；`findPath` 使用 `nav.edges` + 临时起终点全段复核；未发现空壳分支。
+- `runtimeStore.ts`（143 行）/`useSceneLoop.ts`（51 行）：Store 只保存运行时状态与动作；循环每帧 `getState()` 取最新值，面板/失焦取消；已接线到 `WorkshopPage` 与 `SceneView`。
+- `interaction.ts`（79 行）：只按 `scene.hotspots[].kind/contentId/moduleId` 分支；无按中文名分支。
+- `quest.ts`（74 行）/`persistence.ts`（74 行）：纯 reducer + 版本化存档；损坏/非法状态清理；已接入运行时与页面订阅写入。
+- `WorkbenchPanel.tsx`（151 行）/`AssemblyPanel.tsx`（378 行）：维修 SVG 与组装舞台均为真实交互；无 mock 数据，坐标全部来自 `scene.assembly`。
+- `loadWorldData.ts`（530 行）/`import-world-pack.mjs`（145 行）：运行时验证 + 导入前 SHA/路径校验；首页只请求 manifest/content。
+- `WorldLanding.tsx`（266 行）/`ContentPanel.tsx`（160 行）：六模块、图集裁切、故事详情、焦点恢复；内容全部来自 bundle。
+- `SceneView.tsx`（251 行）/`Sprite.tsx`（68 行）：热点、深度排序、脚底锚点、舞台缩放；本轮补上脚底投影与移动起伏。
+- 未发现 `TODO/FIXME/@ts-ignore/as any`；`console.log` 仅存在于导入 CLI 的成功提示。
+
+**最薄弱 3 处及修复**
+
+1. **角色运动表现不完整（设计妥协）**
+   - 修前：只有静态帧切换，没有脚底投影、移动起伏、姿态短过渡；与需求 4.5 不符。
+   - 修后：`SceneView` 增加 `.world-actor-shadow`（按角色脚底定位、随深度排序）；`.world-actor.is-moving` 420ms 起伏；帧切换 170ms 淡入；`prefers-reduced-motion` 关闭动画。
+   - 测试：`WorkshopFlow.test.tsx > pauses movement for panels, stops on blur, and Esc restores focus` 断言投影存在、移动时 `is-moving` 出现、面板打开后消失。
+
+2. **重玩确认对话框可访问性/状态清理不足（测试与实现均弱）**
+   - 修前：无 Esc、无初始焦点、无焦点恢复、无 `aria-describedby`；重置后 `notice` 可能残留。
+   - 修后：打开时焦点进入“取消”，Esc/背景点击关闭，关闭后焦点回到“重玩主线”；重置同时 `setNotice(null)`。
+   - 测试：`WorkshopFlow.test.tsx` 完整流程中打开重玩确认 → Esc → 断言对话框消失且焦点回到触发按钮，再确认重玩。
+
+3. **边界行为与测试缺口（代码小缺陷 + 测试弱）**
+   - 修前：坐在椅子/喝咖啡时点击不可达地面，目标被拒但日常姿态未结束；重复 INSTALL、核心图未就绪不可玩、运行中缩放没有直接测试。
+   - 修后：`requestMove` 不可达分支把 `pose` 复位为当前朝向。
+   - 新增测试：`motion.test.tsx > ends a daily pose even when the new destination is unreachable`；`quest.test.tsx > does not consume the same module twice`；`WorkshopFlow.test.tsx > does not mount a playable scene until core images resolve`；Chromium 实测运行中 1280×720 → 1600×900@1.5 不刷新，点击仍落在 600,700（误差 <2 场景像素）。
+
+**边界自查结果**
+- 快速点两个目标：`motion.test.tsx > ignores the stale arrival token after a new destination` PASS。
+- `elapsedMs=5000`：`caps a huge frame gap at 100 ms of travel` PASS（最多 19px）。
+- 面板开关：`stops movement when a panel opens` + `pauses movement for panels...` PASS；面板关闭不自动恢复旧目标。
+- 失焦/pointercancel/拖拽取消：`cancels a drag on pointercancel and on window blur`、`pauses movement...blur` PASS，均不发 INSTALL。
+- 存储：损坏 JSON、schema 2、合法但不可能状态、getItem/setItem 抛错、重玩隔离，全部 PASS。
+- 资源失败：核心图首次失败→重试成功；组装图失败保留任务；预载期间不挂载可玩场景。
+- 缩放：1280@1、1920@1.25、1280@2、运行中 1280→1600@1.5，落点均通过。
+- 错误插槽、重复领取、重复安装、重玩后状态：全部有断言。
+
+**质量门**
+- `pnpm test`：15 files / **129 tests passed**，exit 0（基线 42 + 新增 87）。
+- `pnpm exec tsc --noEmit`：无输出，exit 0。
+- `pnpm build`：exit 0，`dist/index.html`、`dist/404.html` 生成。
+- 浏览器：**47/47 checks passed**，`errors: []`。
+- 无 lint 配置，未运行 lint。
+
+**关键决策**
+- 导航用“人工节点图 + 可见性临时连边 + Dijkstra + 逐段复核”，而不是仅终点采样：大帧间隔/家具拐角下更安全。
+- 碰撞与遮挡分离：碰撞走几何，显示走脚底/家具 depth；才能同时满足“不能穿”和“前后遮挡”。
+- 组装吸附以 socket 点 + snapRadius 判定，拖拽/点击共用 `tryInstall`；错误插槽无事件，避免消耗模块。
+- 存档仅由 quest 引用变化触发写入，移动帧不写 localStorage；避免高频写与状态竞争。
+- 舞台用百分比坐标 + `getBoundingClientRect`，而不是固定 1536×1024 像素层：任意窗口缩放/DPR 下点击一致。
+
+# Tuvis World 部署模拟抽查与层叠修复（2026-10-19）
+
+**部署模拟**：生产 `dist/` 由 `vite preview` 在 `http://127.0.0.1:4173/tuvis-website/` 提供（GitHub Pages 子路径）。Chromium 146 CDP，1280×900，DPR 1。
+
+**抽查**：9/9 PASS，截图归档在 `docs/qa/screenshots/`（初始、地面移动、工具箱图鉴、坐姿、门说明、维修、组装、成品、装备架完成）。
+
+**发现**：
+1. `.world-stage` 未建立层叠上下文，角色/家具/热点的高 z-index 逃逸到页面根层叠上下文，压住 z-index 60 的弹窗；维修面板截图可见角色与家具盖住 SVG 示意。
+2. 维修面板误用了组装提示 `ui.assemblyHelp`。
+
+**修复**：
+- `world.css`：`.world-stage { isolation: isolate; }`。
+- `WorkbenchPanel.tsx`：维修模式移除组装提示，仅保留“点击高亮的松动接口，再执行检查。”。
+- 浏览器复测：`modal paints above scene sprites — {"isolation":"isolate","dialogOnTop":true}`；9/9 spot checks PASS。

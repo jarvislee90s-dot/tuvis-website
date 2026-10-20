@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "generated": [
+    {
+      "asset": "room",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-house-v2.txt"
+    },
+    {
+      "asset": "directions",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-directions-v2.txt"
+    },
+    {
+      "asset": "actions",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-actions-v2.txt"
+    },
+    {
+      "asset": "props",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-props-v1.txt"
+    },
+    {
+      "asset": "tuvis2dIdleSw",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkNw",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dWalkNe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dJumpSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dPickupSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dCelebrateSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    },
+    {
+      "asset": "tuvis2dFireSe",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/runtime-tuvis2d-frames-v1.txt"
+    }
+  ],
+  "reused": [
+    {
+      "asset": "hero",
+      "source": "tuvis-world/01_images/tuvis_hero_3d.png"
+    },
+    {
+      "asset": "city",
+      "source": "tuvis-world/01_images/circuitown_scene_concept.png"
+    },
+    {
+      "asset": "workshop",
+      "source": "tuvis-world/01_images/tuvis_workshop_concept.png"
+    },
+    {
+      "asset": "residents",
+      "source": "tuvis-world/02_references/resident_lineup_exploration.png"
+    },
+    {
+      "asset": "family",
+      "source": "tuvis-world/02_references/equipment_family_concept.png"
+    },
+    {
+      "asset": "storyPerfect",
+      "source": "tuvis-world/01_images/story_cover_perfect_day.png"
+    },
+    {
+      "asset": "storyMissing",
+      "source": "tuvis-world/01_images/story_cover_missing_parts.png"
+    },
+    {
+      "asset": "storyWeapon",
+      "source": "tuvis-world/04_web_assets/characters/tuvis-display-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-story-weapon.txt"
+    },
+    {
+      "asset": "gunBody",
+      "source": "tuvis-world/04_web_assets/equipment/bug-buster-body-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-gun-body.txt"
+    },
+    {
+      "asset": "gunEmitter",
+      "source": "tuvis-world/04_web_assets/equipment/bug-buster-emitter-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-gun-emitter.txt"
+    },
+    {
+      "asset": "gunSight",
+      "source": "tuvis-world/04_web_assets/equipment/bug-buster-sight-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-gun-sight.txt"
+    },
+    {
+      "asset": "gunCell",
+      "source": "tuvis-world/04_web_assets/equipment/bug-buster-cell-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-gun-cell.txt"
+    },
+    {
+      "asset": "gunComplete",
+      "source": "tuvis-world/04_web_assets/equipment/bug-buster-complete-v1.png",
+      "prompt": "tuvis-world/05_handoff/v1/prompts/reused-gun-complete.txt"
+    }
+  ],
+  "notes": [
+    "source and prompt are project-root-relative provenance paths. Source originals are not runtime prerequisites; the manifest assets are the delivered copies.",
+    "All executable/runtime references resolve from packaged manifest and scene. Original user-supplied art did not contain all original prompts; no prompts are invented."
+  ]
+}

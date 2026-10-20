@@ -1,0 +1,17 @@
+Tool: built-in image_gen
+Date: 2026-10-19 Asia/Shanghai
+Reference images: tuvis-world/01_images/tuvis_hero_3d.png, tuvis-world/03_exploration/workshop-isometric-direction-v1.png
+Purpose: prepared image resource; no image generation is required by the cloud implementer.
+
+ONE four-direction GAME SPRITE ATLAS for Tuvis, transparent square1536x1536 style canvas. Exactly 2 rows x 2 equal invisible cells. One complete full-body standing rabbit per cell, all in same scale, ample margin above ears and below feet; no overlap and nothing cropped. Empty transparent 40+pixel margin at each cell edge. No labels/grid/backdrop/shadows/halos/furniture.
+
+IDENTITY is ref1, CAMERA is ref2's elevated isometric camera looking DOWN40degrees. Grey-white long ears one upright/one floppy, cyan HUD goggles, brown eyes, silver-white/graphite armor, green carrot core with TWO leaves only on FRONT chest; back armor has cyan circular service panel. Same youthful reference proportions, no fur collar.
+
+CRITICAL: In every sprite, head, neck, torso, pelvis and feet point in SAME direction. No look-over-shoulder, no head twisted toward viewer when body faces away, no front face grafted onto back body. Anatomically natural neck.
+
+TOP LEFT: northwest / upper-left facing AWAY. Show rear-left three-quarter, back of head, goggle strap and back armor, muzzle only slight left silhouette.
+TOP RIGHT: northeast / upper-right facing AWAY. Show rear-right three-quarter, back of head, goggle strap and back armor.
+BOTTOM LEFT: southwest / lower-left facing TOWARD viewer. Nose and green chest core visibly angle LEFT, feet also angle lower-left. It must be the OPPOSITE facing from bottom-right.
+BOTTOM RIGHT: southeast / lower-right facing TOWARD viewer. Nose and green chest core visibly angle RIGHT, feet also angle lower-right.
+
+Make bottom-left and bottom-right clearly opposite, not duplicated. Same overhead camera angle and same render style for all frames. Arms relaxed empty. Clean high quality bright 3D animated cutouts matching the workshop, no other objects.
