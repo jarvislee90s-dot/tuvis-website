@@ -7,6 +7,10 @@ brand/archive/
 # 本地一键启动脚本（不入库）
 local-dev.bat
 
+# 一键启动服务的运行状态
+.dev-server.pid
+.dev-server.log
+
 # 本地验收截图与日志（不入库）
 .playwright-mcp/
 vite-dev.log

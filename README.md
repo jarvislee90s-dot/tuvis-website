@@ -18,7 +18,7 @@
 
 ```bash
 pnpm install
-pnpm dev          # 零网络、秒开（内容用仓内副本）——或直接双击 local-dev.bat
+pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可双击 start-dev.command
 ```
 
 | 命令 | 网络 | 用途 |
@@ -29,6 +29,19 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——或直接
 | `pnpm build` | 同步 + 构建 | 与 CI 同一条命令，本地仅预览验证 |
 | `pnpm test` | — | 136 条 vitest（i18n parity / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
 | `pnpm sync:changelog` / `pnpm sync:manual` | 手动 | 单独同步某一类内容 |
+
+### macOS 一键启动 / 关闭
+
+双击 `start-dev.command` 启动服务并自动打开兔维斯世界页面；双击 `stop-dev.command` 关闭。
+
+命令行等价：
+
+```bash
+./scripts/dev-start.sh
+./scripts/dev-stop.sh
+```
+
+服务地址：<http://127.0.0.1:5173/tuvis-website/zh/world>。首次运行若没有 `node_modules`，脚本会自动用 `npx pnpm@10.20.0` 安装依赖；PID 与日志写在 `.dev-server.pid` / `.dev-server.log`。
 
 ## 更新机制
 
