@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sync:changelog": "node --use-system-ca scripts/split-changelog.mjs",
-    "sync:manual": "node --use-system-ca scripts/sync-user-manual.mjs"
+    "sync:manual": "node --use-system-ca scripts/sync-user-manual.mjs",
+    "release:website": "node scripts/release-website.mjs"
   },
   "dependencies": {
     "framer-motion": "^12.0.0",
