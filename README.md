@@ -46,7 +46,7 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 
 ## 更新机制
 
-站点内容（更新日志 / 兼容矩阵 / 用户手册）的唯一真值在 **tuvis 主仓**（`jarvislee90s-dot/tuvis`）。构建时经 GitHub API 同步，失败自动回退仓内副本（副本入 git，页面永不空窗）。
+站点内容（更新日志 / 兼容矩阵 / 用户手册）的唯一真值在 **tuvis 主仓**（`jarvislee90s-dot/tuvis`）。本地预览可以回退仓内副本；正式发布构建固定读取与网站 tag 同名的 Tuvis tag，来源缺失或校验失败就阻断部署。
 
 ```mermaid
 flowchart LR
@@ -57,18 +57,16 @@ flowchart LR
         C["docs/user-manual/（zh/en/img）"]
     end
     subgraph TRIG["部署触发（deploy.yml）"]
-        T1["push v* tag<br>——发版，唯一升版本方式"]
-        T2["schedule 每日 03:53 北京<br>——文档保鲜兜底"]
-        T3["主仓 release / 文档变更<br>——repository_dispatch 实时"]
-        T4["Actions 手动 Run<br>——应急"]
+        T1["push 稳定 vX.Y.Z tag<br>——正式发布"]
+        T2["Redeploy latest website release<br>——最新版本人工恢复"]
     end
-    SRC -->|"构建时 GitHub API 拉取<br>失败回退仓内副本"| BUILD
-    TRIG --> BUILD["build：同步脚本 → 校验闸门<br>→ tsc → vite build → 404"]
+    SRC -->|"从匹配的 Tuvis release tag 拉取<br>缺失或失败即阻断"| BUILD
+    TRIG --> BUILD["build：固定网站 tag + Tuvis tag<br>→ 校验 → tsc → vite build → 404"]
     BUILD --> PAGES["GitHub Pages CDN"]
     PAGES --> SITE["线上站点<br>jarvislee90s-dot.github.io/tuvis-website"]
 ```
 
-> 注意：**push main 只存档、永不部署**。部署仅由 `v*` tag 触发（tag 模型详见 [docs/deploy/README.md](docs/deploy/README.md)）。
+> 注意：**push main 只运行 CI / 存档、永不部署**。只有正式稳定 tag `vX.Y.Z` 发布；同版本恢复只能通过专用 workflow 重发最新 tag（详见 [docs/deploy/README.md](docs/deploy/README.md)）。
 
 ### 同步源 → 前端消费位置
 
@@ -84,10 +82,11 @@ flowchart LR
 ## 发版
 
 ```bash
-git push origin main                              # 平时：存档 WIP，不上线
-git tag vX.Y.Z && git push origin vX.Y.Z          # 发版：上线这一版
+pnpm release:website vX.Y.Z                       # 仅从干净且同步的 main 创建正式 tag 并发布
 ```
 
+- Tuvis 主仓必须先有同名正式 tag；命令会检查两仓 tag、版本递增、工作树干净和 `main` 同步，然后把网站 tag 推到当前 `origin/main` SHA。
+- 普通 `main` push、checkpoint 和定时任务不部署；相同版本重新发布通过 Actions 的 **Redeploy latest website release**，且只允许最新稳定 tag。
 - 首次上线或排障：见 [docs/deploy/README.md](docs/deploy/README.md)
 - 项目目录里说「**发版**」即可触发 `tuvis-release` 技能代跑全流程（提交收尾 → 推 main → 问版本号 → 打 tag → 盯构建 → 验证线上）
 
@@ -95,8 +94,8 @@ git tag vX.Y.Z && git push origin vX.Y.Z          # 发版：上线这一版
 
 ```
 tuvis-website/
-├── SPEC.md                  # 建站规格（v1.3，需求与决策记录）
-├── docs/deploy/             # 部署 workflow 说明 + tuvis 仓侧触发器 + 上线检查单
+├── SPEC.md                  # 建站规格（v1.5，需求与决策记录）
+├── docs/deploy/             # 正式发布与 GitHub Pages 部署说明
 ├── docs/design/             # 演示/文档参考稿（remote-ui 定稿、p9~p13 参考图）
 ├── docs/qa/                 # 兔维斯世界验收记录与真实浏览器截图
 ├── docs/superpowers/plans/  # P0~P13 与兔维斯世界计划、progress.md 全程记录
@@ -117,12 +116,12 @@ tuvis-website/
 
 - **生成物勿手改**：`src/content/*.json` 与 `public/manual/` 是构建同步产物，改动只会发生在 tuvis 主仓对应文件。
 - **部署仅由 `v*` tag 触发**：push main 永不上线（发版模型是刻意的）。
-- **Pages 环境策略**：`github-pages` 环境已配 `v*` tag 部署策略——误删后 Actions 会报 `Tag ... not allowed to deploy`，按 docs/deploy/README.md 第六节恢复。
+- **Pages 环境策略**：`github-pages` 环境要允许 `v*` 稳定 tag 与 `v*-redeploy-*` marker branch；策略不匹配时 Actions 会拒绝部署，按 [docs/deploy/README.md](docs/deploy/README.md) 检查。
 - **仓库改名牵一发动全身**：线上地址含仓库名（`.../tuvis-website/`），base 路径散布在 `vite.config.ts`、`src/router.tsx`、`scripts/make-404.mjs`、`DocsArticlePage`——改名前先说一声。
-- **`SITE_DISPATCH_PAT` 过期症状**：tuvis 仓 notify-website 红叉，但每日兜底不受影响；换新 PAT 即可。
+- **`SITE_DISPATCH_PAT` 已不再需要**：网站不接受 Tuvis 仓的 `repository_dispatch` 部署通知；旧 notify workflow 与 secret 可从 Tuvis 仓清理。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
 - **质量基线**：vitest（含兔维斯世界、中英 i18n parity 与零 Han 门禁）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
-- **红线**：`brand/`、`SPEC.md`、`legacy/` 不可改；全站零追踪脚本；下载 API 失败回退 Releases 列表页。
+- **红线**：`brand/`、`legacy/` 不可改；`SPEC.md`原则上不改，部署决策经用户批准后可同步；全站零追踪脚本；下载 API 失败回退 Releases 列表页。
 - **演示数据 tuvis 化**：真实截图里的项目名/域名/会话内容一律不入站，演示语境全部模拟为 tuvis 生态。
 - **首页「关于」窗的当前版本刻意比最新 release 旧一版**（取 changelog 倒数第二条），保持「检测到新版本」的演示语义。
 - **Git 行尾 CRLF warning 无害**：Windows + autocrlf 的常规提示。

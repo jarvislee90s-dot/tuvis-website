@@ -1,6 +1,6 @@
 # Tuvis 官网建站规格（SPEC）
 
-> 版本：v1.4（2026-10-12 用户裁决：/docs 升级为完整使用手册，启用真实截图，覆写决策 6/12，见决策记录 #17）· 状态：待用户开工指令后按 P0 动工
+> 版本：v1.5（2026-10-21 用户裁决：正式 tag 冻结 main 发布、关闭普通 main 自动部署、最新 tag 串行恢复，见决策记录 #29）· 状态：部署策略已定，后续按正式 tag 发布
 > 本文档是官网建设的单一事实源；品牌侧（命名/吉祥物/域名）见 `brand/BRAND.md`。
 > 参考对象：[cc-switch-website](https://github.com/farion1231/cc-switch-website)（线上 [ccswitch.io](https://ccswitch.io)）；文档形态另参考 [ZCode 文档](https://zcode.z.ai/cn/docs/) 与 [Kimi Code 文档](https://www.kimi.com/code/docs/)。
 
@@ -50,6 +50,7 @@
 | 26 | Gate A 解除 | final 素材到位，裁切/抠图工作版已产出（`brand/final/extracted/`，清单见其 README）：logo SVG 按设定图手写重建（01/19/20 为基准，不自动描摹）、**Hero 用 21-hero-cutout.png 透明立绘**、favicon/应用图标/托盘三态用 13–17 裁切版；更高清多状态立绘降为可选增强（§12 E8） |
 | 27 | 图标定稿路线 | 用户裁决弃手绘 SVG 观感，改走**生图 API**（agnes-image i2i）+ 程序化修正；定稿 = `extracted/13（深）/14（浅）`——无框、整块渐变玻璃目镜（深版蓝渐变三段，浅版白→浅灰）；配色规格单一事实源 = `brand/final/logo/versions/05-aigen/COLOR-SPEC.md`；SVG 母版与全部迭代过程归档于 `brand/final/logo/versions/`（决策 26 的 SVG 路线降为矢量备用） |
 | 28 | **文档页升级（2026-10-12 用户裁决，覆写 #12「文档单篇」）** | `/docs` 升级为**完整使用手册**（13 页 5 组，参照 ZCode/Kimi Code 文档形态）：真值 = 兔维斯仓 `docs/user-manual/{zh,en}/\*.md`（GitHub 可读可编辑），本仓 `sync:manual` 脚本复制到 `public/manual/`（生成物不入库、dev/build 自动前置）；`react-markdown + remark-gfm` 渲染 + 侧栏 + 上一页/下一页 pager + 「编辑本页」；目录表 `src/content/manual.ts`；EN 手册骨架先行（正文回落 zh 兜底不白屏）。**同时覆写 #6（官网不放真实截图）**：手册页启用真实软件截图（图文并茂），Demo 交互页保留互补 |
+| 29 | **正式发布与部署（2026-10-21 用户裁决）** | 正式网站发布只由稳定 `vMAJOR.MINOR.PATCH` tag 触发；发版命令只允许从干净且与 `origin/main` 同 SHA 的 `main` 创建 tag，且 Tuvis 主仓必须已有同名 tag。普通 `main` push、checkpoint、定时任务和 Tuvis dispatch 不部署。网站源码与内容按同名 tag 冻结；内容缺失或校验失败时关闭发布。相同版本重发只允许选择最新稳定 tag，通过专用 workflow 创建唯一 marker；marker 仅可覆盖当前发布工具文件，站点代码仍从正式 tag 构建。正式发布全流程串行排队，并在构建前与部署前复核最新 tag，过期任务跳过。 |
 
 **连带修正项**：现有草稿 `index.html` 中所有 GitHub 链接指向旧仓 `jarvislee90s/MultiAgents-Manager`，新站统一改指 `https://github.com/jarvislee90s-dot/tuvis`（旧地址虽 301，但直接用新址）。
 
@@ -73,7 +74,7 @@ jarvislee90s-dot.github.io/tuvis-website/     （后续绑 tuvis.app）
 - React Router 路径制路由；i18n 前缀段 `/:lang`（`zh` | `en`）。
 - GitHub Pages 项目站是子路径托管（base = `/tuvis-website/`），Vite `base` 与 Router `basename` 相应配置。
 - GH Pages 无原生 SPA fallback：采用标准 `404.html` 复制 `index.html` + 会话存储重定向方案。
-- 部署：GitHub Actions 推 `main` 自动 build + deploy（Actions 部署源，Pages 开 GitHub Actions 模式）。
+- 部署：GitHub Pages 使用 GitHub Actions 部署源。正式稳定 tag `vMAJOR.MINOR.PATCH` 才触发 build + deploy；tag 固定当时 `main` 的 commit，且要求 Tuvis 主仓存在同名 tag。普通 `main` push、checkpoint、定时任务和 Tuvis dispatch 不部署。通过 `pnpm release:website <tag>` 从干净且与 `origin/main` 同步的 `main` 创建发布 tag；同版本重发只允许恢复最新稳定 tag。发布队列串行运行，旧 tag 在构建前与部署前再次检查并跳过。 |
 - 自定义域切换（后期）：仓库加 `CNAME` 文件 + DNS 配置，文档化两步操作，不动代码。
 
 ### 3.3 通用页面元素
