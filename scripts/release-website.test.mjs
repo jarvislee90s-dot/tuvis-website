@@ -4,11 +4,11 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { RECOVERY_TOOL_FILES } from "./release-policy.mjs";
 
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "release-website.mjs");
 const markerScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "create-redeploy-marker.mjs");
 const resolverScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "resolve-deploy-target.mjs");
+const validatorScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "validate-recovery-request.mjs");
 const roots = [];
 
 function git(cwd, ...args) {
@@ -62,18 +62,20 @@ function runRelease(website, tuvisRemote, tag) {
   });
 }
 
-function runMarker(website, tag, workflowSha, runId = "42", attempt = "1") {
+function runMarker(website, tag, runId = "42", attempt = "1") {
   return spawnSync(process.execPath, [markerScript], {
     cwd: website,
     encoding: "utf8",
-    env: { ...process.env, RELEASE_TAG: tag, GITHUB_RUN_ID: runId, GITHUB_RUN_ATTEMPT: attempt, WORKFLOW_SOURCE_SHA: workflowSha },
+    env: { ...process.env, RELEASE_TAG: tag, GITHUB_RUN_ID: runId, GITHUB_RUN_ATTEMPT: attempt },
   });
 }
 
-function addRecoveryTools(website) {
-  for (const file of RECOVERY_TOOL_FILES) commitFile(website, file, `workflow support from ${file}\n`);
+function createProtocolRelease(website, tag) {
+  commitFile(website, ".github/workflows/deploy.yml", "# recovery-marker-protocol: v1\non:\n  workflow_dispatch:\n");
   git(website, "push", "origin", "main");
-  return git(website, "rev-parse", "HEAD");
+  git(website, "tag", "-a", tag, "-m", `Website ${tag}`);
+  git(website, "push", "origin", tag);
+  return git(website, "rev-parse", `${tag}^{commit}`);
 }
 
 function runResolver(website, env) {
@@ -81,6 +83,14 @@ function runResolver(website, env) {
     cwd: website,
     encoding: "utf8",
     env: { ...process.env, ...env },
+  });
+}
+
+function runValidator(website, tag) {
+  return spawnSync(process.execPath, [validatorScript], {
+    cwd: website,
+    encoding: "utf8",
+    env: { ...process.env, RELEASE_TAG: tag },
   });
 }
 
@@ -134,26 +144,29 @@ describe("release-website command", () => {
     expect(sameShaResult.stderr).toMatch(/same SHA/);
   });
 
-  it("creates a unique recovery marker parented by the release with only current deployment tools overlaid", () => {
+  it("creates an empty unique recovery marker with the release's exact tree and parent", () => {
     const { websiteRemote, website } = setup();
-    git(website, "tag", "-a", "v0.1.0", "-m", "Website v0.1.0");
-    git(website, "push", "origin", "v0.1.0");
-    const release = git(website, "rev-parse", "v0.1.0^{commit}");
-    const workflowSha = addRecoveryTools(website);
+    const release = createProtocolRelease(website, "v0.1.0");
 
-    const result = runMarker(website, "v0.1.0", workflowSha);
+    const result = runMarker(website, "v0.1.0");
     expect(result.status, result.stderr).toBe(0);
     const branch = "v0.1.0-redeploy-42-1";
     const remoteBranch = execFileSync("git", ["ls-remote", websiteRemote, `refs/heads/${branch}`], { encoding: "utf8" });
     expect(remoteBranch).toContain(`refs/heads/${branch}`);
     git(website, "fetch", "origin", branch);
     const marker = git(website, "rev-parse", `origin/${branch}`);
-    expect(git(website, "diff", "--name-only", `${release}..${marker}`).split("\n").sort()).toEqual([...RECOVERY_TOOL_FILES].sort());
+    expect(marker).not.toBe(release);
+    expect(git(website, "rev-parse", `${marker}^{tree}`)).toBe(git(website, "rev-parse", `${release}^{tree}`));
     expect(git(website, "rev-parse", `${marker}^`)).toBe(release);
-    expect(git(website, "show", `${marker}:README.md`)).toBe(git(website, "show", `${release}:README.md`));
-    for (const file of RECOVERY_TOOL_FILES) {
-      expect(git(website, "rev-parse", `${marker}:${file}`)).toBe(git(website, "rev-parse", `${workflowSha}:${file}`));
-    }
+
+    const secondResult = runMarker(website, "v0.1.0", "43", "1");
+    expect(secondResult.status, secondResult.stderr).toBe(0);
+    const secondBranch = "v0.1.0-redeploy-43-1";
+    git(website, "fetch", "origin", secondBranch);
+    const secondMarker = git(website, "rev-parse", `origin/${secondBranch}`);
+    expect(secondMarker).not.toBe(marker);
+    expect(git(website, "rev-parse", `${secondMarker}^{tree}`)).toBe(git(website, "rev-parse", `${release}^{tree}`));
+    expect(git(website, "rev-parse", `${secondMarker}^`)).toBe(release);
   });
 
   it("refuses recovery of a tag older than the latest stable website release", () => {
@@ -162,17 +175,37 @@ describe("release-website command", () => {
     git(website, "tag", "-a", "v0.2.0", "-m", "Website v0.2.0");
     git(website, "push", "origin", "--tags");
 
-    const result = runMarker(website, "v0.1.0", "");
+    const result = runMarker(website, "v0.1.0");
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/only the latest stable release tag/);
   });
 
-  it("validates a dispatch marker by its event SHA while using current workflow scripts", () => {
-    const { website, websiteRemote } = setup();
-    git(website, "tag", "-a", "v0.1.0", "-m", "Website v0.1.0");
+  it("rejects recovery of the current legacy release but accepts the next same-tree protocol release", () => {
+    const { website } = setup();
+    commitFile(website, ".github/workflows/deploy.yml", "on:\n  workflow_dispatch:\n    inputs:\n      ref:\n        required: false\n");
+    git(website, "push", "origin", "main");
+    git(website, "tag", "-a", "v0.1.0", "-m", "legacy website release");
     git(website, "push", "origin", "v0.1.0");
-    const workflowSha = addRecoveryTools(website);
-    const markerResult = runMarker(website, "v0.1.0", workflowSha);
+
+    const legacy = runValidator(website, "v0.1.0");
+    expect(legacy.status).not.toBe(0);
+    expect(legacy.stderr).toMatch(/predates the same-tree recovery protocol/);
+    expect(runMarker(website, "v0.1.0").status).not.toBe(0);
+
+    git(website, "switch", "main");
+    commitFile(website, ".github/workflows/deploy.yml", "# recovery-marker-protocol: v1\non:\n  workflow_dispatch:\n");
+    git(website, "push", "origin", "main");
+    git(website, "tag", "-a", "v0.2.0", "-m", "same-tree recovery release");
+    git(website, "push", "origin", "v0.2.0");
+    const current = runValidator(website, "v0.2.0");
+    expect(current.status, current.stderr).toBe(0);
+    expect(current.stdout).toContain("is the latest stable website release");
+  });
+
+  it("validates a same-tree dispatch marker and makes a late old tag event target the newest release", () => {
+    const { website, websiteRemote } = setup();
+    const releaseCommit = createProtocolRelease(website, "v0.1.0");
+    const markerResult = runMarker(website, "v0.1.0");
     expect(markerResult.status, markerResult.stderr).toBe(0);
     const markerBranch = "v0.1.0-redeploy-42-1";
     const markerSha = git(website, "rev-parse", "HEAD");
@@ -183,30 +216,25 @@ describe("release-website command", () => {
       GITHUB_REF_TYPE: "branch",
       GITHUB_REF_NAME: markerBranch,
       INPUT_RELEASE_TAG: "v0.1.0",
-      INPUT_WORKFLOW_SOURCE_SHA: workflowSha,
     });
     expect(resolved.status, resolved.stderr).toBe(0);
     expect(resolved.stdout).toContain("should_deploy=true");
     expect(resolved.stdout).toContain("recovery=true");
 
-    const releaseCommit = git(website, "rev-parse", "v0.1.0^{commit}");
-    git(website, "switch", "main");
-    commitFile(website, "scripts/release-policy.mjs", "tampered support from a later workflow source\n");
-    git(website, "push", "origin", "main");
-    const mismatchedSource = runResolver(website, {
+    const staleTag = "v0.2.0";
+    git(website, "tag", "-a", staleTag, "-m", "Website v0.2.0", releaseCommit);
+    git(website, "push", "origin", staleTag);
+    const delayedRecovery = runResolver(website, {
       GITHUB_SHA: markerSha,
       GITHUB_EVENT_NAME: "workflow_dispatch",
       GITHUB_REF_TYPE: "branch",
       GITHUB_REF_NAME: markerBranch,
       INPUT_RELEASE_TAG: "v0.1.0",
-      INPUT_WORKFLOW_SOURCE_SHA: git(website, "rev-parse", "HEAD"),
     });
-    expect(mismatchedSource.status).not.toBe(0);
-    expect(mismatchedSource.stderr).toMatch(/does not match workflow source/);
+    expect(delayedRecovery.status, delayedRecovery.stderr).toBe(0);
+    expect(delayedRecovery.stdout).toContain("release_tag=v0.2.0");
+    expect(delayedRecovery.stdout).toContain("should_deploy=true");
 
-    const staleTag = "v0.2.0";
-    git(website, "tag", "-a", staleTag, "-m", "Website v0.2.0");
-    git(website, "push", "origin", staleTag);
     const stale = runResolver(website, {
       GITHUB_SHA: releaseCommit,
       GITHUB_EVENT_NAME: "push",
@@ -214,6 +242,7 @@ describe("release-website command", () => {
       GITHUB_REF_NAME: "v0.1.0",
     });
     expect(stale.status, stale.stderr).toBe(0);
-    expect(stale.stdout).toContain("should_deploy=false");
+    expect(stale.stdout).toContain("release_tag=v0.2.0");
+    expect(stale.stdout).toContain("should_deploy=true");
   });
 });

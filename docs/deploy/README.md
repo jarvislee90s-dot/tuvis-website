@@ -14,10 +14,10 @@ pnpm release:website v0.7.0
 
 网站 Actions 收到正式 tag 后：
 
-1. 校验 tag 是稳定 `vMAJOR.MINOR.PATCH`，并且仍是最新正式版本；旧 tag 晚到时跳过部署。
+1. 校验触发 tag 是稳定 `vMAJOR.MINOR.PATCH`，再解析当前最新正式版本；迟到的旧 tag 事件会转而构建最新 tag。
 2. 网站代码从该网站 tag 构建。
 3. 更新日志、用户手册和能力矩阵均从同名 Tuvis tag 拉取。任一 tag 或文件缺失、内容校验失败、网络请求失败都会使构建失败，不使用网站仓旧副本或 Tuvis `main` 回退。
-4. 发布工作流从开始到部署全程共用一个串行队列。每个任务在构建前、部署前都重新检查最新稳定 tag；过期任务跳过，避免旧构建覆盖线上。
+4. 先在部署 job 入队前校验 release 事件；实际发布 job 使用单 pending 并发锁。取得锁后重新解析最新稳定 tag，再从该 tag 构建。若构建期间出现新 tag，部署前复查会丢弃旧构建；被新任务替换的等待任务不会覆盖更新版本，因为取得锁后还会重新选择最新 tag。
 
 网站仓和 Tuvis 仓的正式 tag 必须一一对应。通常流程是先发布 Tuvis `vX.Y.Z`，再运行网站发布命令创建网站 `vX.Y.Z`。
 
@@ -25,9 +25,9 @@ pnpm release:website v0.7.0
 
 在网站仓 Actions 运行 **Redeploy latest website release**，输入最新稳定网站 tag。恢复只允许最新 tag；旧版本回滚应作为单独、明确的操作处理。
 
-恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 以正式 tag 为父提交，只覆盖当前 `main` 中的部署 workflow 与发布同步脚本；网站应用仍从正式 tag 构建。解析器会验证覆盖文件都来自本次恢复 workflow 对应的 `main` commit，其他网站文件必须保持正式 tag 内容。marker SHA 唯一，因此同一 tag 可触发新的 Pages 部署。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
+恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
 
-GitHub 仓库的 `github-pages` Environment 必须允许正式 `v*` tag 和 `v*-redeploy-*` marker branch 部署。恢复编排 workflow 不持有 Pages 发布锁，实际发布统一串行；队列最多保留 100 个等待项。GitHub 按进入等待队列的时间处理，不能保证与 tag 事件时间完全一致，因此每个任务都会在构建前和部署前重查最新 tag；较旧任务即使排在后面也会跳过，最新稳定版本最终覆盖旧版本。超过队列容量时新任务会被 GitHub 拒绝，需要重新触发最新 tag 的发布或恢复。
+GitHub 仓库的 `github-pages` Environment 必须允许正式 `v*` tag 和 `v*-redeploy-*` marker branch 部署。网站仓与 Tuvis 仓均配置了 active ruleset `Protect v* release tags`，匹配 `refs/tags/v*`，禁止更新与删除且没有 bypass actor；它不阻止创建新 release tag。旧辅助 tag `v0.6.0-deploy.1` 也在保护范围内，因此保留不删。
 
 ## 其他工作流
 
@@ -47,4 +47,4 @@ GitHub 仓库的 `github-pages` Environment 必须允许正式 `v*` tag 和 `v*-
 - **恢复后 marker 分支残留**：检查 `Redeploy latest website release` 的清理步骤，再手动删除 `v*-redeploy-*` 分支。
 - **Pages 拒绝部署**：确认 `github-pages` Environment 的分支/tag 规则包含 marker 分支；检查部署日志使用的 Pages build SHA 是否唯一。
 
-首次启用永久流程时，先合并本次 workflow 更新到网站 `main`，确认 `github-pages` Environment 规则包含 marker 分支，再通过后续正式 tag 验收发布链。验收通过后删除旧辅助 tag `v0.6.0-deploy.1`。
+首次启用永久流程时，先合并本次 workflow 更新到网站 `main`，确认 `github-pages` Environment 规则包含 marker 分支，再通过后续正式 tag 验收发布链。旧辅助 tag `v0.6.0-deploy.1` 会被稳定 tag 保护规则保留，版本解析器会忽略它。

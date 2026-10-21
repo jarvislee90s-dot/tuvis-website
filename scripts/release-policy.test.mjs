@@ -7,7 +7,7 @@ import {
   resolveDeployTarget,
   verifyRecoveryMarker,
   assertLatestRecoverableTag,
-  RECOVERY_TOOL_FILES,
+  assertRecoveryTagSupportsMarker,
 } from "./release-policy.mjs";
 
 describe("stable release tags", () => {
@@ -29,7 +29,7 @@ describe("stable release tags", () => {
 });
 
 describe("resolveDeployTarget", () => {
-  it("deploys a stable tag only when it is still the latest formal release", () => {
+  it("targets the latest release even when an older tag event arrives late", () => {
     expect(resolveDeployTarget({
       eventName: "push",
       refType: "tag",
@@ -42,7 +42,7 @@ describe("resolveDeployTarget", () => {
       refType: "tag",
       refName: "v0.6.0",
       latestTag: "v0.7.0",
-    })).toEqual({ releaseTag: "v0.6.0", shouldDeploy: false, recovery: false });
+    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: false });
   });
 
   it("rejects helper tags and non-tag push refs", () => {
@@ -69,6 +69,14 @@ describe("resolveDeployTarget", () => {
       latestTag: "v0.7.0",
     })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: true });
 
+    expect(resolveDeployTarget({
+      eventName: "workflow_dispatch",
+      refType: "branch",
+      refName: "v0.7.0-redeploy-42-1",
+      inputTag: "v0.7.0",
+      latestTag: "v0.8.0",
+    })).toEqual({ releaseTag: "v0.8.0", shouldDeploy: true, recovery: true });
+
     expect(() => resolveDeployTarget({
       eventName: "workflow_dispatch",
       refType: "branch",
@@ -76,18 +84,18 @@ describe("resolveDeployTarget", () => {
       inputTag: "v0.7.0",
       latestTag: "v0.7.0",
     })).toThrow(/marker branch/);
-    expect(() => resolveDeployTarget({
+    expect(resolveDeployTarget({
       eventName: "workflow_dispatch",
       refType: "branch",
       refName: "v0.6.0-redeploy-42-1",
       inputTag: "v0.6.0",
       latestTag: "v0.7.0",
-    })).toThrow(/latest stable release/);
+    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: true });
   });
 });
 
 describe("verifyRecoveryMarker", () => {
-  it("requires a release parent and limits marker tree changes to deployment support files", () => {
+  it("requires an identical release tree and the release commit as parent", () => {
     expect(() => verifyRecoveryMarker({
       markerTree: "tree-1",
       releaseTree: "tree-1",
@@ -100,18 +108,7 @@ describe("verifyRecoveryMarker", () => {
       releaseTree: "tree-1",
       markerParents: ["tag-commit"],
       releaseCommit: "tag-commit",
-      changedPaths: [".github/workflows/deploy.yml", "scripts/release-policy.mjs"],
-      allowedChangedPaths: RECOVERY_TOOL_FILES,
-    })).not.toThrow();
-
-    expect(() => verifyRecoveryMarker({
-      markerTree: "tree-2",
-      releaseTree: "tree-1",
-      markerParents: ["tag-commit"],
-      releaseCommit: "tag-commit",
-      changedPaths: ["src/App.tsx"],
-      allowedChangedPaths: RECOVERY_TOOL_FILES,
-    })).toThrow(/outside the recovery support allowlist/);
+    })).toThrow(/same tree/);
     expect(() => verifyRecoveryMarker({
       markerTree: "tree-1",
       releaseTree: "tree-1",
@@ -128,5 +125,14 @@ describe("assertLatestRecoverableTag", () => {
       .toThrow(/only the latest stable release tag/);
     expect(() => assertLatestRecoverableTag("v0.7.0-deploy.1", ["v0.7.0"]))
       .toThrow(/stable release tag/);
+  });
+
+  it("refuses legacy releases whose own deploy workflow lacks the marker-safe protocol", () => {
+    const markerWorkflow = "# recovery-marker-protocol: v1\non:\n  workflow_dispatch:\n";
+    expect(assertRecoveryTagSupportsMarker("v0.7.0", ["v0.6.0", "v0.7.0"], markerWorkflow)).toBe("v0.7.0");
+    expect(() => assertRecoveryTagSupportsMarker("v0.6.0", ["v0.6.0"], "on:\n  workflow_dispatch:\n"))
+      .toThrow(/predates the same-tree recovery protocol/);
+    expect(() => assertRecoveryTagSupportsMarker("v0.6.0", ["v0.6.0", "v0.7.0"], markerWorkflow))
+      .toThrow(/only the latest stable release tag/);
   });
 });

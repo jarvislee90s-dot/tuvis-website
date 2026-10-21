@@ -12,7 +12,7 @@ permissions:
   contents: write
   actions: write
 
-# 恢复编排不占用 Pages 部署锁；实际部署由 deploy.yml 的 job-level concurrency 串行化。
+# 恢复编排不占用 Pages 部署锁；实际发布由 deploy.yml 的单 pending job 锁串行化。
 concurrency:
   group: pages-recovery-orchestrator
   cancel-in-progress: false
@@ -29,12 +29,11 @@ jobs:
         run: node scripts/validate-recovery-request.mjs
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
-      - name: Create unique marker branch from the release tree
+      - name: Create empty marker commit with the exact release tree
         id: marker
         run: node scripts/create-redeploy-marker.mjs
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
-          WORKFLOW_SOURCE_SHA: ${{ github.workflow_sha }}
       - name: Dispatch the pinned release deployment
         id: dispatch
         run: |
@@ -42,7 +41,6 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
             -F "ref=${MARKER_BRANCH}" \
             -F "inputs[release_tag]=${RELEASE_TAG}" \
-            -F "inputs[workflow_source_sha]=${WORKFLOW_SOURCE_SHA}" \
             -F "return_run_details=true")
           deploy_run_id=$(jq -r '.workflow_run_id // empty' <<< "$response")
           if [[ -z "$deploy_run_id" ]]; then
@@ -54,7 +52,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MARKER_BRANCH: ${{ steps.marker.outputs.branch }}
           RELEASE_TAG: ${{ inputs.release_tag }}
-          WORKFLOW_SOURCE_SHA: ${{ github.workflow_sha }}
       - name: Wait for Pages deployment
         run: gh run watch "$DEPLOY_RUN_ID" --exit-status
         env:
