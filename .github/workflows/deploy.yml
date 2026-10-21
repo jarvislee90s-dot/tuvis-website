@@ -1,87 +1,132 @@
-# 网站仓部署（P15 裁决：主线随便推，发版才上线）。
-#
-# 部署触发（四条线，部署的「代码」都钉在最新 v* tag；「文档」构建时从 tuvis 主仓实时拉取）：
-#   1. push tag（v*）        —— 正式发版：打完 tag 推上去即部署该版本
-#   2. schedule 每日一次（北京 03:53）—— 兜底：用「最新 tag 的代码 + 主仓最新文档」重建，文档保持新鲜
-#   3. repository_dispatch   —— tuvis 主仓 release / docs 变更实时触发（同上，代码仍钉最新 tag）
-#   4. workflow_dispatch     —— 手动按钮：可选输入 ref，留空 = 最新 v* tag
-# push main 只存档、不部署（WIP 随便推）。
+# 只发布正式稳定 tag。网站源码与文档都固定在同版本的两个仓库 tag 上。
 name: Deploy to GitHub Pages
 
 on:
   push:
     tags: ["v*"]
-  schedule:
-    - cron: "53 19 * * *" # 每日一次（北京 03:53）：最新 tag 代码 + 主仓最新文档重建
-  repository_dispatch:
-    types: [tuvis-docs-update]
+  # 内部恢复入口：只接受由 redeploy-latest.yml 创建的 v*-redeploy-* marker branch。
   workflow_dispatch:
     inputs:
-      ref:
-        description: "要部署的 tag 或分支（留空 = 最新 v* tag）"
-        required: false
-        default: ""
+      release_tag:
+        description: "待恢复的最新正式网站 tag（仅由恢复 workflow 调用）"
+        required: true
+        type: string
+      workflow_source_sha:
+        description: "恢复工具来源 commit（仅由恢复 workflow 调用）"
+        required: true
+        type: string
+
+# 将整条发布流程串行化并保留等待队列；每个 run 在开始构建和实际部署前检查是否仍是最新 tag。
+# 不依赖 GitHub 并发队列的事件顺序，旧 tag 即使晚入队也只会跳过，不会挤掉最新版本。
+concurrency:
+  group: github-pages-production
+  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  build:
+  resolve:
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.target.outputs.release_tag }}
+      should_deploy: ${{ steps.target.outputs.should_deploy }}
+      recovery: ${{ steps.target.outputs.recovery }}
+      workflow_tools_sha: ${{ steps.target.outputs.workflow_tools_sha }}
     steps:
-      # 解析部署目标：tag push 用该 tag；schedule/dispatch/手动 → 最新 v* tag（无 tag 兜底 main）
-      - name: Resolve deploy ref
-        id: resolve
-        run: |
-          EVENT="${{ github.event_name }}"
-          INPUT_REF="${{ github.event.inputs.ref }}"
-          if [ "$EVENT" = "push" ]; then
-            REF="${{ github.ref_name }}"
-          elif [ -n "$INPUT_REF" ]; then
-            REF="$INPUT_REF"
-          else
-            # 注意：tags REST API 按字母序返回，v0.5.10 会排在 v0.5.7 前——用 git ls-remote 的版本序取真最新
-            TAG=$(git ls-remote --tags --refs --sort="-v:refname" "https://github.com/${{ github.repository }}.git" "v*" | head -n1 | sed "s|.*refs/tags/||")
-            if [ -z "$TAG" ]; then
-              echo "::error::no v* tag found"
-              exit 1
-            fi
-            REF="$TAG"
-          fi
-          echo "deploying ref: $REF"
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+      # 使用本次 workflow 所在 commit 的校验脚本；marker 恢复 tag 可能早于这些脚本。
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.resolve.outputs.ref }}
-      - uses: pnpm/action-setup@v4   # 版本取自 package.json 的 packageManager 字段
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+      - name: Fetch the event ref for immutable SHA checks
+        run: git fetch origin "$GITHUB_REF" --no-tags --depth=2
+      - name: Validate and resolve release target
+        id: target
+        run: node scripts/resolve-deploy-target.mjs
+        env:
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+          INPUT_WORKFLOW_SOURCE_SHA: ${{ inputs.workflow_source_sha }}
+
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.workflow_tools_sha }}
+          path: workflow-tools
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.release_tag }}
+          path: site
+          fetch-depth: 0
+      - name: Checkout matching Tuvis content tag
+        run: |
+          git clone --depth=1 --single-branch --branch "$TUVIS_RELEASE_REF" \
+            https://github.com/jarvislee90s-dot/tuvis.git ../tuvis-source
+          expected=$(git -C ../tuvis-source rev-parse "${TUVIS_RELEASE_REF}^{commit}")
+          actual=$(git -C ../tuvis-source rev-parse HEAD)
+          if [[ "$expected" != "$actual" ]]; then
+            echo "::error::Tuvis checkout does not match $TUVIS_RELEASE_REF"
+            exit 1
+          fi
+        working-directory: site
+        env:
+          TUVIS_RELEASE_REF: ${{ needs.resolve.outputs.release_tag }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.20.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      # 测试先行把门：构建会从主仓实时拉 CHANGELOG 重新解析进产物，解析器回归必须挡在上线前
+        working-directory: site
       - run: pnpm test
-      # GITHUB_TOKEN 传给同步脚本：提升 api.github.com 速率上限（公开仓拉取本可匿名，兜底更稳）
+        working-directory: site
+      # 旧正式 tag 可能不包含本次新增的严格同步器；只在临时 build workspace 覆盖同步工具，
+      # 网站应用文件仍全部来自正式 tag。普通新 tag 的 workflow_sha 与 release tag 相同。
+      - name: Apply pinned release content synchronizers
+        run: cp ../workflow-tools/scripts/{split-changelog.mjs,sync-user-manual.mjs,release-policy.mjs} scripts/
+        working-directory: site
       - run: pnpm build
+        working-directory: site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TUVIS_RELEASE_REF: ${{ needs.resolve.outputs.release_tag }}
+          TUVIS_RELEASE_SOURCE_DIR: ../tuvis-source
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site/dist
 
   deploy:
-    needs: build
+    needs: [resolve, build]
+    if: needs.resolve.outputs.should_deploy == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.workflow_tools_sha }}
+          fetch-depth: 0
+      # 即使本次构建期间到达新 tag，也必须在发布前再次核对，避免旧构建覆盖新版。
+      - name: Recheck latest release before deployment
+        id: latest
+        run: node scripts/assert-latest-release.mjs "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ needs.resolve.outputs.release_tag }}
       - id: deployment
+        if: steps.latest.outputs.is_latest == 'true'
         uses: actions/deploy-pages@v4

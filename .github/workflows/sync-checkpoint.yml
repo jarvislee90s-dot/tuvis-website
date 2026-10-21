@@ -27,7 +27,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          LATEST=$(git ls-remote --tags --refs --sort="-v:refname" "https://github.com/${{ github.repository }}.git" "v*" | head -n1 | sed "s|.*refs/tags/||")
+          LATEST=$(node scripts/latest-stable-tag.mjs)
           git add public/manual src/content
           if git diff --cached --quiet; then
             echo "::notice::no changes since last checkpoint"

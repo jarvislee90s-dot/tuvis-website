@@ -1,0 +1,68 @@
+name: Redeploy latest website release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "只允许重发最新稳定网站 tag，例如 v0.6.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+# 恢复编排不占用 Pages 部署锁；实际部署由 deploy.yml 的 job-level concurrency 串行化。
+concurrency:
+  group: pages-recovery-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+      - name: Validate requested release
+        run: node scripts/validate-recovery-request.mjs
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+      - name: Create unique marker branch from the release tree
+        id: marker
+        run: node scripts/create-redeploy-marker.mjs
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          WORKFLOW_SOURCE_SHA: ${{ github.workflow_sha }}
+      - name: Dispatch the pinned release deployment
+        id: dispatch
+        run: |
+          response=$(gh api --method POST --header "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/dispatches" \
+            -F "ref=${MARKER_BRANCH}" \
+            -F "inputs[release_tag]=${RELEASE_TAG}" \
+            -F "inputs[workflow_source_sha]=${WORKFLOW_SOURCE_SHA}" \
+            -F "return_run_details=true")
+          deploy_run_id=$(jq -r '.workflow_run_id // empty' <<< "$response")
+          if [[ -z "$deploy_run_id" ]]; then
+            echo "::error::GitHub did not return the deployment workflow run id"
+            exit 1
+          fi
+          echo "deploy_run_id=$deploy_run_id" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MARKER_BRANCH: ${{ steps.marker.outputs.branch }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          WORKFLOW_SOURCE_SHA: ${{ github.workflow_sha }}
+      - name: Wait for Pages deployment
+        run: gh run watch "$DEPLOY_RUN_ID" --exit-status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ steps.dispatch.outputs.deploy_run_id }}
+      - name: Delete marker branch
+        if: always() && steps.marker.outputs.branch != ''
+        run: gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/git/refs/heads/${MARKER_BRANCH}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MARKER_BRANCH: ${{ steps.marker.outputs.branch }}
