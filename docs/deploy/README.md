@@ -28,7 +28,7 @@ pnpm release:website v0.7.0
 ## 托管配置（Cloudflare Pages，一次性）
 
 - **部署 secrets**：Cloudflare 控制台 → My Profile → API Tokens → Create Token，自定义权限一行 `Account | Cloudflare Pages | Edit`；然后到网站仓 → Settings → Secrets and variables → Actions，存入 `CLOUDFLARE_API_TOKEN` 与 `CLOUDFLARE_ACCOUNT_ID`（后者在控制台首页右侧复制）。
-- **自定义域名**：首个正式 tag 的部署会自动创建 Pages 项目 `tuvis`；随后在 Cloudflare 控制台 Workers & Pages → `tuvis` → Custom domains 绑定 `tuvis.app`（域名与项目同账号，DNS 自动配置）。
+- **自定义域名**：Pages 项目 `tuvis` 由部署 workflow 的 ensure 步骤幂等创建（CI 下 wrangler 不会自动建项目；已存在则跳过）；随后在 Cloudflare 控制台 Workers & Pages → `tuvis` → Custom domains 绑定 `tuvis.app`（域名与项目同账号，DNS 自动配置）。
 - **部署的是哪个包？** 你不需要手动打包：GitHub Actions 云端执行 `pnpm build`（内容钉网站 + Tuvis 双 tag）产出 `site/dist`，经 wrangler 直传 Cloudflare Pages；本地 build 仅作预览/验证。
 
 ## 同版本人工恢复

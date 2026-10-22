@@ -2,7 +2,8 @@
 # 只发布正式稳定 tag。网站源码与文档都固定在同版本的两个仓库 tag 上。
 # 托管自 2026-10 起为 Cloudflare Pages（自定义域名 tuvis.app）：构建流程不变，
 # 仅发布目标由 GitHub Pages 换成 wrangler 直传（secrets：CLOUDFLARE_API_TOKEN /
-# CLOUDFLARE_ACCOUNT_ID；首个 tag 自动建 Pages 项目 tuvis，域名在项目 Custom domains 绑定）。
+# CLOUDFLARE_ACCOUNT_ID；CI 下 wrangler 不自动建项目，由 ensure 步骤幂等创建
+# Pages 项目 tuvis，域名在项目 Custom domains 绑定）。
 name: Deploy to Cloudflare Pages
 
 on:
@@ -153,6 +154,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECONCILE_TAG: ${{ steps.latest.outputs.latest_tag }}
+      # wrangler 在 CI（非交互、token 认证）下不会自动建项目：先幂等确保项目存在
+      - name: Ensure Cloudflare Pages project exists
+        if: steps.locked_target.outputs.should_deploy == 'true' && steps.latest.outputs.is_latest == 'true'
+        run: |
+          npx --yes wrangler@3.90.0 pages project create tuvis --production-branch=main \
+            || echo "::notice::Pages project tuvis already exists"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy to Cloudflare Pages
         if: steps.locked_target.outputs.should_deploy == 'true' && steps.latest.outputs.is_latest == 'true'
         uses: cloudflare/wrangler-action@v3
