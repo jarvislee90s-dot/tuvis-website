@@ -18,9 +18,18 @@ describe("release workflow policy", () => {
     expect(deploy).toMatch(/deploy:\n[\s\S]*?concurrency:\n      group: github-pages-production\n      cancel-in-progress: false/);
     expect(deploy).not.toContain("queue: max");
     expect((deploy.match(/resolve-deploy-target\.mjs/g) ?? []).length).toBe(2);
+    expect((deploy.match(/dispatch-latest-redeploy\.mjs/g) ?? []).length).toBe(3);
     expect(deploy).toContain("TUVIS_RELEASE_SOURCE_DIR: ../tuvis-source");
     expect(deploy).toContain("recovery-marker-protocol: v1");
+    expect(deploy).toContain("reconcile_tag: ${{ steps.target.outputs.reconcile_tag }}");
+    expect(deploy).toContain("Queue a same-tree deployment for a newer tag");
+    expect(deploy).toContain("Queue the latest tag if this event became stale while waiting");
+    expect(deploy).toContain("Queue a same-tree deployment if a newer tag arrived during the build");
     expect(deploy).toContain("Recheck latest release before deployment");
+    expect(deploy).toContain('run: node scripts/assert-latest-release.mjs "$RELEASE_TAG"');
+    expect(deploy).toMatch(/Fetch the event ref for lock-time validation[\s\S]*?working-directory: event-tools/);
+    expect(deploy).toMatch(/Resolve the latest release after acquiring the deployment lock[\s\S]*?working-directory: event-tools/);
+    expect(deploy).toMatch(/Recheck latest release before deployment[\s\S]*?working-directory: workflow-tools/);
   });
 
   it("requests and waits for the exact dispatched workflow run, then always cleans its marker", () => {

@@ -43,7 +43,13 @@ export function resolveDeployTarget({ eventName, refType, refName, inputTag = ""
   if (eventName === "push") {
     if (refType !== "tag") throw new Error("deployment push must be a tag push");
     if (!parseStableTag(refName)) throw new Error("deployment requires a stable release tag (vMAJOR.MINOR.PATCH)");
-    return { releaseTag: latestTag ?? refName, shouldDeploy: true, recovery: false };
+    const reconcileTag = latestTag && compareStableTags(latestTag, refName) > 0 ? latestTag : null;
+    return {
+      releaseTag: refName,
+      shouldDeploy: reconcileTag === null,
+      recovery: false,
+      reconcileTag,
+    };
   }
 
   if (eventName === "workflow_dispatch") {
@@ -55,7 +61,14 @@ export function resolveDeployTarget({ eventName, refType, refName, inputTag = ""
       throw new Error("manual redeploy requires a marker branch for the selected release tag");
     }
     if (!parseStableTag(inputTag)) throw new Error("recovery requires an exact stable release tag (vMAJOR.MINOR.PATCH)");
-    return { releaseTag: latestTag ?? inputTag, shouldDeploy: true, recovery: true };
+    if (!latestTag) throw new Error("there is no stable release available for recovery");
+    const reconcileTag = compareStableTags(latestTag, inputTag) > 0 ? latestTag : null;
+    return {
+      releaseTag: inputTag,
+      shouldDeploy: reconcileTag === null,
+      recovery: true,
+      reconcileTag,
+    };
   }
 
   throw new Error(`unsupported deployment event: ${eventName}`);

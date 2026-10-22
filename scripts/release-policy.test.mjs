@@ -29,20 +29,20 @@ describe("stable release tags", () => {
 });
 
 describe("resolveDeployTarget", () => {
-  it("targets the latest release even when an older tag event arrives late", () => {
+  it("keeps each tag event bound to its own release and signals reconciliation for stale tags", () => {
     expect(resolveDeployTarget({
       eventName: "push",
       refType: "tag",
       refName: "v0.7.0",
       latestTag: "v0.7.0",
-    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: false });
+    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: false, reconcileTag: null });
 
     expect(resolveDeployTarget({
       eventName: "push",
       refType: "tag",
       refName: "v0.6.0",
       latestTag: "v0.7.0",
-    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: false });
+    })).toEqual({ releaseTag: "v0.6.0", shouldDeploy: false, recovery: false, reconcileTag: "v0.7.0" });
   });
 
   it("rejects helper tags and non-tag push refs", () => {
@@ -60,14 +60,14 @@ describe("resolveDeployTarget", () => {
     })).toThrow(/tag push/);
   });
 
-  it("allows recovery only from a marker branch for the latest stable tag", () => {
+  it("keeps marker recovery bound to its release and signals reconciliation if it becomes stale", () => {
     expect(resolveDeployTarget({
       eventName: "workflow_dispatch",
       refType: "branch",
       refName: "v0.7.0-redeploy-42-1",
       inputTag: "v0.7.0",
       latestTag: "v0.7.0",
-    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: true });
+    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: true, reconcileTag: null });
 
     expect(resolveDeployTarget({
       eventName: "workflow_dispatch",
@@ -75,7 +75,7 @@ describe("resolveDeployTarget", () => {
       refName: "v0.7.0-redeploy-42-1",
       inputTag: "v0.7.0",
       latestTag: "v0.8.0",
-    })).toEqual({ releaseTag: "v0.8.0", shouldDeploy: true, recovery: true });
+    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: false, recovery: true, reconcileTag: "v0.8.0" });
 
     expect(() => resolveDeployTarget({
       eventName: "workflow_dispatch",
@@ -90,7 +90,7 @@ describe("resolveDeployTarget", () => {
       refName: "v0.6.0-redeploy-42-1",
       inputTag: "v0.6.0",
       latestTag: "v0.7.0",
-    })).toEqual({ releaseTag: "v0.7.0", shouldDeploy: true, recovery: true });
+    })).toEqual({ releaseTag: "v0.6.0", shouldDeploy: false, recovery: true, reconcileTag: "v0.7.0" });
   });
 });
 

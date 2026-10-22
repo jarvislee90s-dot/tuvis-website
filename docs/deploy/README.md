@@ -14,10 +14,10 @@ pnpm release:website v0.7.0
 
 网站 Actions 收到正式 tag 后：
 
-1. 校验触发 tag 是稳定 `vMAJOR.MINOR.PATCH`，再解析当前最新正式版本；迟到的旧 tag 事件会转而构建最新 tag。
-2. 网站代码从该网站 tag 构建。
+1. 校验触发 tag 是稳定 `vMAJOR.MINOR.PATCH`，并确认事件 SHA 与 tag 一致；构建仍绑定触发的 tag。
+2. 若旧 tag 事件迟到，或新 tag 在排队／构建期间出现，workflow 通过最新正式 tag 的同树 marker 重新排队，不会在旧事件 SHA 下构建别的 tag 内容。
 3. 更新日志、用户手册和能力矩阵均从同名 Tuvis tag 拉取。任一 tag 或文件缺失、内容校验失败、网络请求失败都会使构建失败，不使用网站仓旧副本或 Tuvis `main` 回退。
-4. 先在部署 job 入队前校验 release 事件；实际发布 job 使用单 pending 并发锁。取得锁后重新解析最新稳定 tag，再从该 tag 构建。若构建期间出现新 tag，部署前复查会丢弃旧构建；被新任务替换的等待任务不会覆盖更新版本，因为取得锁后还会重新选择最新 tag。
+4. 先在部署 job 入队前校验 release 事件；实际发布 job 使用单 pending 并发锁。取得锁后重新核对 tag 是否仍为最新。若该事件已过期则只排队最新 tag 的同树 marker；构建期间若 tag 再前进，部署前复查会丢弃旧 artifact 并重新排队最新 marker。
 
 网站仓和 Tuvis 仓的正式 tag 必须一一对应。通常流程是先发布 Tuvis `vX.Y.Z`，再运行网站发布命令创建网站 `vX.Y.Z`。
 

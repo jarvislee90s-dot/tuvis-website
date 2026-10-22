@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,10 +9,16 @@ const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "release-
 const markerScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "create-redeploy-marker.mjs");
 const resolverScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "resolve-deploy-target.mjs");
 const validatorScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "validate-recovery-request.mjs");
+const assertLatestScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "assert-latest-release.mjs");
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const roots = [];
 
 function git(cwd, ...args) {
-  return execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" }).trim();
+  try {
+    return execFileSync("git", args, { cwd, encoding: "utf8", stdio: "pipe" }).trim();
+  } catch (error) {
+    throw new Error(JSON.stringify({ status: error.status, stderr: error.stderr?.toString(), stdout: error.stdout?.toString(), message: error.message }));
+  }
 }
 
 function initRepo(cwd, bare = false) {
@@ -71,7 +77,17 @@ function runMarker(website, tag, runId = "42", attempt = "1") {
 }
 
 function createProtocolRelease(website, tag) {
-  commitFile(website, ".github/workflows/deploy.yml", "# recovery-marker-protocol: v1\non:\n  workflow_dispatch:\n");
+  for (const file of [
+    ".github/workflows/deploy.yml",
+    ".github/workflows/redeploy-latest.yml",
+    "scripts/release-policy.mjs",
+    "scripts/release-website.mjs",
+    "scripts/resolve-deploy-target.mjs",
+    "scripts/assert-latest-release.mjs",
+    "scripts/dispatch-latest-redeploy.mjs",
+  ]) {
+    commitFile(website, file, readFileSync(path.join(projectRoot, file), "utf8"));
+  }
   git(website, "push", "origin", "main");
   git(website, "tag", "-a", tag, "-m", `Website ${tag}`);
   git(website, "push", "origin", tag);
@@ -202,8 +218,8 @@ describe("release-website command", () => {
     expect(current.stdout).toContain("is the latest stable website release");
   });
 
-  it("validates a same-tree dispatch marker and makes a late old tag event target the newest release", () => {
-    const { website, websiteRemote } = setup();
+  it("keeps tag builds exact, reconciles stale events, and runs scripts from their nested checkouts", () => {
+    const { root, website, websiteRemote } = setup();
     const releaseCommit = createProtocolRelease(website, "v0.1.0");
     const markerResult = runMarker(website, "v0.1.0");
     expect(markerResult.status, markerResult.stderr).toBe(0);
@@ -221,9 +237,65 @@ describe("release-website command", () => {
     expect(resolved.stdout).toContain("should_deploy=true");
     expect(resolved.stdout).toContain("recovery=true");
 
+    const workspace = path.join(root, "runner-workspace");
+    mkdirSync(workspace, { recursive: true });
+    const eventTools = path.join(workspace, "event-tools");
+    const workflowTools = path.join(workspace, "workflow-tools");
+    const site = path.join(workspace, "site");
+    git(root, "clone", websiteRemote, eventTools);
+    git(root, "clone", websiteRemote, workflowTools);
+    git(root, "clone", websiteRemote, site);
+    git(eventTools, "fetch", "origin", markerBranch);
+    git(eventTools, "checkout", "--detach", markerSha);
+    git(workflowTools, "checkout", "--detach", "v0.1.0");
+    git(site, "checkout", "--detach", "v0.1.0");
+
+    const runnerEnv = {
+      ...process.env,
+      GITHUB_SHA: markerSha,
+      GITHUB_EVENT_NAME: "workflow_dispatch",
+      GITHUB_REF_TYPE: "branch",
+      GITHUB_REF_NAME: markerBranch,
+      INPUT_RELEASE_TAG: "v0.1.0",
+    };
+    const wrongCwd = spawnSync(process.execPath, [path.join(eventTools, "scripts/resolve-deploy-target.mjs")], {
+      cwd: workspace,
+      encoding: "utf8",
+      env: runnerEnv,
+    });
+    expect(wrongCwd.status).not.toBe(0);
+    expect(wrongCwd.stderr).toMatch(/not .*git repository/);
+
+    const nestedResolver = spawnSync(process.execPath, [path.join(eventTools, "scripts/resolve-deploy-target.mjs")], {
+      cwd: eventTools,
+      encoding: "utf8",
+      env: runnerEnv,
+    });
+    expect(nestedResolver.status, nestedResolver.stderr).toBe(0);
+    expect(nestedResolver.stdout).toContain("should_deploy=true");
+
+    const nestedLatestCheck = spawnSync(process.execPath, [path.join(workflowTools, "scripts/assert-latest-release.mjs"), "v0.1.0"], {
+      cwd: workflowTools,
+      encoding: "utf8",
+      env: process.env,
+    });
+    expect(nestedLatestCheck.status, nestedLatestCheck.stderr).toBe(0);
+    expect(nestedLatestCheck.stdout).toContain("is_latest=true");
+    expect(nestedLatestCheck.stdout).toContain("latest_tag=v0.1.0");
+    expect(git(site, "rev-parse", "HEAD")).toBe(git(site, "rev-parse", "v0.1.0^{commit}"));
+
     const staleTag = "v0.2.0";
     git(website, "tag", "-a", staleTag, "-m", "Website v0.2.0", releaseCommit);
     git(website, "push", "origin", staleTag);
+    const finalRecheck = spawnSync(process.execPath, [assertLatestScript, "v0.1.0"], {
+      cwd: workflowTools,
+      encoding: "utf8",
+      env: process.env,
+    });
+    expect(finalRecheck.status, finalRecheck.stderr).toBe(0);
+    expect(finalRecheck.stdout).toContain("is_latest=false");
+    expect(finalRecheck.stdout).toContain("latest_tag=v0.2.0");
+
     const delayedRecovery = runResolver(website, {
       GITHUB_SHA: markerSha,
       GITHUB_EVENT_NAME: "workflow_dispatch",
@@ -232,8 +304,24 @@ describe("release-website command", () => {
       INPUT_RELEASE_TAG: "v0.1.0",
     });
     expect(delayedRecovery.status, delayedRecovery.stderr).toBe(0);
-    expect(delayedRecovery.stdout).toContain("release_tag=v0.2.0");
-    expect(delayedRecovery.stdout).toContain("should_deploy=true");
+    expect(delayedRecovery.stdout).toContain("release_tag=v0.1.0");
+    expect(delayedRecovery.stdout).toContain("should_deploy=false");
+    expect(delayedRecovery.stdout).toContain("reconcile_tag=v0.2.0");
+
+    const reconcileMarker = runMarker(website, "v0.2.0", "44", "1");
+    expect(reconcileMarker.status, reconcileMarker.stderr).toBe(0);
+    const reconcileBranch = "v0.2.0-redeploy-44-1";
+    const reconcileSha = git(website, "rev-parse", "HEAD");
+    const reconciled = runResolver(website, {
+      GITHUB_SHA: reconcileSha,
+      GITHUB_EVENT_NAME: "workflow_dispatch",
+      GITHUB_REF_TYPE: "branch",
+      GITHUB_REF_NAME: reconcileBranch,
+      INPUT_RELEASE_TAG: "v0.2.0",
+    });
+    expect(reconciled.status, reconciled.stderr).toBe(0);
+    expect(reconciled.stdout).toContain("release_tag=v0.2.0");
+    expect(reconciled.stdout).toContain("should_deploy=true");
 
     const stale = runResolver(website, {
       GITHUB_SHA: releaseCommit,
@@ -242,7 +330,8 @@ describe("release-website command", () => {
       GITHUB_REF_NAME: "v0.1.0",
     });
     expect(stale.status, stale.stderr).toBe(0);
-    expect(stale.stdout).toContain("release_tag=v0.2.0");
-    expect(stale.stdout).toContain("should_deploy=true");
+    expect(stale.stdout).toContain("release_tag=v0.1.0");
+    expect(stale.stdout).toContain("should_deploy=false");
+    expect(stale.stdout).toContain("reconcile_tag=v0.2.0");
   });
 });

@@ -17,13 +17,17 @@ permissions:
   contents: read
 
 jobs:
-  # 快速校验放在并发队列前。较旧的 push 事件会解析为当前最新稳定 tag。
+  # 快速校验放在并发队列前。旧事件不改建另一 tag 的内容，改为排队发布当前最新 tag。
   resolve:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     outputs:
       release_tag: ${{ steps.target.outputs.release_tag }}
       should_deploy: ${{ steps.target.outputs.should_deploy }}
       recovery: ${{ steps.target.outputs.recovery }}
+      reconcile_tag: ${{ steps.target.outputs.reconcile_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,9 +40,16 @@ jobs:
         run: node scripts/resolve-deploy-target.mjs
         env:
           INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+      - name: Queue a same-tree deployment for a newer tag
+        if: steps.target.outputs.reconcile_tag != ''
+        run: node scripts/dispatch-latest-redeploy.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECONCILE_TAG: ${{ steps.target.outputs.reconcile_tag }}
+          RECONCILE_WAIT: "true"
 
   # Single pending slot: a newer deployment replaces an older pending one.
-  # Resolve again after acquiring the lock so a delayed old run always builds latest.
+  # A delayed old run queues a same-tree marker for latest; it never builds another tag under this event SHA.
   deploy:
     needs: resolve
     if: needs.resolve.outputs.should_deploy == 'true'
@@ -48,6 +59,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
+      actions: write
       pages: write
       id-token: write
     environment:
@@ -61,22 +73,35 @@ jobs:
           fetch-depth: 0
       - name: Fetch the event ref for lock-time validation
         run: git fetch origin "$GITHUB_REF" --no-tags --depth=2
+        working-directory: event-tools
       - name: Resolve the latest release after acquiring the deployment lock
         id: locked_target
-        run: node event-tools/scripts/resolve-deploy-target.mjs
+        run: node scripts/resolve-deploy-target.mjs
+        working-directory: event-tools
         env:
           INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+      - name: Queue the latest tag if this event became stale while waiting
+        if: steps.locked_target.outputs.reconcile_tag != ''
+        run: node scripts/dispatch-latest-redeploy.mjs
+        working-directory: event-tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECONCILE_TAG: ${{ steps.locked_target.outputs.reconcile_tag }}
+          RECONCILE_WAIT: "false"
       - uses: actions/checkout@v4
+        if: steps.locked_target.outputs.should_deploy == 'true'
         with:
           ref: ${{ steps.locked_target.outputs.release_tag }}
           path: workflow-tools
           fetch-depth: 0
       - uses: actions/checkout@v4
+        if: steps.locked_target.outputs.should_deploy == 'true'
         with:
           ref: ${{ steps.locked_target.outputs.release_tag }}
           path: site
           fetch-depth: 0
       - name: Checkout matching Tuvis content tag
+        if: steps.locked_target.outputs.should_deploy == 'true'
         run: |
           git clone --depth=1 --single-branch --branch "$TUVIS_RELEASE_REF" \
             https://github.com/jarvislee90s-dot/tuvis.git ../tuvis-source
@@ -90,37 +115,55 @@ jobs:
         env:
           TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.release_tag }}
       - uses: pnpm/action-setup@v4
+        if: steps.locked_target.outputs.should_deploy == 'true'
         with:
           version: 10.20.0
       - uses: actions/setup-node@v4
+        if: steps.locked_target.outputs.should_deploy == 'true'
         with:
           node-version: 22
           cache: pnpm
           cache-dependency-path: site/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+        if: steps.locked_target.outputs.should_deploy == 'true'
         working-directory: site
       - run: pnpm test
+        if: steps.locked_target.outputs.should_deploy == 'true'
         working-directory: site
       # 工作流与构建脚本来自本次目标 release；网站应用文件也来自同一 tag。
       - name: Apply pinned release content synchronizers
+        if: steps.locked_target.outputs.should_deploy == 'true'
         run: cp ../workflow-tools/scripts/{split-changelog.mjs,sync-user-manual.mjs,release-policy.mjs} scripts/
         working-directory: site
       - run: pnpm build
+        if: steps.locked_target.outputs.should_deploy == 'true'
         working-directory: site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.release_tag }}
           TUVIS_RELEASE_SOURCE_DIR: ../tuvis-source
       - uses: actions/configure-pages@v5
+        if: steps.locked_target.outputs.should_deploy == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.locked_target.outputs.should_deploy == 'true'
         with:
           path: site/dist
       # A tag arriving during the build invalidates this artifact; its run will take the lock next.
       - name: Recheck latest release before deployment
+        if: steps.locked_target.outputs.should_deploy == 'true'
         id: latest
-        run: node workflow-tools/scripts/assert-latest-release.mjs "$RELEASE_TAG"
+        run: node scripts/assert-latest-release.mjs "$RELEASE_TAG"
+        working-directory: workflow-tools
         env:
           RELEASE_TAG: ${{ steps.locked_target.outputs.release_tag }}
+      - name: Queue a same-tree deployment if a newer tag arrived during the build
+        if: steps.latest.outputs.is_latest == 'false' && steps.latest.outputs.latest_tag != ''
+        run: node scripts/dispatch-latest-redeploy.mjs
+        working-directory: workflow-tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECONCILE_TAG: ${{ steps.latest.outputs.latest_tag }}
+          RECONCILE_WAIT: "false"
       - id: deployment
-        if: steps.latest.outputs.is_latest == 'true'
+        if: steps.locked_target.outputs.should_deploy == 'true' && steps.latest.outputs.is_latest == 'true'
         uses: actions/deploy-pages@v4

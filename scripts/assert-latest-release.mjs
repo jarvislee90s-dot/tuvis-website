@@ -9,4 +9,8 @@ const isLatest = isLatestStableTag(tag, tags);
 
 if (!isLatest) console.log(`::notice::skipping stale release ${tag}; latest is ${latestTag ?? "none"}`);
 console.log(`is_latest=${String(isLatest)}`);
-if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `is_latest=${String(isLatest)}\n`);
+console.log(`latest_tag=${latestTag ?? ""}`);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `is_latest=${String(isLatest)}\n`);
+  appendFileSync(process.env.GITHUB_OUTPUT, `latest_tag=${latestTag ?? ""}\n`);
+}
