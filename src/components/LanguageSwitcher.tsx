@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useParams } from "react-router";
 import { LANGS, type Lang } from "@/i18n";
+import { rememberManualLang } from "@/utils/langRedirect";
 
 export function LanguageSwitcher() {
   const { lang } = useParams();
@@ -14,7 +15,11 @@ export function LanguageSwitcher() {
     <button
       aria-label={`switch language to ${other === "zh" ? "Chinese (ZH)" : "English (EN)"}`}
       className="rounded-lg border border-line px-2 py-1 text-xs uppercase hover:opacity-70"
-      onClick={() => nav(loc.pathname.replace(`/${cur}`, `/${other}`) + loc.search)}
+      onClick={() => {
+        // W2：只有手动切换写持久偏好（localStorage tuvis-lang-pref）；自动检测结果永不落盘
+        rememberManualLang(other);
+        nav(loc.pathname.replace(`/${cur}`, `/${other}`) + loc.search);
+      }}
     >
       {other === "zh" ? "ZH" : "EN"}
     </button>

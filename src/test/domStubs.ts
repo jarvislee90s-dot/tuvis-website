@@ -43,3 +43,42 @@ export function denySessionStorage(): () => void {
     }
   };
 }
+
+/** denySessionStorage 的 localStorage 版：属性读取本身抛 SecurityError 的形态
+ *  （langRedirect 的存储容错必须在这种形态下验证——默认参数在 try 外求值会绕过 try/catch）。
+ *  返回还原函数，调用方在用例结束执行。 */
+export function denyLocalStorage(): () => void {
+  const targets = globalThis === window ? [globalThis] : [globalThis, window];
+  const saved = targets.map((target) => ({
+    target,
+    desc: Object.getOwnPropertyDescriptor(target, "localStorage"),
+  }));
+  const deny = {
+    configurable: true,
+    get(): never {
+      throw new DOMException("Access is denied for this document", "SecurityError");
+    },
+  };
+  for (const { target } of saved) Object.defineProperty(target, "localStorage", deny);
+  return () => {
+    for (const { target, desc } of saved) {
+      if (desc) Object.defineProperty(target, "localStorage", desc);
+      else delete (target as { localStorage?: Storage }).localStorage;
+    }
+  };
+}
+
+/** jsdom 不保证实现 navigator.languages（语言分流检测的首选输入）：桩成固定列表。
+ *  实例 own 属性遮蔽原型 getter 即可（与 denySessionStorage 同款 defineProperty 手法）。
+ *  返回还原函数，调用方在用例结束（finally/afterEach）执行，防污染同文件其他用例。 */
+export function stubNavigatorLanguages(langs: readonly string[]): () => void {
+  const saved = Object.getOwnPropertyDescriptor(window.navigator, "languages");
+  Object.defineProperty(window.navigator, "languages", {
+    configurable: true,
+    get: () => [...langs],
+  });
+  return () => {
+    if (saved) Object.defineProperty(window.navigator, "languages", saved);
+    else delete (window.navigator as { languages?: readonly string[] }).languages;
+  };
+}
