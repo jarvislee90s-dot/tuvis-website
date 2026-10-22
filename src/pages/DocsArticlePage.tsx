@@ -121,7 +121,12 @@ export default function DocsArticlePage() {
                       a: ({ href, children }) => {
                         const m = href?.match(/^(?:\.\/)?(\d{2}-[a-z-]+)\.md$/i);
                         if (m) return <Link to={`/${lang}/docs/${m[1]}`}>{children}</Link>;
-                        void m;
+                        // 真值 MD 里的站内根绝对链接（如 /demo）：实际路由是 /:lang/...，
+                        // 直写 /demo 会被当成非法 lang 段归流回首页。渲染时补当前语言段；
+                        // 在渲染层而非 MD 源头修，因手册由主仓同步覆盖。已带语言段的链接原样放行。
+                        if (href?.startsWith("/") && !/^\/(zh|en)(\/|$)/.test(href)) {
+                          return <Link to={`/${lang}${href}`}>{children}</Link>;
+                        }
                         return (
                           <a
                             href={href}
