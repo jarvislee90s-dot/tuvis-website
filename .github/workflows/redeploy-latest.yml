@@ -11,9 +11,6 @@ on:
 permissions:
   contents: write
   actions: write
-  # marker 分支提交树与正式 tag 完全一致，必然包含 .github/workflows/deploy.yml——
-  # GITHUB_TOKEN（App 身份）推含 workflow 文件的分支必须声明 workflows: write
-  workflows: write
 
 # 恢复编排不占用 Pages 部署锁；实际发布由 deploy.yml 的单 pending job 锁串行化。
 concurrency:
