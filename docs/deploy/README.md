@@ -1,6 +1,10 @@
-# 正式发布与 GitHub Pages 部署
+# 正式发布与 Cloudflare Pages 部署
 
 网站只在推送正式稳定 tag `vX.Y.Z` 时发布。tag 冻结网站 `main` 的具体 commit；之后 `main` 前进不会改变该版本的代码或文档。普通 `main` push、半月 checkpoint、定时任务和 Tuvis 文档 dispatch 都不会部署。
+
+> 网站远端仓：`https://github.com/jarvislee90s-dot/tuvis-website`（公开）
+> 线上地址：<https://tuvis.app/>（Cloudflare Pages 自定义域名，2026-10 起托管；旧 GitHub Pages 地址已停更，验证新站后在仓库 Settings → Pages 关停）
+> 内容真值：更新日志 / 兼容矩阵 / 用户手册来自 Tuvis 主仓的**同名 release tag**，构建时校验拉取，缺失或失败即阻断（不回退网站仓副本或 Tuvis `main`）。
 
 ## 正式发布
 
@@ -17,9 +21,15 @@ pnpm release:website v0.7.0
 1. 校验触发 tag 是稳定 `vMAJOR.MINOR.PATCH`，并确认事件 SHA 与 tag 一致；构建仍绑定触发的 tag。
 2. 若旧 tag 事件迟到，或新 tag 在排队／构建期间出现，workflow 通过最新正式 tag 的同树 marker 重新排队，不会在旧事件 SHA 下构建别的 tag 内容。
 3. 更新日志、用户手册和能力矩阵均从同名 Tuvis tag 拉取。任一 tag 或文件缺失、内容校验失败、网络请求失败都会使构建失败，不使用网站仓旧副本或 Tuvis `main` 回退。
-4. 先在部署 job 入队前校验 release 事件；实际发布 job 使用单 pending 并发锁。取得锁后重新核对 tag 是否仍为最新。若该事件已过期则只排队最新 tag 的同树 marker；构建期间若 tag 再前进，部署前复查会丢弃旧 artifact 并重新排队最新 marker。过期部署只异步派发后继恢复并立即退出，不能等待恢复 workflow；否则恢复 workflow 等待部署、部署又等待恢复时，会与恢复编排锁形成循环等待。人工恢复 workflow 自身仍等待它派发的具体部署结束。
+4. 先在部署 job 入队前校验 release 事件；实际发布 job 使用单 pending 并发锁。取得锁后重新核对 tag 是否仍为最新。若该事件已过期则只排队最新 tag 的同树 marker；构建期间若 tag 再前进，部署前复查会放弃旧部署并重新排队最新 marker。过期部署只异步派发后继恢复并立即退出，不能等待恢复 workflow；否则恢复 workflow 等待部署、部署又等待恢复时，会与恢复编排锁形成循环等待。人工恢复 workflow 自身仍等待它派发的具体部署结束。
 
 网站仓和 Tuvis 仓的正式 tag 必须一一对应。通常流程是先发布 Tuvis `vX.Y.Z`，再运行网站发布命令创建网站 `vX.Y.Z`。
+
+## 托管配置（Cloudflare Pages，一次性）
+
+- **部署 secrets**：Cloudflare 控制台 → My Profile → API Tokens → Create Token，自定义权限一行 `Account | Cloudflare Pages | Edit`；然后到网站仓 → Settings → Secrets and variables → Actions，存入 `CLOUDFLARE_API_TOKEN` 与 `CLOUDFLARE_ACCOUNT_ID`（后者在控制台首页右侧复制）。
+- **自定义域名**：首个正式 tag 的部署会自动创建 Pages 项目 `tuvis`；随后在 Cloudflare 控制台 Workers & Pages → `tuvis` → Custom domains 绑定 `tuvis.app`（域名与项目同账号，DNS 自动配置）。
+- **部署的是哪个包？** 你不需要手动打包：GitHub Actions 云端执行 `pnpm build`（内容钉网站 + Tuvis 双 tag）产出 `site/dist`，经 wrangler 直传 Cloudflare Pages；本地 build 仅作预览/验证。
 
 ## 同版本人工恢复
 
@@ -27,7 +37,7 @@ pnpm release:website v0.7.0
 
 恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
 
-GitHub 仓库的 `github-pages` Environment 必须允许正式 `v*` tag 和 `v*-redeploy-*` marker branch 部署。网站仓与 Tuvis 仓均配置了 active ruleset `Protect v* release tags`，匹配 `refs/tags/v*`，禁止更新与删除且没有 bypass actor；它不阻止创建新 release tag。旧辅助 tag `v0.6.0-deploy.1` 也在保护范围内，因此保留不删。
+网站仓与 Tuvis 仓均配置了 active ruleset `Protect v* release tags`，匹配 `refs/tags/v*`，禁止更新与删除且没有 bypass actor；它不阻止创建新 release tag。旧辅助 tag `v0.6.0-deploy.1` 也在保护范围内，因此保留不删。托管迁至 Cloudflare Pages 后，`github-pages` Environment 不再参与发布，无需维护其部署规则。
 
 ## 其他工作流
 
@@ -45,6 +55,6 @@ GitHub 仓库的 `github-pages` Environment 必须允许正式 `v*` tag 和 `v*-
 - **用户手册章节或配图缺失**：构建会对照 `src/content/manual.ts` 检查中英文 13 篇章节及其相对图片引用；补齐 Tuvis 对应 tag 后重新发版。
 - **旧 tag 没有部署**：这是保护行为；只部署最新正式稳定 tag。
 - **恢复后 marker 分支残留**：检查 `Redeploy latest website release` 的清理步骤，再手动删除 `v*-redeploy-*` 分支。
-- **Pages 拒绝部署**：确认 `github-pages` Environment 的分支/tag 规则包含 marker 分支；检查部署日志使用的 Pages build SHA 是否唯一。
+- **CF 部署红在 wrangler 步骤**：多为 `CLOUDFLARE_API_TOKEN` 过期/权限不足（需 `Account | Cloudflare Pages | Edit`）或 `CLOUDFLARE_ACCOUNT_ID` 填错；更新 secret 后对最新 tag 运行「Redeploy latest website release」重发。
 
-首次启用永久流程时，先合并本次 workflow 更新到网站 `main`，确认 `github-pages` Environment 规则包含 marker 分支，再通过后续正式 tag 验收发布链。旧辅助 tag `v0.6.0-deploy.1` 会被稳定 tag 保护规则保留，版本解析器会忽略它。
+首次启用永久流程时，先把本 workflow 更新合并到网站 `main`（含上节 Cloudflare secrets），再通过后续正式 tag 验收发布链。旧辅助 tag `v0.6.0-deploy.1` 会被稳定 tag 保护规则保留，版本解析器会忽略它。

@@ -11,7 +11,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MANUAL_FLAT, MANUAL_GROUPS } from "@/content/manual";
 
-const BASE = import.meta.env.BASE_URL; // "/tuvis-website/"
+const BASE = import.meta.env.BASE_URL; // "/"（根路径部署）
 
 export default function DocsArticlePage() {
   const { t } = useTranslation();

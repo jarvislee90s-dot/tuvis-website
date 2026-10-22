@@ -4,7 +4,7 @@ export function resolveBootPath(
   href: string,
   opts: { base: string; origin: string },
 ): string {
-  // 归一化去尾斜杠：调用方可能直接传 import.meta.env.BASE_URL（"/tuvis-website/"），不归一则 startsWith 静默全量回根
+  // 归一化去尾斜杠：调用方可能直接传 import.meta.env.BASE_URL（base "/" 时为 "/"），不归一则 startsWith 静默全量回根
   const base = opts.base.replace(/\/+$/, "");
   let u: URL;
   try {

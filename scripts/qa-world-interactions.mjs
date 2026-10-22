@@ -29,7 +29,7 @@ import {
 } from "./qa-cdp.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_BASE = "http://127.0.0.1:4173/tuvis-website";
+const DEFAULT_BASE = "http://127.0.0.1:4173";
 const SCENE_SIZE = [1536, 1024];
 const STORAGE_KEY = "tuvis-world-v1";
 const SHOT_DIR = path.resolve(here, "../docs/qa/screenshots");

@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import http from "node:http";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_BASE = "http://127.0.0.1:4173/tuvis-website";
+const DEFAULT_BASE = "http://127.0.0.1:4173";
 const CDP_HOST = process.env.CDP_HOST ?? "127.0.0.1";
 const CDP_PORT = Number(process.env.CDP_PORT ?? 9222);
 

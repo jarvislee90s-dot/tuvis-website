@@ -1,6 +1,9 @@
 # recovery-marker-protocol: v1
 # 只发布正式稳定 tag。网站源码与文档都固定在同版本的两个仓库 tag 上。
-name: Deploy to GitHub Pages
+# 托管自 2026-10 起为 Cloudflare Pages（自定义域名 tuvis.app）：构建流程不变，
+# 仅发布目标由 GitHub Pages 换成 wrangler 直传（secrets：CLOUDFLARE_API_TOKEN /
+# CLOUDFLARE_ACCOUNT_ID；首个 tag 自动建 Pages 项目 tuvis，域名在项目 Custom domains 绑定）。
+name: Deploy to Cloudflare Pages
 
 on:
   push:
@@ -59,11 +62,6 @@ jobs:
     permissions:
       contents: read
       actions: write
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -140,13 +138,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.release_tag }}
           TUVIS_RELEASE_SOURCE_DIR: ../tuvis-source
-      - uses: actions/configure-pages@v5
-        if: steps.locked_target.outputs.should_deploy == 'true'
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.locked_target.outputs.should_deploy == 'true'
-        with:
-          path: site/dist
-      # A tag arriving during the build invalidates this artifact; its run will take the lock next.
+      # A tag arriving during the build invalidates this deployment; its run will take the lock next.
       - name: Recheck latest release before deployment
         if: steps.locked_target.outputs.should_deploy == 'true'
         id: latest
@@ -161,6 +153,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECONCILE_TAG: ${{ steps.latest.outputs.latest_tag }}
-      - id: deployment
+      - name: Deploy to Cloudflare Pages
         if: steps.locked_target.outputs.should_deploy == 'true' && steps.latest.outputs.is_latest == 'true'
-        uses: actions/deploy-pages@v4
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site/dist --project-name=tuvis --branch=main

@@ -40,7 +40,7 @@ function bootWith(rawRedirect: string) {
   return router;
 }
 
-describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router.navigate）", () => {
+describe("boot 深链恢复（404.html 兜底，GH Pages / CF Pages 同机制，restoreBootLocation + router.navigate）", () => {
   beforeEach(() => {
     // 前一用例的 replace navigate 会改写 jsdom URL，复位到根、清空存储，保证用例独立
     window.history.replaceState(null, "", "/");
@@ -54,13 +54,13 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
   });
 
   it("主用例：/en/changelog 深链经 navigate 恢复落位，页面挂载 Changelog 内容而非首页/重定向，redirect 键清除防死循环", async () => {
-    const router = bootWith(`${ORIGIN}/tuvis-website/en/changelog`);
+    const router = bootWith(`${ORIGIN}/en/changelog`);
 
     // RR 7.18 的 state.location 含 basename（navigate 目标 prependBasename，匹配层再剥）。
     // 此断言同时锁死「navigate 真实发生」——旧 bug（history.replaceState 后 router 不感知）下恒为初始 "/"
     expect(router.state.location.pathname).toBe(`${BASE}/en/changelog`);
-    // 地址栏真实落位（GH Pages 深链的用户可见最终事实）
-    expect(window.location.pathname).toBe("/tuvis-website/en/changelog");
+    // 地址栏真实落位（静态托管深链的用户可见最终事实）
+    expect(window.location.pathname).toBe("/en/changelog");
     // 消费即清除，防 404→根→404 死循环
     expect(sessionStorage.getItem(KEY)).toBeNull();
 
@@ -74,21 +74,21 @@ describe("boot 深链恢复（GH Pages 404 兜底，restoreBootLocation + router
   });
 
   it("反向用例：跨 origin 的预置 URL 被 origin 防线拒绝——落回 basename 根，键同样清除", () => {
-    const router = bootWith(`https://jarvislee90s-dot.github.io/tuvis-website/en/changelog`);
+    const router = bootWith(`https://tuvis.app/en/changelog`);
 
     // 不 render：渲染会触发 "/" → /zh 兜底重定向（非本用例关注点），落位以 router/地址栏状态为准
     // 防线拒绝 → 解析为 "/" → RR 7.18 里 navigate("/") 落在 basename 根（state.location 含 basename）
-    expect(router.state.location.pathname).toBe(BASE);
-    expect(window.location.pathname).toBe("/tuvis-website");
+    expect(router.state.location.pathname).toBe(BASE || "/");
+    expect(window.location.pathname).toBe("/");
     expect(sessionStorage.getItem(KEY)).toBeNull();
   });
 
   it("根路径用例：base 自身（带尾斜杠形态）→ 根路径，交由 router 兜底重定向", () => {
-    const router = bootWith(`${ORIGIN}/tuvis-website/`);
+    const router = bootWith(`${ORIGIN}/`);
 
     // 同上不 render：根路径的兜底重定向（→ /zh）是 router 既有行为，此处只锁 restore 落位与清键
-    expect(router.state.location.pathname).toBe(BASE);
-    expect(window.location.pathname).toBe("/tuvis-website");
+    expect(router.state.location.pathname).toBe(BASE || "/");
+    expect(window.location.pathname).toBe("/");
     expect(sessionStorage.getItem(KEY)).toBeNull();
   });
 

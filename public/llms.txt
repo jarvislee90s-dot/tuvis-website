@@ -6,5 +6,5 @@ from one board, with a Foxbell desktop pet and a token usage ledger.
 MIT licensed, local-first, no telemetry. Windows 10+ / macOS 14+.
 
 - GitHub: https://github.com/jarvislee90s-dot/tuvis
-- Docs: https://jarvislee90s-dot.github.io/tuvis-website/zh/docs
-- Changelog: https://jarvislee90s-dot.github.io/tuvis-website/zh/changelog
+- Docs: https://tuvis.app/zh/docs
+- Changelog: https://tuvis.app/zh/changelog

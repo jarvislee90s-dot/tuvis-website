@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/zh/</loc><changefreq>weekly</changefreq></url>
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/en/</loc><changefreq>weekly</changefreq></url>
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/zh/demo</loc></url>
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/en/demo</loc></url>
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/zh/docs</loc></url>
-  <url><loc>https://jarvislee90s-dot.github.io/tuvis-website/zh/changelog</loc></url>
+  <url><loc>https://tuvis.app/zh/</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://tuvis.app/en/</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://tuvis.app/zh/demo</loc></url>
+  <url><loc>https://tuvis.app/en/demo</loc></url>
+  <url><loc>https://tuvis.app/zh/docs</loc></url>
+  <url><loc>https://tuvis.app/zh/changelog</loc></url>
 </urlset>

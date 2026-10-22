@@ -9,7 +9,7 @@ import ChangelogPage from "@/pages/ChangelogPage";
 const WorldPage = lazy(() => import("@/pages/WorldPage"));
 const WorkshopPage = lazy(() => import("@/pages/WorkshopPage"));
 
-export const BASE = import.meta.env.BASE_URL.replace(/\/$/, ""); // "/tuvis-website"
+export const BASE = import.meta.env.BASE_URL.replace(/\/$/, ""); // "/" → ""（根路径部署）
 
 const worldFallback = (
   <main className="mx-auto max-w-5xl px-5 py-24 text-center text-inkdim" aria-busy="true">

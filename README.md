@@ -2,7 +2,7 @@
 
 > 你的桌面多 Agent 指挥台——官网与交互演示。
 
-**线上**：<https://jarvislee90s-dot.github.io/tuvis-website/zh>
+**线上**：<https://tuvis.app/zh>
 
 技术栈：Vite 6 · React 19 · TypeScript strict · Tailwind CSS v4 · GitHub Pages（子路径部署）· 中英双语 · 全站零追踪。
 
@@ -42,7 +42,7 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 ./scripts/dev-stop.sh
 ```
 
-服务地址：<http://127.0.0.1:5173/tuvis-website/zh/world>。首次运行若没有 `node_modules`，脚本会自动用 `npx pnpm@10.20.0` 安装依赖；PID 与日志写在 `.dev-server.pid` / `.dev-server.log`。
+服务地址：<http://127.0.0.1:5173/zh/world>。首次运行若没有 `node_modules`，脚本会自动用 `npx pnpm@10.20.0` 安装依赖；PID 与日志写在 `.dev-server.pid` / `.dev-server.log`。
 
 ## 更新机制
 
@@ -62,8 +62,8 @@ flowchart LR
     end
     SRC -->|"从匹配的 Tuvis release tag 拉取<br>缺失或失败即阻断"| BUILD
     TRIG --> BUILD["build：固定网站 tag + Tuvis tag<br>→ 校验 → tsc → vite build → 404"]
-    BUILD --> PAGES["GitHub Pages CDN"]
-    PAGES --> SITE["线上站点<br>jarvislee90s-dot.github.io/tuvis-website"]
+    BUILD --> PAGES["Cloudflare Pages CDN"]
+    PAGES --> SITE["线上站点<br>tuvis.app"]
 ```
 
 > 注意：**push main 只运行 CI / 存档、永不部署**。只有正式稳定 tag `vX.Y.Z` 发布；同版本恢复只能通过专用 workflow 重发最新 tag（详见 [docs/deploy/README.md](docs/deploy/README.md)）。
@@ -95,7 +95,7 @@ pnpm release:website vX.Y.Z                       # 仅从干净且同步的 mai
 ```
 tuvis-website/
 ├── SPEC.md                  # 建站规格（v1.5，需求与决策记录）
-├── docs/deploy/             # 正式发布与 GitHub Pages 部署说明
+├── docs/deploy/             # 正式发布与 Cloudflare Pages 部署说明
 ├── docs/design/             # 演示/文档参考稿（remote-ui 定稿、p9~p13 参考图）
 ├── docs/qa/                 # 兔维斯世界验收记录与真实浏览器截图
 ├── docs/superpowers/plans/  # P0~P13 与兔维斯世界计划、progress.md 全程记录
@@ -116,8 +116,8 @@ tuvis-website/
 
 - **生成物勿手改**：`src/content/*.json` 与 `public/manual/` 是构建同步产物，改动只会发生在 tuvis 主仓对应文件。
 - **部署仅由 `v*` tag 触发**：push main 永不上线（发版模型是刻意的）。
-- **Pages 环境策略**：`github-pages` 环境要允许 `v*` 稳定 tag 与 `v*-redeploy-*` marker branch；策略不匹配时 Actions 会拒绝部署，按 [docs/deploy/README.md](docs/deploy/README.md) 检查。
-- **仓库改名牵一发动全身**：线上地址含仓库名（`.../tuvis-website/`），base 路径散布在 `vite.config.ts`、`src/router.tsx`、`scripts/make-404.mjs`、`DocsArticlePage`——改名前先说一声。
+- **托管在 Cloudflare Pages（2026-10 起）**：secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 驱动 wrangler 直传；旧 GitHub Pages 站点已停更，验证新站后在仓库 Settings → Pages 关停。
+- **仓库改名只影响 git remote**：线上地址已是自有域名 tuvis.app，与仓库名彻底解耦。
 - **`SITE_DISPATCH_PAT` 已不再需要**：网站不接受 Tuvis 仓的 `repository_dispatch` 部署通知；旧 notify workflow 与 secret 可从 Tuvis 仓清理。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
 - **质量基线**：vitest（含兔维斯世界、中英 i18n parity 与零 Han 门禁）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。

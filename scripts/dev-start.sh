@@ -12,7 +12,7 @@ HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-5173}"
 PID_FILE="$ROOT_DIR/.dev-server.pid"
 LOG_FILE="$ROOT_DIR/.dev-server.log"
-URL="http://${HOST}:${PORT}/tuvis-website/zh/world"
+URL="http://${HOST}:${PORT}/zh/world"
 
 if [ -f "$PID_FILE" ]; then
   OLD_PID="$(cat "$PID_FILE" 2>/dev/null || true)"
@@ -67,7 +67,7 @@ for _ in $(seq 1 60); do
   if ! kill -0 "$PID" 2>/dev/null; then
     break
   fi
-  if curl -fsS "http://${HOST}:${PORT}/tuvis-website/" >/dev/null 2>&1; then
+  if curl -fsS "http://${HOST}:${PORT}/" >/dev/null 2>&1; then
     READY=1
     break
   fi
