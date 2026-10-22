@@ -19,3 +19,6 @@ d2-viewport.png
 
 # 本会话工具状态目录
 .zcode/
+
+# Git worktrees
+.worktrees/

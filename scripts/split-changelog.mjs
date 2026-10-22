@@ -6,6 +6,8 @@
 //                                                               # 两份 changelog 走本地文件（capabilities 仍走网络）
 //   node scripts/split-changelog.mjs --offline                  # 全离线：跳过网络，保留现有产物
 // 失败语义：任一源失败 → 警告并保留上次同步产物，退出码 0（dev / build 不被打断）。
+// 正式发布：设置 TUVIS_RELEASE_REF=vX.Y.Z 后，优先读取 workflow 已 checkout 的 TUVIS_RELEASE_SOURCE_DIR；
+// 若无本地 checkout，则用 ref 查询 GitHub API。三源先全部读取并校验再落盘，任何失败非零，不回退旧产物。
 //
 // ── 中英分文件契约（主仓 2026-10-17 拆分，用户裁决；「同文件内嵌 EN: 行」旧契约作废）────
 // 主仓 `CHANGELOG.md` = 纯中文、`CHANGELOG.en.md` = 纯英文，两份各自单语：版本标题 / 日期 /
@@ -18,6 +20,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { parseStableTag } from "./release-policy.mjs";
 
 /** 语言 ↔ 主仓文件名（解析告警点名 + 闸门定位用；两份文件各自单语，一一对应） */
 export const SRC_FILE = { zh: "CHANGELOG.md", en: "CHANGELOG.en.md" };
@@ -134,30 +137,39 @@ const SOURCES = [
 /** changelog 落盘：解析 → 空产物 / 语言纯度两道闸门 → 写产物。
  *  不过闸 = 告警 + 保留上次产物：截断响应会把日志页清空，夹中文的英文日志比一份旧快照更糟
  *  （/en 的零 Han 硬红线挂在产物上，脏数据不该有机会上线）。返回是否已写入。 */
-function writeChangelog(text, src) {
+export function parseChangelogSource(text, src) {
   const data = parseChangelog(text, src.lang);
-  if (!data.length) {
-    console.warn(`::warning::[sync] ${src.path} 解析出 0 个版本（截断响应 / 错误页？）：保留上次同步的产物`);
-    return false;
-  }
+  if (!data.length) throw new Error(`${src.path} parsed no releases`);
   const bad = langViolations(data, src.lang);
-  if (bad.length) {
-    console.warn(`::warning::[sync] ${src.path} 出现与本文件语言不符的字符（${bad.slice(0, 3).join("；")}${bad.length > 3 ? ` 等 ${bad.length} 处` : ""}）：保留上次同步的产物`);
+  if (bad.length) throw new Error(`${src.path} contains text outside its language contract: ${bad.slice(0, 3).join("; ")}`);
+  return data;
+}
+
+function writeChangelog(text, src) {
+  try {
+    writeFileSync(src.out, JSON.stringify(parseChangelogSource(text, src), null, 2));
+    return true;
+  } catch (error) {
+    console.warn(`::warning::[sync] ${error.message}：保留上次同步的产物`);
     return false;
   }
-  writeFileSync(src.out, JSON.stringify(data, null, 2));
-  return true;
 }
 
 /** contents 拉取：3 次重试（schannel 吊销检查偶发失败）；403/429 限流直接放弃重试 */
-async function fetchSource(src, { attempts = 3, timeoutMs = 5000 } = {}) {
+export function contentsUrl(sourcePath, ref) {
+  const url = new URL(`${API_BASE}/${sourcePath}`);
+  if (ref) url.searchParams.set("ref", ref);
+  return url.toString();
+}
+
+export async function fetchSource(src, { attempts = 3, timeoutMs = 5000, ref, fetchImpl = fetch } = {}) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, i * 600));
     try {
       const headers = { "User-Agent": "tuvis-website-sync", Accept: "application/vnd.github+json" };
       if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;   // I1：与 sync-user-manual 对齐，deploy.yml 注释的限额承诺兑现
-      const res = await fetch(`${API_BASE}/${src.path}`, {
+      const res = await fetchImpl(contentsUrl(src.path, ref), {
         headers,
         signal: AbortSignal.timeout(timeoutMs),
       });
@@ -174,27 +186,68 @@ async function fetchSource(src, { attempts = 3, timeoutMs = 5000 } = {}) {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
+export async function fetchAllSources(sources, { ref, fetcher = fetchSource } = {}) {
+  return Promise.all(sources.map(async (source) => ({ source, text: await fetcher(source, { ref }) })));
+}
+
+export function readReleaseSources(sourceRoot, sources) {
+  const root = path.resolve(sourceRoot);
+  return sources.map((source) => {
+    const file = path.resolve(root, source.path);
+    if (file !== root && !file.startsWith(`${root}${path.sep}`)) throw new Error(`source path escaped release checkout: ${source.path}`);
+    return { source, text: readFileSync(file, "utf8") };
+  });
+}
+
 // CLI 入口
 if (process.argv[1]?.endsWith("split-changelog.mjs")) {
   const arg = (k, d) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : d; };
   const local = { zh: arg("--in", null), en: arg("--in-en", null) };   // 本地回退通道：给出即跳过该源的网络拉取
   const offline = process.argv.includes("--offline");
-  const jobs = offline ? [] : SOURCES.filter((s) => !(s.lang && local[s.lang]));
-  const results = await Promise.allSettled(jobs.map(async (s) => ({ s, text: await fetchSource(s) })));
-  for (const r of results) {
-    if (r.status === "rejected") { console.warn(`[sync] ${r.reason.message}：保留上次同步的产物`); continue; }
-    const { s, text } = r.value;
+  const releaseRef = process.env.TUVIS_RELEASE_REF?.trim() ?? "";
+  const releaseSourceDir = process.env.TUVIS_RELEASE_SOURCE_DIR?.trim() ?? "";
+
+  if (releaseRef) {
     try {
-      if (s.lang) {
-        if (writeChangelog(text, s)) console.log(`[sync] ${s.path} -> ${s.out}`);
-      } else {
+      if (!parseStableTag(releaseRef)) throw new Error("TUVIS_RELEASE_REF must be a stable vMAJOR.MINOR.PATCH tag");
+      if (offline || local.zh || local.en) throw new Error("release sync cannot use offline mode or local changelog overrides");
+
+      // 正式发布先整体拉齐并校验三源，全部通过后才落盘，不能混用旧副本。
+      const fetched = releaseSourceDir
+        ? readReleaseSources(releaseSourceDir, SOURCES)
+        : await fetchAllSources(SOURCES, { ref: releaseRef });
+      const prepared = fetched.map(({ source, text }) => {
+        if (source.lang) return { source, data: parseChangelogSource(text, source) };
         const data = validateCapabilities(JSON.parse(text));
-        if (!data) { console.warn("::warning::[sync] capabilities 结构校验未过（键名/覆盖/取值域）：保留上次同步的产物"); continue; }
-        writeFileSync(s.out, JSON.stringify(data, null, 2));
-        console.log(`[sync] ${s.path} -> ${s.out}`);
+        if (!data) throw new Error(`${source.path} failed the capabilities schema validation`);
+        return { source, data };
+      });
+      for (const { source, data } of prepared) {
+        writeFileSync(source.out, JSON.stringify(data, null, 2));
+        console.log(`[sync] ${releaseRef}:${source.path} -> ${source.out}`);
       }
-    } catch (e) {
-      console.warn(`[sync] ${s.key} 写入失败（${e.message}），保留上次同步的产物`);
+    } catch (error) {
+      console.error(`::error::[sync] release-pinned content sync failed: ${error.message}`);
+      process.exitCode = 1;
+    }
+  } else {
+    const jobs = offline ? [] : SOURCES.filter((s) => !(s.lang && local[s.lang]));
+    const results = await Promise.allSettled(jobs.map(async (s) => ({ s, text: await fetchSource(s) })));
+    for (const r of results) {
+      if (r.status === "rejected") { console.warn(`[sync] ${r.reason.message}：保留上次同步的产物`); continue; }
+      const { s, text } = r.value;
+      try {
+        if (s.lang) {
+          if (writeChangelog(text, s)) console.log(`[sync] ${s.path} -> ${s.out}`);
+        } else {
+          const data = validateCapabilities(JSON.parse(text));
+          if (!data) { console.warn("::warning::[sync] capabilities 结构校验未过（键名/覆盖/取值域）：保留上次同步的产物"); continue; }
+          writeFileSync(s.out, JSON.stringify(data, null, 2));
+          console.log(`[sync] ${s.path} -> ${s.out}`);
+        }
+      } catch (e) {
+        console.warn(`[sync] ${s.key} 写入失败（${e.message}），保留上次同步的产物`);
+      }
     }
   }
   // 本地回退通道（离线改稿 / 链路排查用；网络侧对应源已跳过，不双写）

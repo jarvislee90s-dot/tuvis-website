@@ -1,8 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { SRC_FILE, parseChangelog, langViolations, decodeContent, validateCapabilities } from "./split-changelog.mjs";
+import { tmpdir } from "node:os";
+import {
+  SRC_FILE,
+  parseChangelog,
+  langViolations,
+  decodeContent,
+  validateCapabilities,
+  fetchSource,
+  fetchAllSources,
+  readReleaseSources,
+} from "./split-changelog.mjs";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFileSync(resolve(__dir, p), "utf8");
@@ -233,6 +243,48 @@ describe("decodeContent", () => {
   it("contents 带换行 base64 正确解码", () => {
     const payload = { content: Buffer.from("## [x] – 2026-01-01\n- a\n").toString("base64") + "\n" };
     expect(decodeContent(payload)).toBe("## [x] – 2026-01-01\n- a\n");
+  });
+});
+
+describe("release-pinned source fetching", () => {
+  it("adds the selected Tuvis release ref to the contents API request", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ content: Buffer.from("release body").toString("base64") }),
+    }));
+
+    await expect(fetchSource({ path: "CHANGELOG.md" }, { ref: "v0.6.0", fetchImpl, attempts: 1 }))
+      .resolves.toBe("release body");
+    expect(new URL(fetchImpl.mock.calls[0][0]).searchParams.get("ref")).toBe("v0.6.0");
+  });
+
+  it("fails the strict three-source fetch as a unit when any source is unavailable", async () => {
+    const sources = [{ path: "a" }, { path: "b" }, { path: "c" }];
+    const fetcher = vi.fn(async (source) => {
+      if (source.path === "b") throw new Error("missing at release tag");
+      return { source, text: "ok" };
+    });
+
+    await expect(fetchAllSources(sources, { ref: "v0.6.0", fetcher }))
+      .rejects.toThrow("missing at release tag");
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it("reads all pinned files from a checked-out Tuvis tag and fails when one file is missing", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "tuvis-release-source-"));
+    try {
+      mkdirSync(resolve(root, "docs"), { recursive: true });
+      writeFileSync(resolve(root, "CHANGELOG.md"), "v0.6.0 zh");
+      writeFileSync(resolve(root, "CHANGELOG.en.md"), "v0.6.0 en");
+      writeFileSync(resolve(root, "docs/capabilities.json"), "{}");
+      const sources = [{ path: "CHANGELOG.md" }, { path: "CHANGELOG.en.md" }, { path: "docs/capabilities.json" }];
+
+      expect(readReleaseSources(root, sources).map(({ text }) => text)).toEqual(["v0.6.0 zh", "v0.6.0 en", "{}"]);
+      rmSync(resolve(root, "CHANGELOG.en.md"));
+      expect(() => readReleaseSources(root, sources)).toThrow(/CHANGELOG.en.md/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
