@@ -46,7 +46,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECONCILE_TAG: ${{ steps.target.outputs.reconcile_tag }}
-          RECONCILE_WAIT: "true"
 
   # Single pending slot: a newer deployment replaces an older pending one.
   # A delayed old run queues a same-tree marker for latest; it never builds another tag under this event SHA.
@@ -87,7 +86,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECONCILE_TAG: ${{ steps.locked_target.outputs.reconcile_tag }}
-          RECONCILE_WAIT: "false"
       - uses: actions/checkout@v4
         if: steps.locked_target.outputs.should_deploy == 'true'
         with:
@@ -163,7 +161,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RECONCILE_TAG: ${{ steps.latest.outputs.latest_tag }}
-          RECONCILE_WAIT: "false"
       - id: deployment
         if: steps.locked_target.outputs.should_deploy == 'true' && steps.latest.outputs.is_latest == 'true'
         uses: actions/deploy-pages@v4

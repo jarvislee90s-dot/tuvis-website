@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { parseStableTag } from "./release-policy.mjs";
 
-export function dispatchLatestRedeploy(tag, { wait = false, run = execFileSync, repository = process.env.GITHUB_REPOSITORY } = {}) {
+export function dispatchLatestRedeploy(tag, { run = execFileSync, repository = process.env.GITHUB_REPOSITORY } = {}) {
   if (!parseStableTag(tag)) throw new Error("reconciliation requires a stable release tag");
   if (!repository) throw new Error("GITHUB_REPOSITORY is required to queue a latest-tag redeploy");
 
@@ -17,14 +17,13 @@ export function dispatchLatestRedeploy(tag, { wait = false, run = execFileSync, 
   const runId = JSON.parse(response).workflow_run_id;
   if (!Number.isSafeInteger(runId) || runId <= 0) throw new Error("GitHub did not return the recovery workflow run id");
 
-  if (wait) run("gh", ["run", "watch", String(runId), "--exit-status"], { stdio: "inherit" });
   return runId;
 }
 
 if (process.argv[1]?.endsWith("dispatch-latest-redeploy.mjs")) {
   try {
     const tag = process.env.RECONCILE_TAG ?? "";
-    const runId = dispatchLatestRedeploy(tag, { wait: process.env.RECONCILE_WAIT === "true" });
+    const runId = dispatchLatestRedeploy(tag);
     console.log(`recovery_run_id=${runId}`);
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `recovery_run_id=${runId}\n`);
   } catch (error) {
