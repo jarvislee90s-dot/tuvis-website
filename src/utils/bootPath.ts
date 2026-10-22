@@ -37,7 +37,7 @@ interface NavigateLike {
  * 深链会坍缩到 /zh；router.navigate 则让 router 自身记下新位置。行为由 boot.integration.test.tsx 锁定。
  * 值只读一次、读后即清（先于 navigate），无论解析/navigate 结果如何都不留脏键，防 404→根→404 死循环。
  * 存储本身不可用（如 Chrome/Edge「屏蔽所有 Cookie」下访问器抛 SecurityError）则静默放弃恢复，
- * 不留键、不 navigate，交由 router 兜底（Navigate to /zh）——本函数在 main.tsx render 前的
+ * 不留键、不 navigate，交由路由语言分流兜底——本函数在 main.tsx render 前的
  * 模块顶层同步调用，此处若抛出则后续 render 永不执行（整站白屏）。
  */
 export function restoreBootLocation(
@@ -49,7 +49,7 @@ export function restoreBootLocation(
     raw = sessionStorage.getItem(REDIRECT_KEY);
     if (raw) sessionStorage.removeItem(REDIRECT_KEY);
   } catch {
-    return; // 存储不可用：放弃恢复，交由 router 兜底（Navigate to /zh）
+    return; // 存储不可用：放弃恢复，交由路由语言分流兜底
   }
   if (!raw) return;
   router.navigate(resolveBootPath(raw, opts), { replace: true });

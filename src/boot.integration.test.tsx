@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { BASE, routes } from "@/router";
 import { REDIRECT_KEY, restoreBootLocation } from "@/utils/bootPath";
-import { denySessionStorage, stubIntersectionObserver } from "@/test/domStubs";
+import { LANG_PREF_KEY } from "@/utils/langRedirect";
+import { denySessionStorage, stubIntersectionObserver, stubNavigatorLanguages } from "@/test/domStubs";
 
 // ---- 测试环境 realm 桥接（仅本文件）----
 // RR 真实导航时 new AbortController()（= jsdom 版）并把 signal 交给 new Request(url, { signal })；
@@ -45,6 +46,8 @@ describe("boot 深链恢复（404.html 兜底，GH Pages / CF Pages 同机制，
     // 前一用例的 replace navigate 会改写 jsdom URL，复位到根、清空存储，保证用例独立
     window.history.replaceState(null, "", "/");
     sessionStorage.clear();
+    // 根入口（LangEntry）会读手动语言偏好，一并清空防跨用例污染
+    localStorage.clear();
     // jsdom 不实现 scrollTo，Silent 掉 ScrollManager 回顶的 "Not implemented" 提示（非被测行为）
     window.scrollTo = () => {};
   });
@@ -86,7 +89,7 @@ describe("boot 深链恢复（404.html 兜底，GH Pages / CF Pages 同机制，
   it("根路径用例：base 自身（带尾斜杠形态）→ 根路径，交由 router 兜底重定向", () => {
     const router = bootWith(`${ORIGIN}/`);
 
-    // 同上不 render：根路径的兜底重定向（→ /zh）是 router 既有行为，此处只锁 restore 落位与清键
+    // 同上不 render：根路径的语言分流兜底是 router 既有行为，此处只锁 restore 落位与清键
     expect(router.state.location.pathname).toBe(BASE || "/");
     expect(window.location.pathname).toBe("/");
     expect(sessionStorage.getItem(KEY)).toBeNull();
@@ -98,6 +101,8 @@ describe("boot 深链恢复（404.html 兜底，GH Pages / CF Pages 同机制，
     // /zh 首页 Reveal（whileInView）在 jsdom 无 IO 时会崩进 ErrorBoundary（非被测行为），afterEach 统一 unstub
     stubIntersectionObserver();
     const restoreStorage = denySessionStorage();
+    // 分流入口决定落到哪个语言首页：检测桩钉 zh，保持本用例 /zh 的断言语义（jsdom 默认 navigator 语言为 en-US）
+    const restoreLangs = stubNavigatorLanguages(["zh-CN"]);
     try {
       const router = createBrowserRouter(routes, { basename: BASE });
       const navigateSpy = vi.spyOn(router, "navigate");
@@ -117,7 +122,110 @@ describe("boot 深链恢复（404.html 兜底，GH Pages / CF Pages 同机制，
       await waitFor(() => expect(window.location.pathname).toBe(`${BASE}/zh`));
     } finally {
       // 还原访问器：防污染本文件其他用例（beforeEach 有 sessionStorage.clear()）
+      restoreLangs();
       restoreStorage();
+    }
+  });
+});
+
+describe("W1/W2 首访语言分流（/ 与 * 入口 LangEntry；合法深链由路由结构豁免，不经此路径）", () => {
+  beforeEach(() => {
+    window.history.replaceState(null, "", "/");
+    sessionStorage.clear();
+    localStorage.clear();
+    window.scrollTo = () => {};
+    stubIntersectionObserver();
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const renderAt = (path: string) => {
+    window.history.replaceState(null, "", path);
+    render(<RouterProvider router={createBrowserRouter(routes, { basename: BASE })} />);
+    return screen.findByRole("main");
+  };
+
+  it.each([
+    ["zh-CN", "/zh"],
+    ["zh-TW", "/zh"],
+    ["zh-HK", "/zh"],
+    ["en-US", "/en"],
+    ["ja", "/en"],
+    ["de", "/en"],
+  ])("W1 首访无偏好：浏览器语言 %s → %s", async (tag, target) => {
+    const restore = stubNavigatorLanguages([tag]);
+    try {
+      await renderAt("/");
+      expect(window.location.pathname).toBe(target);
+      expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
+
+  it("W1 自动检测结果不落盘：分流后 localStorage 无偏好残留", async () => {
+    const restore = stubNavigatorLanguages(["en-US"]);
+    try {
+      await renderAt("/");
+      expect(window.location.pathname).toBe("/en");
+      expect(localStorage.getItem(LANG_PREF_KEY)).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it("W2 手动偏好优先于浏览器语言：en 偏好 + zh 浏览器 → /en；zh 偏好 + en 浏览器 → /zh", async () => {
+    localStorage.setItem(LANG_PREF_KEY, "en");
+    let restore = stubNavigatorLanguages(["zh-CN"]);
+    try {
+      await renderAt("/");
+      expect(window.location.pathname).toBe("/en");
+    } finally {
+      restore();
+    }
+    cleanup();
+
+    localStorage.setItem(LANG_PREF_KEY, "zh");
+    restore = stubNavigatorLanguages(["en-US"]);
+    try {
+      await renderAt("/");
+      expect(window.location.pathname).toBe("/zh");
+    } finally {
+      restore();
+    }
+  });
+
+  it("W3 深链直达不改跳：/en/changelog 直访（无 redirect 记录）保持原路径与英文内容", async () => {
+    const restore = stubNavigatorLanguages(["zh-CN"]); // 即便浏览器语言是中文
+    try {
+      await renderAt("/en/changelog");
+      expect(window.location.pathname).toBe("/en/changelog");
+      const main = await screen.findByRole("main");
+      expect(within(main).getByRole("heading", { level: 1 })).toBeInTheDocument();
+    } finally {
+      restore();
+    }
+  });
+
+  it("非法 lang 段守卫归流：/nonexistent（单段未知，命中 LangLayout 守卫）按检测语言落地", async () => {
+    const restore = stubNavigatorLanguages(["en-US"]);
+    try {
+      await renderAt("/nonexistent");
+      expect(window.location.pathname).toBe("/en");
+    } finally {
+      restore();
+    }
+  });
+
+  it("catch-all（*）真覆盖：两段以上未知路径同样按检测语言归流", async () => {
+    const restore = stubNavigatorLanguages(["zh-CN"]);
+    try {
+      await renderAt("/xx/yy");
+      expect(window.location.pathname).toBe("/zh");
+    } finally {
+      restore();
     }
   });
 });

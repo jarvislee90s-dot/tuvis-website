@@ -118,6 +118,7 @@ tuvis-website/
 - **部署仅由 `v*` tag 触发**：push main 永不上线（发版模型是刻意的）。
 - **托管在 Cloudflare Pages（2026-10 起）**：secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 驱动 wrangler 直传；旧 GitHub Pages 站点已停更，验证新站后在仓库 Settings → Pages 关停。
 - **仓库改名只影响 git remote**：线上地址已是自有域名 tuvis.app，与仓库名彻底解耦。
+- **首访语言分流（W1/W2）**：`/`、未知路径与非法 lang 段按「手动偏好 → 浏览器语言」归流（zh* → 中文，其余 → 英文）；偏好存 localStorage `tuvis-lang-pref`，**仅站内手动切换写入**，自动检测结果不落盘；合法 /zh /en 深链与 tuvis-redirect 回放永不改跳（W3）。
 - **`SITE_DISPATCH_PAT` 已不再需要**：网站不接受 Tuvis 仓的 `repository_dispatch` 部署通知；旧 notify workflow 与 secret 可从 Tuvis 仓清理。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
 - **质量基线**：vitest（含兔维斯世界、中英 i18n parity 与零 Han 门禁）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。

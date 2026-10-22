@@ -1,5 +1,95 @@
 [
   {
+    "version": "0.6.1",
+    "date": "2026-10-22",
+    "sections": {
+      "Changed": [
+        {
+          "en": "**Unified fixed-address setup completion**: Tailscale and Cloudflare Own domain use timelines that collapse only after real public board verification, retaining address, copy/open, QR and setup-details actions. Later failures keep the summary; historical completion never implies current availability."
+        },
+        {
+          "en": "**Cloudflare Own-domain wizard**: for domains already on Cloudflare, guide tunnel creation, Token entry, confirmed connection, browser-side hostname binding and access verification. A live process alone is not a connected tunnel, and changed configurations require fresh verification."
+        },
+        {
+          "en": "**First-install remote setup**: installations without a historical database enable Remote Access and launch at login by default, with device signatures off. Channels remain manual; upgrades retain their settings, and switches stay off after users disable them."
+        },
+        {
+          "en": "**Tailscale installer experience**: packages are saved in the system Downloads folder. The wizard aligns actions on a vertical timeline, marks completion in green, shows file paths only after verification, reveals manual download only after automatic download fails, and reuses verified legacy packages; temporary downloads become clickable packages only after checksum verification."
+        }
+      ],
+      "Fixed": [
+        {
+          "en": "**Tailscale enable wrap-up**: enabling Funnel from the wizard now persists the channel switch and writes an audit entry, so the wizard completes after public verification and the channel restores after a relaunch (previously the flag was never written and the completion gate could not be met)."
+        },
+        {
+          "en": "**Approval link retention**: the browser approval link returned by first-time enable is no longer cleared by ordinary same-config status refreshes; config changes, channel off or master off still invalidate stale links and in-flight receipts."
+        },
+        {
+          "en": "**Separate DNS waiting from repair**: confirmed missing public records show continuous elapsed time and an estimate of around ten minutes, with automatic read-only checks and no repeated retry action. Ordinary verification no longer resets Funnel; an explicitly confirmed re-enable performs repair. Enabled macOS extensions require no further action, and a stopped backend no longer implies missing approval."
+        },
+        {
+          "en": "**macOS Tailscale installation**: the install action opens the system installer and rechecks status when Tuvis regains focus. Cancellation stays incomplete; installer failures retain exit codes and stdout/stderr instead of showing a blank error."
+        },
+        {
+          "en": "**Re-verification process hint**: while the automatic re-check runs after a channel is re-enabled, the summary shows a spinner with the expected timing (usually within a minute); it clears itself once verification passes, letting users tell normal waiting from a fault."
+        }
+      ]
+    }
+  },
+  {
+    "version": "0.6.0",
+    "date": "2026-10-21",
+    "sections": {
+      "Added": [
+        {
+          "en": "**Codex APP mobile control and message/file links (experimental)**: view message content and runtime status, send and queue messages, handle command approvals, and answer Plan-blocking questions from a phone. Capabilities are unlocked per exact Desktop build: Windows `26.1013.4894.0` supports send/status/command approval/Plan Q&A; macOS `26.1013.40934` supports send/status. `permissions` remains disabled. When Desktop is absent, the compatible exec path is used only if H3 is enabled; otherwise the request is refused honestly. Recognized file paths in message text open the preview; uploaded/referenced images, generated images under `~/.codex/generated_images/<threadId>/`, and files changed or viewed appear in the file panel with accurate source labels. A file entry jumps to its latest message reference within the current tail and at most four earlier pages (up to 50 messages per page). Previews read the current file on disk; historical file versions are not retained."
+        },
+        {
+          "en": "**Codex session image extraction**: the file pool now reads `event_msg.local_images` so user-uploaded or referenced local images can appear in the panel (#69)."
+        },
+        {
+          "en": "**Token dashboard V2 and cost estimates**: refreshed usage summaries, trend and distribution views, provider aliases, model pricing from curated public sources, USD/CNY estimates, hourly cost calculation, and a separate cost CSV export."
+        }
+      ],
+      "Changed": [
+        {
+          "en": "**Sub-agent completion-report toggle extended to codex / kimi / opencode** (#152)."
+        },
+        {
+          "en": "**Codex APP message signature is off by default**: when the setting is off, Codex APP paths no longer carry the `[mobile name]` source marker by default; enable it in desktop Settings → Message signature. actionId idempotency is unchanged."
+        },
+        {
+          "en": "**Usage formatting follows the locale**: English UI uses K/M/B and min/s/ms instead of Chinese number formats."
+        }
+      ],
+      "Fixed": [
+        {
+          "en": "**ZCode no longer reports completion while background work is unsettled**: synthetic notification messages no longer affect status or preview (#61 Task 3/4, PR #169)."
+        },
+        {
+          "en": "**Codex file-pool seq now aligns with message entries**, fixing ordering shifts (PR #168)."
+        },
+        {
+          "en": "**Sub-agent notifications / board / presets**: PR #167 cleanup; the parent card's sub-agent badge is recomputed from the same source (#134); the sub-agent-level preset entry is restored with distinct empty/unsupported states (#66)."
+        },
+        {
+          "en": "**Codex Q&A cancel now supports Esc** with explicit destructive-action wording (#80, PR #166)."
+        },
+        {
+          "en": "**Remote hardening**: escaped ingress hostnames parse correctly; saveToken gains a busy guard; named-parser config-line priority and charset handling are hardened."
+        }
+      ],
+      "Engineering": [
+        {
+          "en": "Split the bilingual changelog and backfilled v0.5.6–v0.5.8 English entries; added `nameEn` to the capability matrix; translated the remaining 7 English manual chapters; corrected the OpenClaw matrix cells."
+        },
+        {
+          "en": "Added `CHANGELOG.en.md` to the website-notification trigger paths, so English-only changelog updates also trigger a website rebuild."
+        }
+      ]
+    }
+  },
+  {
     "version": "0.5.8",
     "date": "2026-10-16",
     "sections": {
@@ -11,7 +101,7 @@
           "en": "Errors now carry error codes across the board: failures in the Rust layer (remote, commands, services, inject, etc.) and the mobile network layer are unified as \"error code + bilingual message\", with a new CI gate that scans for hardcoded on-screen Chinese strings to prevent regressions (#123/#150/#157). Quote the error code in a bug report and the failure can be pinpointed."
         },
         {
-          "en": "Added \"session artifacts\" as a fourth source for the file panel: artifact links and inline file references are scanned from session bodies (both inside and outside code fences) and wired into desktop and mobile from one shared implementation; preview honors an extension whitelist, existence filtering and rank-based fallback merging, and Codex sessions pass their working directory through as the base for resolving relative paths."
+          "en": "Added \"session artifacts\" as a fourth source for the file panel: artifact links and inline file references are scanned from session bodies (plain text and inline backtick paths, excluding triple-backtick code blocks) and wired into desktop and mobile from one shared implementation; preview honors an extension whitelist, existence filtering and rank-based fallback merging, and Codex sessions pass their working directory through as the base for resolving relative paths."
         },
         {
           "en": "The Codex trust gate became a persistent in-app action card instead of a one-shot system notification after registration (showing the card is not the same as clearing it — only \"Copy command\" or \"Don't remind me again\" dismisses it, and the card carries the `/hooks` command text as a fallback when the clipboard is unavailable). The reason a hook is not registered is stated as-is (on macOS Kimi shows \"this platform does not ship a Hook channel yet — nothing to do\"), and the signal-health section moved into the \"Tools & Health\" block in Settings."
