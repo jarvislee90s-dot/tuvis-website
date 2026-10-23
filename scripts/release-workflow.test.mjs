@@ -46,7 +46,10 @@ describe("release workflow policy", () => {
       expect(block).not.toContain("gh run watch");
     }
     expect(recovery).toMatch(/concurrency:\n  group: pages-recovery-orchestrator\n  cancel-in-progress: false/);
-    expect(recovery).toContain("gh run watch");
+    expect(recovery).toContain("scripts/wait-for-run.mjs");
+    // The wait step must not invoke `gh run watch`; mentioning it in an
+    // explanatory comment is fine, so only non-comment lines are banned.
+    expect(recovery).not.toMatch(/^[^#]*gh run watch/m);
   });
 
   it("requests and waits for the exact dispatched workflow run, then always cleans its marker", () => {
@@ -54,7 +57,15 @@ describe("release workflow policy", () => {
     expect(recovery).toContain('-F "return_run_details=true"');
     expect(recovery).toContain('-F "inputs[release_tag]=${RELEASE_TAG}"');
     expect(recovery).not.toContain("workflow_source_sha");
-    expect(recovery).toContain("gh run watch");
+    expect(recovery).toContain("scripts/wait-for-run.mjs");
+    expect(recovery).not.toMatch(/^[^#]*gh run watch/m);
+    // `gh run watch` cannot authenticate with fine-grained PATs, so the wait
+    // polls the Actions REST API with the same PAT-first token as the other
+    // gh steps.
+    const waitStep = recovery.match(/- name: Wait for Pages deployment[\s\S]*?(?=\n      - |\n  #|$)/);
+    expect(waitStep).toBeTruthy();
+    expect(waitStep[0]).toContain("DEPLOY_RUN_ID");
+    expect(waitStep[0]).toContain("GH_TOKEN: ${{ secrets.RELEASE_RECOVERY_PAT || github.token }}");
     expect(recovery).toMatch(/if: always\(\).*steps\.marker\.outputs\.branch/);
   });
 

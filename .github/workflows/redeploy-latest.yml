@@ -61,7 +61,10 @@ jobs:
           MARKER_BRANCH: ${{ steps.marker.outputs.branch }}
           RELEASE_TAG: ${{ inputs.release_tag }}
       - name: Wait for Pages deployment
-        run: gh run watch "$DEPLOY_RUN_ID" --exit-status
+        # gh run watch does not support fine-grained PAT authentication
+        # (checks:read cannot be granted on them), so completion is polled
+        # through the Actions REST API instead.
+        run: node scripts/wait-for-run.mjs
         env:
           GH_TOKEN: ${{ secrets.RELEASE_RECOVERY_PAT || github.token }}
           DEPLOY_RUN_ID: ${{ steps.dispatch.outputs.deploy_run_id }}
