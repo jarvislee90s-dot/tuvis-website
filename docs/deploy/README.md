@@ -35,7 +35,7 @@ pnpm release:website v0.7.0
 
 在网站仓 Actions 运行 **Redeploy latest website release**，输入最新稳定网站 tag。恢复只允许最新 tag；旧版本回滚应作为单独、明确的操作处理。
 
-恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。该分支通过 GitHub Git 数据 API（`POST /git/commits` + `POST /git/refs`）创建而不是 `git push`：GITHUB_TOKEN 推送树里含 workflow 文件的新分支会被 GitHub 拒绝，而 `workflows: write` 又不是 GITHUB_TOKEN 的合法 scope（issue #7）。Git 数据 API 经验上不经过该推送门禁（GitHub 未文档化此差异），合并后首次恢复仍应实测确认；不要改回 push。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
+恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。该分支通过 GitHub Git 数据 API（`POST /git/commits` + `POST /git/refs`）创建而不是 `git push`：GITHUB_TOKEN 推送树里含 workflow 文件的新分支会被 GitHub 拒绝，而 `workflows: write` 又不是 GITHUB_TOKEN 的合法 scope（issue #7）。实测（2026-10-23，run 39978121538）Git 数据 API 也绕不开该门禁：commit 对象可以创建，但 ref 创建同样被 403 拒绝。因此编排各步骤使用 `RELEASE_RECOVERY_PAT` secret（fine-grained PAT，仅限本仓库，Contents / Actions / Workflows 均为 read & write），未配置时回退 GITHUB_TOKEN——此时恢复会在 marker 步骤失败。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
 
 网站仓与 Tuvis 仓均配置了 active ruleset `Protect v* release tags`，匹配 `refs/tags/v*`，禁止更新与删除且没有 bypass actor；它不阻止创建新 release tag。旧辅助 tag `v0.6.0-deploy.1` 也在保护范围内，因此保留不删。托管迁至 Cloudflare Pages 后，`github-pages` Environment 不再参与发布，无需维护其部署规则。
 
@@ -54,6 +54,7 @@ pnpm release:website v0.7.0
 - **正式构建失败**：检查日志中的 `TUVIS_RELEASE_REF` 与三类内容来源；正式发布不允许从 `main` 或网站快照回退。
 - **用户手册章节或配图缺失**：构建会对照 `src/content/manual.ts` 检查中英文 13 篇章节及其相对图片引用；补齐 Tuvis 对应 tag 后重新发版。
 - **旧 tag 没有部署**：这是保护行为；只部署最新正式稳定 tag。
+- **恢复在 marker 步骤 403（Resource not accessible by integration）**：`RELEASE_RECOVERY_PAT` 未配置（回退到 GITHUB_TOKEN 必被 workflow 门禁拦截）或权限不足（需 Contents / Actions / Workflows 均为 read & write，仅限本仓库）；更新 secret 后重跑恢复。
 - **恢复后 marker 分支残留**：检查 `Redeploy latest website release` 的清理步骤，再手动删除 `v*-redeploy-*` 分支。
 - **CF 部署红在 wrangler 步骤**：多为 `CLOUDFLARE_API_TOKEN` 过期/权限不足（需 `Account | Cloudflare Pages | Edit`）或 `CLOUDFLARE_ACCOUNT_ID` 填错；更新 secret 后对最新 tag 运行「Redeploy latest website release」重发。
 

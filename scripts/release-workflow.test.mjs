@@ -63,8 +63,18 @@ describe("release workflow policy", () => {
     expect(markerScript).toContain("/git/refs");
     expect(markerScript).not.toMatch(/git\(\s*["'`](push|checkout|switch|commit)["'`]/);
 
+    // GITHUB_TOKEN cannot create refs via the Git data API (403 on run
+    // 39978121538), so every gh step in the orchestrator prefers a PAT and
+    // falls back to GITHUB_TOKEN only when the secret is not configured.
+    const tokenFallback = "GH_TOKEN: ${{ secrets.RELEASE_RECOVERY_PAT || github.token }}";
+    expect((recovery.match(/GH_TOKEN: \$\{\{ secrets\.RELEASE_RECOVERY_PAT \|\| github\.token \}\}/g) ?? []).length).toBe(4);
+
     const markerStep = recovery.match(/- name: Create empty marker commit[\s\S]*?(?=\n      - |\n  #|$)/);
     expect(markerStep).toBeTruthy();
-    expect(markerStep[0]).toContain("GH_TOKEN: ${{ github.token }}");
+    expect(markerStep[0]).toContain(tokenFallback);
+
+    const deleteStep = recovery.match(/- name: Delete marker branch[\s\S]*?(?=\n      - |\n  #|$)/);
+    expect(deleteStep).toBeTruthy();
+    expect(deleteStep[0]).toContain(tokenFallback);
   });
 });
