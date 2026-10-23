@@ -35,7 +35,7 @@ pnpm release:website v0.7.0
 
 在网站仓 Actions 运行 **Redeploy latest website release**，输入最新稳定网站 tag。恢复只允许最新 tag；旧版本回滚应作为单独、明确的操作处理。
 
-恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
+恢复 workflow 会创建 `vX.Y.Z-redeploy-<run-id>-<attempt>` 临时分支。marker commit 是正式 tag 的子提交，只有 SHA 不同，tree 与正式 tag 完全一致。该分支通过 GitHub Git 数据 API（`POST /git/commits` + `POST /git/refs`）创建而不是 `git push`：GITHUB_TOKEN 推送树里含 workflow 文件的新分支会被 GitHub 拒绝，而 `workflows: write` 又不是 GITHUB_TOKEN 的合法 scope（issue #7）。Git 数据 API 经验上不经过该推送门禁（GitHub 未文档化此差异），合并后首次恢复仍应实测确认；不要改回 push。恢复构建和工作流都来自正式 tag。恢复前会验证该 tag 自带的 `deploy.yml` 声明了同树 marker 协议；不支持该协议的旧 tag（包括现有 `v0.6.0`）会被拒绝，安全恢复从下一个按新流程创建的正式 tag 开始。恢复完成或失败后，workflow 自动删除 marker 分支。不要直接重跑旧 tag 的部署 run；同版本重发请使用这个恢复入口。
 
 网站仓与 Tuvis 仓均配置了 active ruleset `Protect v* release tags`，匹配 `refs/tags/v*`，禁止更新与删除且没有 bypass actor；它不阻止创建新 release tag。旧辅助 tag `v0.6.0-deploy.1` 也在保护范围内，因此保留不删。托管迁至 Cloudflare Pages 后，`github-pages` Environment 不再参与发布，无需维护其部署规则。
 

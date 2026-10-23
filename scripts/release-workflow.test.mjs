@@ -7,6 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const deploy = readFileSync(resolve(root, ".github/workflows/deploy.yml"), "utf8");
 const recovery = readFileSync(resolve(root, ".github/workflows/redeploy-latest.yml"), "utf8");
 const reconciliation = readFileSync(resolve(root, "scripts/dispatch-latest-redeploy.mjs"), "utf8");
+const markerScript = readFileSync(resolve(root, "scripts/create-redeploy-marker.mjs"), "utf8");
 
 describe("release workflow policy", () => {
   it("checks release events before the deploy job and serializes that job with one pending run", () => {
@@ -55,5 +56,15 @@ describe("release workflow policy", () => {
     expect(recovery).not.toContain("workflow_source_sha");
     expect(recovery).toContain("gh run watch");
     expect(recovery).toMatch(/if: always\(\).*steps\.marker\.outputs\.branch/);
+  });
+
+  it("creates the redeploy marker through the GitHub Git data API without local git mutations", () => {
+    expect(markerScript).toContain("/git/commits");
+    expect(markerScript).toContain("/git/refs");
+    expect(markerScript).not.toMatch(/git\(\s*["'`](push|checkout|switch|commit)["'`]/);
+
+    const markerStep = recovery.match(/- name: Create empty marker commit[\s\S]*?(?=\n      - |\n  #|$)/);
+    expect(markerStep).toBeTruthy();
+    expect(markerStep[0]).toContain("GH_TOKEN: ${{ github.token }}");
   });
 });
