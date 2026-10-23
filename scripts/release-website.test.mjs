@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,9 +33,68 @@ function commitFile(cwd, name, contents) {
   git(cwd, "-c", "user.name=Release Test", "-c", "user.email=release-test@example.test", "commit", "-m", `add ${name}`);
 }
 
+// A local `gh` stand-in for integration fixtures: it serves exactly the GitHub
+// Git data API calls that create-redeploy-marker.mjs makes, backed by the bare
+// repo in FAKE_GITHUB_REPO_DIR. Responses echo real git plumbing results (never
+// the request body), and any drifted invocation exits non-zero instead of
+// silently bypassing this fake.
+const GH_SHIM_SOURCE = [
+  "#!/usr/bin/env node",
+  'const { execFileSync } = require("node:child_process");',
+  'const { readFileSync } = require("node:fs");',
+  "const args = process.argv.slice(2);",
+  'const fixed = ["api", "--method", "POST", "--header", "X-GitHub-Api-Version: 2022-11-28"];',
+  "const pathParts = typeof args[5] === 'string' ? args[5].split('/') : [];",
+  "const drifted = args.length !== 8",
+  "  || fixed.some((part, index) => args[index] !== part)",
+  "  || pathParts.length !== 6",
+  "  || pathParts[0] !== '' || pathParts[1] !== 'repos'",
+  "  || pathParts[2] === '' || pathParts[3] === ''",
+  "  || pathParts[4] !== 'git' || !['commits', 'refs'].includes(pathParts[5])",
+  '  || args[6] !== "--input" || args[7] !== "-";',
+  "if (drifted) {",
+  '  console.error("fake-gh: invocation does not match the GitHub Git data API contract: " + JSON.stringify(args));',
+  "  process.exit(1);",
+  "}",
+  "const repo = process.env.FAKE_GITHUB_REPO_DIR;",
+  "if (!repo) {",
+  '  console.error("fake-gh: FAKE_GITHUB_REPO_DIR is not set");',
+  "  process.exit(1);",
+  "}",
+  "const git = (gitArgs, env) => execFileSync('git', gitArgs, { cwd: repo, encoding: 'utf8', env: { ...process.env, ...env } }).trim();",
+  'const body = JSON.parse(readFileSync(0, "utf8"));',
+  "const botIdentity = {",
+  '  GIT_AUTHOR_NAME: "github-actions[bot]",',
+  '  GIT_AUTHOR_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com",',
+  '  GIT_COMMITTER_NAME: "github-actions[bot]",',
+  '  GIT_COMMITTER_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com",',
+  "};",
+  'if (pathParts[5] === "commits") {',
+  "  const parents = Array.isArray(body.parents) ? body.parents : [];",
+  '  const sha = git(["commit-tree", body.tree, ...parents.flatMap((parent) => ["-p", parent]), "-m", body.message], botIdentity);',
+  '  const tree = git(["rev-parse", sha + "^{tree}"]);',
+  '  const realParents = git(["rev-list", "--parents", "-n", "1", sha]).split(" ").slice(1);',
+  '  process.stdout.write(JSON.stringify({ sha, tree: { sha: tree }, parents: realParents.map((parent) => ({ sha: parent })) }));',
+  "  process.exit(0);",
+  "}",
+  'let existing = "";',
+  'try { existing = git(["rev-parse", "--verify", "-q", body.ref]); } catch { existing = ""; }',
+  'if (existing !== "") {',
+  '  console.error("fake-gh: " + body.ref + " already exists (simulated GitHub 422)");',
+  "  process.exit(1);",
+  "}",
+  'git(["update-ref", body.ref, body.sha]);',
+  'process.stdout.write(JSON.stringify({ ref: body.ref, object: { sha: body.sha } }));',
+  "process.exit(0);",
+].join("\n");
+
 function setup() {
   const root = mkdtempSync(path.join(tmpdir(), "tuvis-website-release-"));
   roots.push(root);
+  const ghShimDir = path.join(root, "bin");
+  mkdirSync(ghShimDir, { recursive: true });
+  writeFileSync(path.join(ghShimDir, "gh"), GH_SHIM_SOURCE);
+  chmodSync(path.join(ghShimDir, "gh"), 0o755);
   const websiteRemote = path.join(root, "website.git");
   const website = path.join(root, "website");
   const tuvisRemote = path.join(root, "tuvis.git");
@@ -68,11 +127,19 @@ function runRelease(website, tuvisRemote, tag) {
   });
 }
 
-function runMarker(website, tag, runId = "42", attempt = "1") {
+function runMarker({ root, website, websiteRemote }, tag, runId = "42", attempt = "1") {
   return spawnSync(process.execPath, [markerScript], {
     cwd: website,
     encoding: "utf8",
-    env: { ...process.env, RELEASE_TAG: tag, GITHUB_RUN_ID: runId, GITHUB_RUN_ATTEMPT: attempt },
+    env: {
+      ...process.env,
+      RELEASE_TAG: tag,
+      GITHUB_RUN_ID: runId,
+      GITHUB_RUN_ATTEMPT: attempt,
+      GITHUB_REPOSITORY: "owner/site",
+      FAKE_GITHUB_REPO_DIR: websiteRemote,
+      PATH: `${path.join(root, "bin")}:${process.env.PATH ?? ""}`,
+    },
   });
 }
 
@@ -161,10 +228,10 @@ describe("release-website command", () => {
   });
 
   it("creates an empty unique recovery marker with the release's exact tree and parent", () => {
-    const { websiteRemote, website } = setup();
+    const { root, websiteRemote, website } = setup();
     const release = createProtocolRelease(website, "v0.1.0");
 
-    const result = runMarker(website, "v0.1.0");
+    const result = runMarker({ root, website, websiteRemote }, "v0.1.0");
     expect(result.status, result.stderr).toBe(0);
     const branch = "v0.1.0-redeploy-42-1";
     const remoteBranch = execFileSync("git", ["ls-remote", websiteRemote, `refs/heads/${branch}`], { encoding: "utf8" });
@@ -175,7 +242,7 @@ describe("release-website command", () => {
     expect(git(website, "rev-parse", `${marker}^{tree}`)).toBe(git(website, "rev-parse", `${release}^{tree}`));
     expect(git(website, "rev-parse", `${marker}^`)).toBe(release);
 
-    const secondResult = runMarker(website, "v0.1.0", "43", "1");
+    const secondResult = runMarker({ root, website, websiteRemote }, "v0.1.0", "43", "1");
     expect(secondResult.status, secondResult.stderr).toBe(0);
     const secondBranch = "v0.1.0-redeploy-43-1";
     git(website, "fetch", "origin", secondBranch);
@@ -186,18 +253,18 @@ describe("release-website command", () => {
   });
 
   it("refuses recovery of a tag older than the latest stable website release", () => {
-    const { website } = setup();
+    const { root, websiteRemote, website } = setup();
     git(website, "tag", "-a", "v0.1.0", "-m", "Website v0.1.0");
     git(website, "tag", "-a", "v0.2.0", "-m", "Website v0.2.0");
     git(website, "push", "origin", "--tags");
 
-    const result = runMarker(website, "v0.1.0");
+    const result = runMarker({ root, website, websiteRemote }, "v0.1.0");
     expect(result.status).not.toBe(0);
     expect(result.stderr).toMatch(/only the latest stable release tag/);
   });
 
   it("rejects recovery of the current legacy release but accepts the next same-tree protocol release", () => {
-    const { website } = setup();
+    const { root, websiteRemote, website } = setup();
     commitFile(website, ".github/workflows/deploy.yml", "on:\n  workflow_dispatch:\n    inputs:\n      ref:\n        required: false\n");
     git(website, "push", "origin", "main");
     git(website, "tag", "-a", "v0.1.0", "-m", "legacy website release");
@@ -206,7 +273,7 @@ describe("release-website command", () => {
     const legacy = runValidator(website, "v0.1.0");
     expect(legacy.status).not.toBe(0);
     expect(legacy.stderr).toMatch(/predates the same-tree recovery protocol/);
-    expect(runMarker(website, "v0.1.0").status).not.toBe(0);
+    expect(runMarker({ root, website, websiteRemote }, "v0.1.0").status).not.toBe(0);
 
     git(website, "switch", "main");
     commitFile(website, ".github/workflows/deploy.yml", "# recovery-marker-protocol: v1\non:\n  workflow_dispatch:\n");
@@ -221,10 +288,13 @@ describe("release-website command", () => {
   it("keeps tag builds exact, reconciles stale events, and runs scripts from their nested checkouts", () => {
     const { root, website, websiteRemote } = setup();
     const releaseCommit = createProtocolRelease(website, "v0.1.0");
-    const markerResult = runMarker(website, "v0.1.0");
+    const markerResult = runMarker({ root, website, websiteRemote }, "v0.1.0");
     expect(markerResult.status, markerResult.stderr).toBe(0);
     const markerBranch = "v0.1.0-redeploy-42-1";
-    const markerSha = git(website, "rev-parse", "HEAD");
+    // The marker script no longer moves HEAD in the local clone (issue #7);
+    // consume the marker exactly the way deploy.yml does, by fetching the event ref.
+    git(website, "fetch", "origin", markerBranch);
+    const markerSha = git(website, "rev-parse", `origin/${markerBranch}`);
 
     const resolved = runResolver(website, {
       GITHUB_SHA: markerSha,
@@ -308,10 +378,11 @@ describe("release-website command", () => {
     expect(delayedRecovery.stdout).toContain("should_deploy=false");
     expect(delayedRecovery.stdout).toContain("reconcile_tag=v0.2.0");
 
-    const reconcileMarker = runMarker(website, "v0.2.0", "44", "1");
+    const reconcileMarker = runMarker({ root, website, websiteRemote }, "v0.2.0", "44", "1");
     expect(reconcileMarker.status, reconcileMarker.stderr).toBe(0);
     const reconcileBranch = "v0.2.0-redeploy-44-1";
-    const reconcileSha = git(website, "rev-parse", "HEAD");
+    git(website, "fetch", "origin", reconcileBranch);
+    const reconcileSha = git(website, "rev-parse", `origin/${reconcileBranch}`);
     const reconciled = runResolver(website, {
       GITHUB_SHA: reconcileSha,
       GITHUB_EVENT_NAME: "workflow_dispatch",
@@ -333,5 +404,57 @@ describe("release-website command", () => {
     expect(stale.stdout).toContain("release_tag=v0.1.0");
     expect(stale.stdout).toContain("should_deploy=false");
     expect(stale.stdout).toContain("reconcile_tag=v0.2.0");
+  });
+
+  it("keeps the fake GitHub API shim strict about its wire contract and honest in its responses", () => {
+    const { root, websiteRemote } = setup();
+    const gh = path.join(root, "bin", "gh");
+    const runShim = (args, body) =>
+      spawnSync(process.execPath, [gh, ...args], {
+        encoding: "utf8",
+        input: JSON.stringify(body),
+        env: { ...process.env, FAKE_GITHUB_REPO_DIR: websiteRemote },
+      });
+    const commitsArgs = ["api", "--method", "POST", "--header", "X-GitHub-Api-Version: 2022-11-28", "/repos/owner/site/git/commits", "--input", "-"];
+
+    const mainSha = git(websiteRemote, "rev-parse", "main");
+    const probeBody = { message: "probe", tree: git(websiteRemote, "rev-parse", "main^{tree}"), parents: [mainSha] };
+
+    // Any drift from the exact wire contract must fail loudly.
+    const staleHeader = runShim(["api", "--method", "POST", "--header", "X-GitHub-Api-Version: 2020-01-01", ...commitsArgs.slice(5)], probeBody);
+    expect(staleHeader.status).not.toBe(0);
+    expect(staleHeader.stderr).toMatch(/does not match the GitHub Git data API contract/);
+
+    const missingInputFlag = runShim([...commitsArgs.slice(0, 7)], probeBody);
+    expect(missingInputFlag.status).not.toBe(0);
+    expect(missingInputFlag.stderr).toMatch(/does not match the GitHub Git data API contract/);
+
+    const unsupportedEndpoint = runShim(
+      ["api", "--method", "POST", "--header", "X-GitHub-Api-Version: 2022-11-28", "/repos/owner/site/actions/workflows/x/dispatches", "--input", "-"],
+      {},
+    );
+    expect(unsupportedEndpoint.status).not.toBe(0);
+
+    // The commits response must echo the repo's real plumbing, not the request.
+    const commitResponse = runShim(commitsArgs, probeBody);
+    expect(commitResponse.status, commitResponse.stderr).toBe(0);
+    const commit = JSON.parse(commitResponse.stdout);
+    expect(commit.sha).not.toBe(mainSha);
+    expect(commit.tree.sha).toBe(probeBody.tree);
+    expect(commit.tree.sha).toBe(git(websiteRemote, "rev-parse", `${commit.sha}^{tree}`));
+    expect(commit.parents).toEqual([{ sha: mainSha }]);
+    expect(git(websiteRemote, "log", "--format=%an %ae %cn %ce", "-1", commit.sha)).toBe(
+      "github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com github-actions[bot] 41898282+github-actions[bot]@users.noreply.github.com",
+    );
+
+    const refArgs = ["api", "--method", "POST", "--header", "X-GitHub-Api-Version: 2022-11-28", "/repos/owner/site/git/refs", "--input", "-"];
+    const refResponse = runShim(refArgs, { ref: "refs/heads/probe-marker", sha: commit.sha });
+    expect(refResponse.status, refResponse.stderr).toBe(0);
+    expect(JSON.parse(refResponse.stdout)).toEqual({ ref: "refs/heads/probe-marker", object: { sha: commit.sha } });
+    expect(execFileSync("git", ["ls-remote", websiteRemote, "refs/heads/probe-marker"], { encoding: "utf8" })).toContain(commit.sha);
+
+    const conflict = runShim(refArgs, { ref: "refs/heads/probe-marker", sha: mainSha });
+    expect(conflict.status).not.toBe(0);
+    expect(conflict.stderr).toMatch(/already exists/);
   });
 });
