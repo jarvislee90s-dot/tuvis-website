@@ -1,0 +1,2348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tuvis × iPhone Duo — Unfold Lab</title>
+<!--
+  Tuvis × iPhone Duo — standalone unfold study.
+  No build, no external assets. Open directly in a browser.
+
+  Click the phone to unfold. Click the center hinge to fold back.
+  Query: ?state=open&slow=1&lang=en&freeze=0.55&embed=1&video=1
+    state=open  start open
+    slow=1      play at 0.25x
+    lang=en     English copy
+    freeze=0.55 freeze the unfold at a given progress (QA)
+    embed=1     iframe variant: lab chrome removed, state chip merged into the
+                bottom row next to the hinge hint, resolution note dropped
+    video=1     offline-render variant: embed chrome plus interaction controls
+                hidden, video title/note shown (used by scripts/render-duo-unfold.mjs)
+  The reusable stage is .duo-stage; the .lab-* shell/control bar can be removed.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f5efe4;
+    --paper-2: #fbf7ef;
+    --paper-3: #f0e8da;
+    --ink: #292319;
+    --ink-2: #4f483c;
+    --muted: #7c7363;
+    --faint: #a59b89;
+    --line: #e7dfd0;
+    --line-2: #ddd3c2;
+    --claude: #d97757;
+    --claude-soft: #f4e2d9;
+    --ok: #1e7b34;
+    --ok-soft: #e3f2e7;
+    --warn: #9a7100;
+    --warn-soft: #fbf3d9;
+    --blue: #2f6fed;
+    --blue-soft: #edf3ff;
+    --half: 350px;
+    --dev-h: 500px;
+    --rim: 2px;
+    --bezel: 9px;
+    --corner-free: 46px;
+    --corner-hinge: 8px;
+    --metal-lip: 2px;
+    --scale: 1.22;
+    --shift: -175px;
+    --fold: 180deg;
+    --crease: 0;
+    --inner: 0;
+    --inner-full: 0;
+    --outer: 1;
+    --outer-dim: 0;
+    --outer-off: 0;
+    --base-bright: 1;
+    --lv-e: 100%;
+    --lv-start: 58%;
+    --lv-end: 142%;
+    --lv-blur: 10px;
+    --lv-a: 0;
+    --lv-o: 0;
+    --udc: 0;
+    --sweep: -40%;
+    --sheen: 0;
+    --shadow: .48;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(1100px 620px at 50% -5%, rgba(255,252,245,.95), transparent 68%),
+      radial-gradient(900px 500px at 8% 88%, rgba(238,228,211,.55), transparent 65%),
+      var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; }
+
+  .lab {
+    width: min(1240px, 100%);
+    margin: 0 auto;
+    padding: 24px 24px 30px;
+  }
+
+  /* ---------- lab chrome ---------- */
+  .lab-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 2px 2px 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand-mark {
+    width: 32px; height: 32px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #30343d, #111319 58%, #050609);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 5px 14px rgba(50,38,20,.16);
+  }
+  .brand-mark svg { width: 21px; height: 21px; display: block; }
+  .brand-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
+  .brand-name { font-weight: 750; letter-spacing: -.02em; font-size: 15px; }
+  .brand-sub { color: var(--muted); font-size: 12px; }
+  .brand-badge {
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink-2); border: 1px solid var(--line-2); background: rgba(255,253,248,.72);
+    padding: 3px 7px; border-radius: 999px;
+  }
+  .controls { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+  .ctl {
+    border: 1px solid var(--line-2);
+    background: rgba(255,253,248,.72);
+    color: var(--ink-2);
+    height: 31px; padding: 0 11px;
+    border-radius: 9px;
+    font-size: 11.5px; font-weight: 600;
+    letter-spacing: .01em;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,.65) inset, 0 4px 12px rgba(72,52,22,.045);
+    transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ctl:hover { border-color: #cfc4b1; background: #fffdf8; transform: translateY(-1px); }
+  .ctl:active { transform: translateY(0); }
+  .ctl:focus-visible { outline: 2px solid rgba(47,111,237,.45); outline-offset: 2px; }
+  .ctl[aria-pressed="true"] { background: #242018; border-color: #242018; color: #fffdf8; }
+  .ctl.primary { background: #242018; border-color: #242018; color: #fffdf8; }
+  .ctl.primary:hover { background: #343026; border-color: #343026; }
+  .ctl .dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .65; margin-right: 6px; vertical-align: 1px; }
+
+  /* ---------- stage ---------- */
+  .duo-stage {
+    position: relative;
+    border-radius: 34px;
+    padding: 62px 28px 20px;
+    overflow: hidden;
+    background:
+      radial-gradient(680px 420px at 50% 38%, rgba(255,254,250,.95), rgba(250,246,237,.66) 46%, transparent 72%),
+      radial-gradient(1px 1px at 50% 50%, rgba(102,85,55,.12) 1px, transparent 1.5px),
+      linear-gradient(180deg, #faf6ed, #f5efe4);
+    background-size: auto, 18px 18px, auto;
+    border: 1px solid rgba(205,193,173,.55);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.9) inset,
+      0 30px 80px -40px rgba(85,62,24,.28),
+      0 2px 6px rgba(85,62,24,.04);
+  }
+  .duo-stage::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(900px 420px at 50% 46%, rgba(255,255,255,.45), transparent 70%);
+    pointer-events: none;
+  }
+  .stage-topline {
+    position: absolute; top: 18px; left: 22px; right: 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    z-index: 8; pointer-events: none;
+  }
+  .state-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 26px; padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(223,213,196,.85);
+    background: rgba(255,253,248,.74);
+    box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink-2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .state-chip i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--warn); box-shadow: 0 0 0 3px rgba(154,113,0,.12);
+    transition: background .3s ease, box-shadow .3s ease;
+  }
+  .duo-stage[data-state="open"] .state-chip i { background: var(--ok); box-shadow: 0 0 0 3px rgba(30,123,52,.12); }
+  .stage-rail { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; }
+  .stage-rail span { white-space: nowrap; }
+  .stage-rail .line { width: 34px; height: 1px; background: var(--line-2); }
+
+  .stage-canvas {
+    position: relative;
+    height: calc(var(--dev-h) * var(--scale) + 94px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 3;
+  }
+  .device-scale {
+    position: relative;
+    width: var(--half);
+    width: calc(var(--half) * 2);
+    height: var(--dev-h);
+    flex: 0 0 auto;
+    transform: scale(var(--scale));
+    transform-origin: 50% 50%;
+  }
+  .floor-shadow {
+    position: absolute;
+    left: 50%; bottom: -28px;
+    width: 760px; height: 74px;
+    transform: translateX(-50%) scaleX(var(--shadow));
+    background:
+      radial-gradient(48% 50% at 50% 50%, rgba(62,45,19,.30), rgba(62,45,19,.10) 46%, transparent 72%);
+    filter: blur(13px);
+    opacity: .9;
+    pointer-events: none;
+  }
+  .floor-shadow::after {
+    content: "";
+    position: absolute; left: 14%; right: 14%; bottom: 27px; height: 12px;
+    border-radius: 50%;
+    background: rgba(55,39,17,.22);
+    filter: blur(7px);
+    opacity: .55;
+  }
+
+  .device {
+    --thickness: 18px;
+    position: relative;
+    width: 700px;
+    height: var(--dev-h);
+    transform: translateX(var(--shift));
+    perspective: 4200px;
+    perspective-origin: 50% 42%;
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 3;
+  }
+
+  .half {
+    position: absolute; top: 0;
+    width: var(--half); height: var(--dev-h);
+    background:
+      linear-gradient(116deg, rgba(255,255,255,.62), transparent 18% 76%, rgba(255,255,255,.18)),
+      linear-gradient(135deg, #b5bcc6 0%, #e5e9ee 18%, #f7f8fa 34%, #aab2bd 58%, #e8ebef 78%, #9ba3ae 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.55),
+      inset 0 0 0 2px rgba(40,44,52,.52),
+      inset 0 1px 1px rgba(255,255,255,.8);
+  }
+  .half::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(102deg, transparent 12%, rgba(255,255,255,.075) 18%, transparent 24% 78%, rgba(255,255,255,.05) 84%, transparent 91%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+    opacity: .8;
+  }
+  .right-half {
+    right: 0;
+    border-radius: var(--corner-hinge) var(--corner-free) var(--corner-free) var(--corner-hinge);
+    transform-style: preserve-3d;
+    z-index: 3;
+  }
+  .left-half {
+    left: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+    transform-origin: right center;
+    transform: rotateY(var(--fold));
+    transform-style: preserve-3d;
+    backface-visibility: visible;
+    -webkit-backface-visibility: visible;
+    z-index: 2;
+    will-change: transform;
+  }
+  .left-half::after { display: none; }
+
+  /* The flipping cover is a real slab: front inner face, back cover face and metal rails. */
+  .left-face {
+    position: absolute; inset: 0;
+    border-radius: var(--corner-free) var(--corner-hinge) var(--corner-hinge) var(--corner-free);
+    background:
+      linear-gradient(116deg, rgba(255,255,255,.62), transparent 18% 76%, rgba(255,255,255,.18)),
+      linear-gradient(135deg, #b5bcc6 0%, #e5e9ee 18%, #f7f8fa 34%, #aab2bd 58%, #e8ebef 78%, #9ba3ae 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.55),
+      inset 0 0 0 2px rgba(40,44,52,.52),
+      inset 0 1px 1px rgba(255,255,255,.8);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+  }
+  .left-face::before,
+  .right-half::before {
+    content: "";
+    position: absolute; inset: calc(-1 * var(--metal-lip));
+    border-radius: inherit;
+    border: 1.7px solid transparent;
+    background:
+      linear-gradient(105deg, #8f98a3 0%, #e9edf1 20%, #fbfcfd 36%, #98a1ab 55%, #dde2e7 76%, #6d757e 100%) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* keep the ring concentric with the body arc, or its corners poke out.
+     the back face is flipped, so its ring mirrors too. */
+  .left-face.front::before { border-radius: calc(var(--corner-free) + var(--metal-lip)) calc(var(--corner-hinge) + var(--metal-lip)) calc(var(--corner-hinge) + var(--metal-lip)) calc(var(--corner-free) + var(--metal-lip)); }
+  .left-face.back::before,
+  .right-half::before { border-radius: calc(var(--corner-hinge) + var(--metal-lip)) calc(var(--corner-free) + var(--metal-lip)) calc(var(--corner-free) + var(--metal-lip)) calc(var(--corner-hinge) + var(--metal-lip)); }
+  .left-face::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(102deg, transparent 12%, rgba(255,255,255,.06) 18%, transparent 24% 78%, rgba(255,255,255,.03) 84%, transparent 91%);
+    pointer-events: none;
+    opacity: .8;
+  }
+  .left-face.front {
+    transform: translateZ(0.01px);
+  }
+  .left-face.back {
+    border-radius: var(--corner-hinge) var(--corner-free) var(--corner-free) var(--corner-hinge);
+    transform: rotateY(180deg) translateZ(var(--thickness));
+    background:
+      linear-gradient(116deg, rgba(255,255,255,.055), transparent 22% 76%, rgba(255,255,255,.03)),
+      linear-gradient(135deg, #191d23 0%, #0a0d12 32%, #04060a 70%, #12161c 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.10),
+      inset 0 0 0 2px rgba(0,0,0,.62),
+      inset 0 1px 1px rgba(255,255,255,.12);
+  }
+  .left-face.front .left-screen {
+    left: var(--rim);
+    top: var(--rim);
+    width: calc(var(--half) - var(--rim));
+    height: calc(var(--dev-h) - var(--rim) * 2);
+    border-width: var(--bezel) 0 var(--bezel) var(--bezel);
+    border-radius: 44px 6px 6px 44px;
+  }
+  .left-face.back .back-screen {
+    left: var(--rim);
+    top: var(--rim);
+    width: calc(var(--half) - var(--rim) * 2);
+    height: calc(var(--dev-h) - var(--rim) * 2);
+    border-width: var(--bezel);
+    border-radius: 8px 44px 44px 8px;
+  }
+  .back-screen { background: #05070a; }
+
+  /* A closed perimeter joins both face rims, including all four corner arcs.
+     Each wall's local x follows the outline; local y spans the body depth. */
+  .slab { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+  .frame-wall {
+    position: absolute; left: 0; top: 0;
+    height: var(--thickness);
+    transform-origin: 0 0;
+    backface-visibility: visible;
+    background:
+      var(--rail-markings, linear-gradient(transparent, transparent)),
+      linear-gradient(180deg, #05070a 0%, #31373f 14%, #c9d0d7 32%, #f5f8fa 47%, #a8b1bb 63%, #262c34 84%, #04060a 100%);
+    pointer-events: none;
+  }
+  .frame-wall.free-rail {
+    --rail-markings: linear-gradient(90deg,
+      transparent 0 5%, rgba(8,10,14,.38) 5% 6.8%,
+      transparent 6.8% 93.2%, rgba(8,10,14,.38) 93.2% 95%, transparent 95%);
+  }
+  .screen {
+    position: absolute; top: var(--rim);
+    width: calc(var(--half) - var(--rim) * 2);
+    height: calc(var(--dev-h) - var(--rim) * 2);
+    overflow: hidden;
+    border: var(--bezel) solid #05070a;
+    background: #05070a;
+    box-shadow:
+      0 0 0 .5px rgba(5,7,10,.9),
+      inset 0 0 0 .5px rgba(255,255,255,.045);
+    isolation: isolate;
+  }
+  .right-half .screen {
+    left: 0;
+    top: var(--rim);
+    width: calc(var(--half) - var(--rim));
+    height: calc(var(--dev-h) - var(--rim) * 2);
+    border-width: var(--bezel) var(--bezel) var(--bezel) 0;
+    border-radius: 6px 44px 44px 6px;
+    z-index: 3;
+  }
+
+  /* Hinge barrel: fills the small notch where the two inner halves meet. */
+  .hinge-core {
+    position: absolute; top: 0; bottom: 0; left: 50%;
+    width: 30px;
+    transform: translateX(-50%);
+    z-index: 1;
+    opacity: var(--inner);
+    pointer-events: none;
+    border-radius: 5px;
+    background: linear-gradient(90deg, #0a0d11 0%, #232932 26%, #414a56 50%, #232932 74%, #0a0d11 100%);
+  }
+  /* The same hinge seen from outside while the phone is closed. */
+  .hinge-barrel {
+    position: absolute; top: 2px; bottom: 2px;
+    left: calc(50% - 7px); width: 14px;
+    z-index: 1;
+    border-radius: 8px;
+    opacity: var(--outer);
+    pointer-events: none;
+    background: linear-gradient(90deg, #565f6a 0%, #cfd5db 26%, #f6f8fa 44%, #aab2bb 62%, #59626c 82%, #23282f 100%);
+    box-shadow:
+      0 0 0 .5px rgba(20,24,30,.55),
+      -2px 0 5px rgba(70,58,32,.14),
+      inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .hinge-barrel::before,
+  .hinge-barrel::after {
+    content: ""; position: absolute; left: 3px; right: 3px; height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #3a414a, #12161b);
+  }
+  .hinge-barrel::before { top: 4px; }
+  .hinge-barrel::after { bottom: 4px; }
+  /* Small break in the rim where the two halves meet the hinge. */
+  .crease-notch {
+    position: absolute; left: 50%; width: 3.5px; height: 8px;
+    transform: translateX(-50%);
+    z-index: 1001;
+    border-radius: 1.5px;
+    background: linear-gradient(180deg, #2a313b, #0a0d12);
+    box-shadow: 0 0 0 .5px rgba(0,0,0,.4);
+    opacity: var(--inner-full);
+    pointer-events: none;
+  }
+  .crease-notch.top { top: -1px; }
+  .crease-notch.bot { bottom: -1px; }
+
+  /* side hardware */
+  .hardware { position: absolute; z-index: 6; pointer-events: none; }
+  .right-half .hw-power {
+    right: -2px; top: 156px; width: 2px; height: 42px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #2d333b, #101319 22%, #343c46 50%, #0c0f13 82%, #272c33);
+    box-shadow: 1px 0 0 rgba(0,0,0,.35), inset .5px 0 0 rgba(255,255,255,.16);
+  }
+  .right-half .hw-btn-top {
+    top: 0; height: 3px; width: 5px;
+    border-radius: 0 0 2px 2px;
+    background: linear-gradient(180deg, #3c434d, #0d1015);
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.22);
+  }
+  .right-half .hw-btn-t1 { right: 116px; }
+  .right-half .hw-btn-t2 { right: 126px; }
+  .right-half .hw-port {
+    right: 78px; bottom: 1px; width: 33px; height: 4px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(180deg, #090b0f, #3b414c 48%, #050608);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  .right-half .hw-speaker {
+    bottom: 2px; width: 4px; height: 2px; border-radius: 50%;
+    background: #050608; box-shadow: 0 0 0 .5px rgba(255,255,255,.08);
+  }
+  .right-half .hw-speaker.s1 { right: 126px; }
+  .right-half .hw-speaker.s2 { right: 136px; }
+  .right-half .hw-speaker.s3 { right: 146px; }
+  .right-half .hw-speaker.s4 { right: 156px; }
+  .right-half .hw-speaker.s5 { left: 126px; }
+  .right-half .hw-speaker.s6 { left: 136px; }
+  .right-half .hw-speaker.s7 { left: 146px; }
+
+  /* ---------- outer screen (closed) ---------- */
+  /* When an app fills the cover screen there is no status component — just the
+     camera punch floating over the content at its natural spot. */
+  .outer-camera.back-camera { opacity: 1; }
+  .outer-home.back-home { opacity: .82; }
+  .status-time { font-size: 9.5px; font-weight: 700; letter-spacing: .015em; }
+  .status-icons { display: flex; align-items: center; gap: 4px; margin-left: auto; margin-right: 19px; opacity: .82; }
+  .status-icons svg { display: block; }
+  .outer-camera {
+    position: absolute; top: 15px; right: 15px;
+    width: 11px; height: 11px; border-radius: 50%;
+    z-index: 60;
+    background:
+      radial-gradient(circle at 38% 32%, #28374f 0 16%, #080b12 17% 55%, #030405 56% 100%);
+    box-shadow:
+      0 0 0 1px #12151b,
+      0 0 0 1.5px rgba(150,164,187,.38),
+      inset 0 0 2px rgba(104,145,204,.48);
+    opacity: var(--outer);
+    pointer-events: none;
+  }
+  .outer-camera::after {
+    content: "";
+    position: absolute; left: 2.2px; top: 1.7px;
+    width: 2.2px; height: 2.2px; border-radius: 50%;
+    background: rgba(164,200,255,.8);
+    filter: blur(.15px);
+  }
+
+  /* The cover panel is the only surface that fades: bright/clear at the hinge side,
+     dark/blurred toward the free edge, then OLED-black near 90°. */
+  .outer-glass {
+    position: absolute; inset: 0;
+    z-index: 38;
+    opacity: var(--outer-dim);
+    pointer-events: none;
+    background: linear-gradient(90deg,
+      rgba(255,255,255,.15) 0%,
+      rgba(238,244,250,.24) 38%,
+      rgba(150,168,190,.34) 68%,
+      rgba(64,76,92,.44) 100%);
+    backdrop-filter: blur(7px) saturate(1.12);
+    -webkit-backdrop-filter: blur(7px) saturate(1.12);
+    box-shadow:
+      inset 0 0 26px rgba(255,255,255,.14),
+      inset 0 0 0 1px rgba(255,255,255,.24);
+    will-change: opacity;
+  }
+  .outer-shade {
+    position: absolute; inset: 0;
+    z-index: 39;
+    opacity: var(--outer-dim);
+    pointer-events: none;
+    background: linear-gradient(90deg,
+      rgba(3,5,8,0) 24%,
+      rgba(3,5,8,.5) 60%,
+      rgba(2,3,6,.92) 100%);
+  }
+  .outer-blackout {
+    position: absolute; inset: 0;
+    z-index: 40;
+    opacity: var(--outer-off);
+    pointer-events: none;
+    background:
+      radial-gradient(120% 70% at 28% 0%, rgba(255,255,255,.075), transparent 46%),
+      linear-gradient(112deg, #0a0d12 0%, #010203 46%, #070a0e 100%);
+    box-shadow: inset 0 0 0 .5px rgba(255,255,255,.04);
+    will-change: opacity;
+  }
+  .outer-blackout::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(104deg, transparent 26%, rgba(255,255,255,.05) 44%, rgba(255,255,255,.015) 52%, transparent 70%);
+  }
+  .back-screen .screen-sheen { z-index: 44; }
+
+  /* Inner panels wake with the fold: the right pane brightens uniformly, the left
+     pane's clarity front travels from the crease toward the free edge. */
+  .right-dim {
+    position: absolute; inset: 0; z-index: 18;
+    background: #05070a;
+    opacity: calc(1 - var(--base-bright));
+    pointer-events: none;
+  }
+  .left-frost {
+    position: absolute; inset: 0; z-index: 29;
+    opacity: var(--lv-o);
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 var(--lv-start), rgba(0,0,0,.5) var(--lv-e), transparent var(--lv-end));
+            mask-image: linear-gradient(90deg, #000 var(--lv-start), rgba(0,0,0,.5) var(--lv-e), transparent var(--lv-end));
+  }
+  /* Filter the duplicate itself: masked backdrop-filter bleeds across a rotated
+     screen in Chromium. The live app below stays sharp and interactive. */
+  .left-frost > .app {
+    filter: blur(var(--lv-blur)) saturate(1.05);
+    pointer-events: none;
+  }
+  .left-veil {
+    position: absolute; inset: 0; z-index: 30;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+      rgba(9,12,17,var(--lv-a)) 0%,
+      rgba(9,12,17,calc(var(--lv-a) * .45)) var(--lv-e),
+      rgba(9,12,17,0) var(--lv-end));
+  }
+
+  /* ---------- inner chrome (open) ---------- */
+  .inner-status {
+    position: absolute;
+    top: calc(var(--rim) + var(--bezel));
+    left: calc(var(--rim) + var(--bezel));
+    right: calc(var(--rim) + var(--bezel));
+    height: 30px;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    z-index: 34;
+    color: #292319;
+    opacity: calc(var(--inner) * var(--base-bright));
+    pointer-events: none;
+  }
+  .inner-status .status-time { opacity: var(--inner-full); }
+  .inner-status .status-icons { margin-right: 0; opacity: .78; }
+  .inner-home {
+    position: absolute; bottom: 17px; left: 50%;
+    width: 96px; height: 4px; border-radius: 99px;
+    transform: translateX(-50%);
+    background: #1e1b16;
+    opacity: calc(var(--inner-full) * .82);
+    z-index: 34;
+    pointer-events: none;
+  }
+  .outer-home {
+    position: absolute; bottom: 6px; left: 50%;
+    width: 96px; height: 4px; border-radius: 99px;
+    transform: translateX(-50%);
+    background: #1e1b16;
+    opacity: calc(var(--outer) * .8);
+    z-index: 14;
+    pointer-events: none;
+  }
+
+  /* under-display camera: hidden entirely — it reads as a distracting dot in
+     promo renders and video frames, so keep it off even at full unfold */
+  .udc {
+    position: absolute;
+    top: 24px; left: 84%;
+    width: 8px; height: 8px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    z-index: 36;
+    opacity: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 42% 36%, rgba(132,144,160,.32) 0 16%, rgba(22,26,32,.5) 38%, rgba(12,15,20,.38) 66%, rgba(18,21,26,.16) 84%, transparent 92%);
+    box-shadow:
+      0 0 0 1px rgba(15,18,24,.08),
+      0 1px 3px rgba(15,18,24,.1);
+  }
+  .udc::after {
+    content: "";
+    position: absolute; left: 2px; top: 1.5px;
+    width: 1.4px; height: 1.4px; border-radius: 50%;
+    background: rgba(255,255,255,.9);
+    filter: blur(.15px);
+  }
+
+  /* crease: a physical band, not a drawn line */
+  .crease {
+    position: absolute;
+    top: calc(var(--rim) + var(--bezel));
+    bottom: calc(var(--rim) + var(--bezel));
+    left: 50%; width: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+    opacity: var(--crease);
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(75,62,42,0) 0%, rgba(75,62,42,0.045) 36%, rgba(255,255,255,0.18) 50%, rgba(75,62,42,0.05) 64%, rgba(75,62,42,0) 100%);
+    filter: blur(0.6px);
+    mix-blend-mode: normal;
+  }
+  .crease::before {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+    transform: translateX(-50%);
+    background: rgba(74,61,42,.045);
+    box-shadow:
+      0 0 5px rgba(74,61,42,.035),
+      0 0 12px rgba(255,255,255,.18);
+  }
+  .crease::after {
+    content: "";
+    position: absolute; top: 8%; bottom: 8%; left: 50%;
+    width: 30px; transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(118,146,191,.03), transparent 70%);
+  }
+
+  /* ---------- outer cover only: a moving glass reflection ---------- */
+  .screen-sheen {
+    position: absolute; inset: 0;
+    z-index: 22;
+    pointer-events: none;
+    opacity: var(--sheen);
+    background: linear-gradient(102deg,
+      transparent 20%,
+      rgba(255,255,255,.34) 44%,
+      rgba(255,255,255,.10) 51%,
+      transparent 72%);
+    transform: translateX(var(--sweep));
+    mix-blend-mode: screen;
+    will-change: transform, opacity;
+  }
+
+  /* screen surface */
+  .screen-glare {
+    position: absolute; inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    background:
+      radial-gradient(240px circle at var(--sx, 52%) var(--sy, 16%), rgba(255,255,255,.13), transparent 62%),
+      linear-gradient(116deg, rgba(255,255,255,.065) 0%, transparent 24% 70%, rgba(255,255,255,.04) 100%);
+    mix-blend-mode: screen;
+    opacity: .7;
+  }
+  .left-half .screen-glare { opacity: .46; }
+  .screen-noise {
+    position: absolute; inset: 0;
+    z-index: 13;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+    background-size: 160px 160px;
+    opacity: .038;
+    mix-blend-mode: multiply;
+  }
+  .right-half .screen-noise { opacity: .028; }
+  .left-half .screen-noise { opacity: .052; }
+  .back-noise { opacity: .030; }
+  .back-glare { opacity: .7; }
+
+  .front-shade {
+    position: absolute; inset: 0;
+    z-index: 16;
+    pointer-events: none;
+    opacity: var(--front-shade, 0);
+    background: linear-gradient(100deg, rgba(20,15,8,.5) 0%, rgba(20,15,8,.10) 38%, transparent 58%, rgba(255,255,255,.08) 100%);
+  }
+  .back-shade {
+    position: absolute; inset: 0;
+    z-index: 11;
+    pointer-events: none;
+    opacity: var(--back-shade, 0);
+    background: linear-gradient(100deg, rgba(20,15,8,.42) 0%, rgba(20,15,8,.08) 38%, transparent 56%, rgba(255,255,255,.07) 100%);
+  }
+  .fold-cast {
+    position: absolute; top: 0; bottom: 0; left: 0;
+    width: var(--cast-w, 10px);
+    z-index: 15;
+    pointer-events: none;
+    opacity: var(--cast-op, .08);
+    background: linear-gradient(90deg, rgba(44,32,16,.55), rgba(44,32,16,.10) 70%, transparent 100%);
+    mix-blend-mode: multiply;
+  }
+
+  /* ---------- app UI: mirrors the current Tuvis mobile remote ---------- */
+  .app {
+    position: absolute; inset: 0;
+    color: var(--a-ink);
+    font-family: var(--font-ui);
+  }
+  .file-app, .chat-app {
+    --a-bg: #f8f3e9;
+    --a-card: #fffdf8;
+    --a-line: #eae2cf;
+    --a-ink: #2b2417;
+    --a-mut: #97907e;
+    --a-bub: #efe8d8;
+    --a-btn: #1a1915;
+    --a-btn-t: #ffffff;
+    --a-red: #b3261e;
+    --a-red-bg: #fee9e5;
+    --a-yellow: #8a6d00;
+    --a-yellow-bg: #fbf3d9;
+    --a-green: #1e7b34;
+    --a-green-bg: #e3f2e7;
+    --a-blue: #2b5fbf;
+    --a-blue-bg: #edf3ff;
+    --a-violet: #6d3fd1;
+  }
+
+  /* ===== file preview sheet ===== */
+  .file-app {
+    display: flex;
+    flex-direction: column;
+    background: var(--a-card);
+  }
+  .file-app::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0; height: 18px;
+    background: linear-gradient(transparent, var(--a-card));
+    pointer-events: none;
+    z-index: 2;
+  }
+  .app-top-pad { height: 30px; flex: 0 0 auto; }
+  .sheet-bar {
+    flex: 0 0 auto;
+    height: 26px;
+    display: flex; align-items: center; gap: 5px;
+    padding: 0 9px;
+    border-bottom: 1px solid var(--a-line);
+    background: var(--a-card);
+  }
+  .sheet-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    height: 17px; padding: 0 6px;
+    border-radius: 999px;
+    background: var(--a-violet);
+    color: #fff;
+    font-size: 7.9px; font-weight: 650;
+    letter-spacing: .01em;
+  }
+  .sheet-pill svg { width: 8px; height: 8px; display: block; }
+  .sheet-tab { font-size: 7.9px; color: var(--a-mut); }
+  .sheet-spacer { flex: 1; }
+  .sheet-mode { display: grid; place-items: center; color: var(--a-mut); }
+  .sheet-mode svg { width: 11px; height: 11px; display: block; }
+
+  .pv-head {
+    flex: 0 0 auto;
+    height: 30px;
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--a-line);
+    background: var(--a-card);
+  }
+  .pv-back { display: grid; place-items: center; color: var(--a-mut); }
+  .pv-back svg { width: 11px; height: 11px; display: block; }
+  .pv-file-icon {
+    width: 10px; height: 12px; flex: 0 0 auto;
+    position: relative;
+    border: 1px solid #c8a99b;
+    border-radius: 2px;
+    background: #f7e6de;
+  }
+  .pv-file-icon::after {
+    content: "";
+    position: absolute; left: 2px; right: 2px; top: 3px; height: 1px;
+    background: rgba(151,93,72,.5);
+    box-shadow: 0 3px 0 rgba(151,93,72,.3), 0 6px 0 rgba(151,93,72,.2);
+  }
+  .pv-name {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 8.6px; font-weight: 650; color: #453b2c;
+  }
+  .pv-seg {
+    flex: 0 0 auto; display: flex; overflow: hidden;
+    border: 1px solid var(--a-line); border-radius: 5px;
+  }
+  .pv-seg button {
+    border: 0; background: transparent;
+    padding: 2px 5px;
+    font-size: 7.4px; color: var(--a-mut);
+    cursor: pointer; line-height: 1.2;
+  }
+  .pv-seg button[aria-pressed="true"] { background: var(--a-btn); color: var(--a-btn-t); }
+  .pv-seg button:focus-visible { outline: 2px solid rgba(47,111,237,.42); outline-offset: -1px; }
+  .pv-locate { display: grid; place-items: center; color: var(--a-mut); }
+  .pv-locate svg { width: 11px; height: 11px; display: block; }
+
+  .pv-scroll {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px 18px;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #d6cab7 transparent;
+  }
+  .pv-scroll::-webkit-scrollbar { width: 3px; }
+  .pv-scroll::-webkit-scrollbar-thumb { background: #d6cab7; border-radius: 99px; }
+  .pv-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  .doc {
+    color: var(--a-ink);
+    font-size: 10.4px;
+    line-height: 1.6;
+  }
+  .doc h1 {
+    margin: 0 0 3px;
+    font-size: 17.4px;
+    line-height: 1.16;
+    font-weight: 750;
+    letter-spacing: -.025em;
+    color: #2a241a;
+  }
+  .doc h2 {
+    margin: 12px 0 4px;
+    font-size: 11.8px;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #342c20;
+  }
+  .doc p { margin: 5px 0; }
+  .doc-sub { margin: 0 0 7px !important; font-size: 8.8px; color: var(--a-mut); letter-spacing: .02em; }
+  .doc ul { margin: 5px 0; padding-left: 13px; list-style: disc; }
+  .doc li { margin: 2px 0; }
+  .doc code {
+    font-family: var(--font-mono);
+    font-size: .92em;
+    background: rgba(120,100,72,.08);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+  .doc .doc-code {
+    margin: 7px 0;
+    padding: 7px 8px;
+    border-radius: 8px;
+    background: #20242e;
+    color: #e8e1d4;
+    font-family: var(--font-mono);
+    font-size: 7.2px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .doc .doc-code .k { color: #e9a080; }
+  .doc .doc-code .n { color: #9bc5ff; }
+  .doc .doc-code .c { color: #8f9aa9; }
+  .doc blockquote {
+    margin: 8px 0;
+    padding: 6px 8px;
+    border-left: 2px solid var(--a-line);
+    border-radius: 0 6px 6px 0;
+    background: var(--a-bg);
+    color: var(--a-mut);
+    font-size: 9.4px;
+    line-height: 1.5;
+  }
+  .doc-figure {
+    margin: 8px 0;
+    border: 1px solid var(--a-line);
+    border-radius: 9px;
+    background: var(--a-bg);
+    padding: 8px;
+    text-align: center;
+  }
+  .doc-figure figcaption {
+    margin-top: 4px;
+    font-size: 6.8px;
+    color: var(--a-mut);
+    letter-spacing: .05em;
+  }
+  .doc-diagram {
+    height: 82px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    position: relative;
+  }
+  .doc-diagram::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(111,92,61,.11) .6px, transparent .8px);
+    background-size: 8px 8px;
+    opacity: .4;
+    pointer-events: none;
+  }
+  .mini-unit { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .mini-device {
+    position: relative;
+    border-radius: 7px;
+    background: linear-gradient(145deg, #48505e, #0b0d12 30%, #242a34 78%, #737d90);
+    box-shadow: 0 4px 8px rgba(62,45,19,.2), inset 0 0 0 .7px rgba(255,255,255,.14);
+  }
+  .mini-device.closed { width: 38px; height: 60px; padding: 2px; }
+  .mini-device.open { width: 88px; height: 60px; padding: 2px; display: flex; gap: 1px; }
+  .mini-screen {
+    position: relative;
+    width: 100%; height: 100%;
+    border-radius: 5px;
+    background: #fffdf9;
+    overflow: hidden;
+  }
+  .mini-screen::before {
+    content: ""; position: absolute; left: 4px; right: 4px; top: 6px; height: 2px;
+    background: rgba(64,51,34,.16);
+    box-shadow: 0 5px 0 rgba(64,51,34,.10), 0 10px 0 rgba(64,51,34,.075), 0 15px 0 rgba(64,51,34,.055);
+  }
+  .mini-punch {
+    position: absolute; top: 2px; right: 2px; width: 2.5px; height: 2.5px; border-radius: 50%;
+    background: #080b11; box-shadow: 0 0 0 .5px rgba(143,156,178,.5);
+  }
+  .mini-open .mini-screen { border-radius: 4px; }
+  .mini-open .mini-screen.chat { background: #fbf7ef; }
+  .mini-open .mini-screen.chat::before {
+    left: 4px; right: 8px; top: 19px; height: 8px; border-radius: 4px;
+    background: #2b251b;
+    box-shadow: 0 12px 0 rgba(43,37,27,.16);
+  }
+  .mini-open .mini-screen.file::before {
+    left: 7px; right: 7px; top: 7px; height: 1.5px;
+    background: rgba(64,51,34,.17);
+    box-shadow: 0 4px 0 rgba(64,51,34,.09), 0 8px 0 rgba(64,51,34,.07), 0 20px 0 rgba(64,51,34,.07);
+  }
+  .mini-crease {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
+    background: rgba(80,63,40,.16);
+    box-shadow: 0 0 3px rgba(255,255,255,.6), 1px 0 0 rgba(255,255,255,.25);
+    z-index: 2;
+  }
+  .mini-label { font-size: 6.8px; letter-spacing: .06em; color: #948874; white-space: nowrap; }
+  .mini-arrow { color: #ad9f89; font-size: 11px; margin-top: -12px; }
+
+  .source-view {
+    display: none;
+    margin: 0;
+    padding: 8px;
+    border-radius: 8px;
+    background: #20242e;
+    color: #e8e1d4;
+    font-family: var(--font-mono);
+    font-size: 7.2px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .file-app[data-view="source"] .doc { display: none; }
+  .file-app[data-view="source"] .source-view { display: block; }
+
+  /* ===== session detail / chat ===== */
+  .chat-app {
+    display: flex;
+    flex-direction: column;
+    background: var(--a-bg);
+  }
+  .chat-top-pad { height: 30px; flex: 0 0 auto; }
+  .chat-header {
+    flex: 0 0 auto;
+    height: 45px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 9px;
+    border-bottom: 1px solid var(--a-line);
+  }
+  .chat-back {
+    width: 20px; height: 20px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    background: transparent;
+    color: var(--a-mut);
+  }
+  .chat-back svg { width: 12px; height: 12px; display: block; }
+  .chat-title-wrap { min-width: 0; flex: 1; }
+  .chat-project {
+    font-size: 13px; font-weight: 700; line-height: 1.1;
+    letter-spacing: -.015em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat-session {
+    margin-top: 2px;
+    font-size: 9.1px; color: var(--a-mut);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chat-status-wrap {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 3px;
+    color: var(--a-yellow);
+    font-size: 7.6px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .chat-status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 2px rgba(138,109,0,.12);
+  }
+  .chat-icon { width: 16px; height: 16px; flex: 0 0 auto; display: grid; place-items: center; color: var(--a-mut); }
+  .chat-icon svg { width: 12px; height: 12px; display: block; }
+  .chat-icon.file-panel {
+    width: 18px; height: 18px;
+    border: 1px solid var(--a-line);
+    border-radius: 999px;
+    background: var(--a-card);
+    color: var(--a-ink);
+  }
+  .chat-icon.file-panel svg { width: 10px; height: 10px; }
+  .chat-font {
+    flex: 0 0 auto;
+    border: 1px solid var(--a-line);
+    border-radius: 4px;
+    padding: 1px 3px;
+    color: var(--a-mut);
+    font-family: var(--font-mono);
+    font-size: 6.7px;
+    line-height: 1.35;
+  }
+
+  .summary-bar {
+    flex: 0 0 auto;
+    margin: 7px 9px 0;
+    padding: 5px 7px;
+    display: flex; align-items: center; gap: 5px;
+    border: 1px solid #dbe7fb;
+    border-radius: 7px;
+    background: var(--a-blue-bg);
+    color: var(--a-blue);
+    font-size: 8.4px;
+    line-height: 1.2;
+  }
+  .summary-clip { flex: 0 0 auto; display: grid; place-items: center; opacity: .9; }
+  .summary-clip svg { width: 9px; height: 9px; display: block; }
+  .summary-bar b {
+    flex: 1; min-width: 0;
+    font-weight: 650;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .summary-expand { flex: 0 0 auto; color: #7b9fd8; font-size: 7.6px; }
+
+  .chat-body {
+    flex: 1; min-height: 0;
+    overflow: hidden;
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 8px 9px 4px;
+  }
+  .chat-msg { display: flex; flex-direction: column; }
+  .chat-msg.user { align-items: flex-end; }
+  .msg-role {
+    display: flex; align-items: center; gap: 3px;
+    margin-bottom: 2px;
+    color: var(--a-mut);
+    font-size: 7.2px;
+  }
+  .chat-msg.user .msg-role { padding-right: 2px; }
+  .msg-role.claude-role { color: #c26a4d; font-weight: 600; }
+  .msg-role svg { width: 8px; height: 8px; display: block; }
+  .user-bubble {
+    max-width: 88%;
+    border-radius: 13px 13px 4px 13px;
+    background: var(--a-bub);
+    color: #33312b;
+    padding: 7px 9px;
+    font-size: 10.3px;
+    line-height: 1.45;
+  }
+  .claude-text {
+    font-size: 10.3px;
+    line-height: 1.55;
+    color: #2a2925;
+    padding: 0 1px;
+  }
+  .claude-text code {
+    font-family: var(--font-mono);
+    font-size: .9em;
+    background: rgba(120,100,72,.1);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+  .tool-row {
+    display: flex; align-items: center; gap: 4px;
+    min-width: 0;
+    padding: 5px 6px;
+    border: 1px solid var(--a-line);
+    border-radius: 8px;
+    background: var(--a-card);
+    color: var(--a-mut);
+    font-size: 8.1px;
+  }
+  .tool-row .run { flex: 0 0 auto; color: var(--a-mut); font-size: 6.8px; }
+  .tool-row .label { flex: 0 0 auto; font-weight: 600; }
+  .tool-row code {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 7.7px;
+    color: var(--a-ink);
+  }
+  .file-card {
+    margin-top: auto;
+    border: 1px solid var(--a-line);
+    border-radius: 9px;
+    background: var(--a-card);
+    overflow: hidden;
+  }
+  .file-card-head {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 7px;
+    border-bottom: 1px solid #f1ebe0;
+    color: var(--a-ink);
+    font-size: 8.1px;
+  }
+  .file-card-head b { font-weight: 650; }
+  .file-card-head svg { width: 9px; height: 9px; flex: 0 0 auto; color: var(--a-mut); }
+  .file-count { margin-left: auto; font-size: 7px; color: var(--a-mut); white-space: nowrap; }
+  .file-row {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 7px;
+    border-top: 1px solid #f7f2e8;
+    font-size: 8.1px;
+  }
+  .file-card-head + .file-row { border-top: 0; }
+  .file-glyph {
+    width: 9px; height: 11px; flex: 0 0 auto;
+    position: relative;
+    border: 1px solid #cdbfa8;
+    border-radius: 2px;
+    background: var(--a-bg);
+  }
+  .file-glyph::after {
+    content: "";
+    position: absolute; right: -1px; top: -1px;
+    width: 3px; height: 3px;
+    background: var(--a-card);
+    border-left: 1px solid #cdbfa8;
+    border-bottom: 1px solid #cdbfa8;
+  }
+  .file-name {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 7.7px;
+    color: var(--a-mut);
+  }
+  .file-name.changed { color: var(--a-red); }
+  .file-badge {
+    flex: 0 0 auto;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 7px; font-weight: 600;
+  }
+  .file-badge.changed { background: var(--a-red-bg); color: var(--a-red); }
+  .file-badge.read { background: #f1eee6; color: #6b6557; }
+  .file-badge.added { background: var(--a-green-bg); color: var(--a-green); }
+
+  .chat-bottom {
+    flex: 0 0 auto;
+    padding: 4px 9px 8px;
+    border-top: 1px solid var(--a-line);
+    background: var(--a-bg);
+  }
+  .chat-chips { display: flex; gap: 4px; margin-bottom: 5px; }
+  .chat-chip {
+    border: 1px solid var(--a-line);
+    border-radius: 999px;
+    background: var(--a-card);
+    padding: 2px 6px;
+    color: var(--a-mut);
+    font-size: 7.5px;
+    line-height: 1.3;
+  }
+  .composer {
+    height: 32px;
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 3px 3px 4px;
+    border: 1px solid var(--a-line);
+    border-radius: 10px;
+    background: var(--a-card);
+  }
+  .composer-plus {
+    width: 20px; height: 20px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    border: 1px solid var(--a-line);
+    border-radius: 50%;
+    color: var(--a-mut);
+    font-size: 12px; line-height: 1;
+  }
+  .composer-text {
+    flex: 1; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--a-mut);
+    font-size: 8.5px;
+  }
+  .send-btn {
+    width: 24px; height: 24px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    border-radius: 8px;
+    background: var(--a-btn);
+    color: var(--a-btn-t);
+  }
+  .send-btn svg { width: 11px; height: 11px; display: block; }
+
+
+  .scrubber {
+    width: min(620px, calc(100% - 48px));
+    margin: 10px auto 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,253,248,.72);
+    box-shadow: 0 2px 10px rgba(77,56,24,.05), inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  .scrub-play {
+    width: 27px; height: 27px; flex: 0 0 auto;
+    display: grid; place-items: center;
+    border: 0; border-radius: 50%;
+    background: var(--ink); color: #fff;
+    cursor: pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .scrub-play:hover { transform: scale(1.04); background: #3a2c1a; }
+  .scrub-play svg { width: 11px; height: 11px; margin-left: 1px; display: block; }
+  .scrub-label {
+    flex: 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 8px; letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--mut);
+  }
+  .scrub-range {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; min-width: 80px;
+    height: 4px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--ink) 0 var(--scrub,0%), rgba(120,100,72,.16) var(--scrub,0%) 100%);
+    outline: none; cursor: pointer;
+  }
+  .scrub-range::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #fffdf8;
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 1px 4px rgba(60,45,20,.18);
+    cursor: grab;
+  }
+  .scrub-range::-moz-range-thumb {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #fffdf8;
+    border: 1.5px solid var(--ink);
+    box-shadow: 0 1px 4px rgba(60,45,20,.18);
+    cursor: grab;
+  }
+  .scrub-range::-moz-range-track {
+    height: 4px; border-radius: 999px;
+    background: rgba(120,100,72,.16);
+  }
+  .scrub-range:focus-visible { outline: 2px solid rgba(80,110,220,.35); outline-offset: 4px; }
+  .scrub-readout {
+    flex: 0 0 auto; min-width: 58px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 8.5px;
+    color: var(--mut);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- stage footer ---------- */
+  .stage-bottom {
+    position: relative;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    flex-wrap: wrap;
+    z-index: 8;
+    padding-top: 4px;
+  }
+  .stage-hint {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 32px; padding: 0 13px;
+    border: 1px solid rgba(216,205,186,.9);
+    border-radius: 999px;
+    background: rgba(255,253,248,.78);
+    color: #51483a;
+    font-size: 10.5px; font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 0 rgba(255,255,255,.8) inset, 0 4px 12px rgba(72,52,22,.05);
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
+  }
+  .stage-hint:hover { background: #fffdf8; border-color: #cdc0aa; transform: translateY(-1px); }
+  .stage-hint:focus-visible { outline: 2px solid rgba(47,111,237,.45); outline-offset: 2px; }
+  .stage-hint .hint-icon { width: 13px; height: 13px; display: grid; place-items: center; color: #8b7d68; }
+  .stage-hint .hint-icon svg { display: block; }
+  .stage-hint b { font-weight: 700; color: #342c20; }
+  .stage-hint .hint-state {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 8.5px; color: #a19582; padding-left: 2px;
+  }
+  .stage-note { color: #9a8e7b; font-size: 9px; letter-spacing: .015em; white-space: nowrap; }
+  .stage-note b { color: #756a58; font-weight: 600; }
+  .device { cursor: pointer; }
+  .duo-stage[data-state="open"] .device { cursor: default; }
+  .hinge-hit {
+    position: absolute;
+    top: calc(var(--rim) + var(--bezel));
+    bottom: calc(var(--rim) + var(--bezel));
+    left: 50%; width: 32px;
+    transform: translateX(-50%);
+    z-index: 1002;
+    border: 0; padding: 0;
+    background: transparent;
+    cursor: pointer;
+    pointer-events: none;
+    outline: none;
+  }
+  .duo-stage[data-state="open"] .hinge-hit { pointer-events: auto; }
+  .hinge-hit:focus-visible { box-shadow: 0 0 0 2px rgba(47,111,237,.42); border-radius: 99px; }
+
+  .lab-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 16px 3px 0;
+    color: #a09582;
+    font-size: 9px;
+    letter-spacing: .02em;
+    flex-wrap: wrap;
+  }
+  .lab-foot b { color: #766b59; font-weight: 600; }
+  .mobile-tip { display: none; }
+
+  @media (max-width: 900px) {
+    .lab { padding: 18px 14px 24px; }
+    .lab-bar { align-items: flex-start; flex-direction: column; gap: 12px; padding-bottom: 14px; }
+    .controls { justify-content: flex-start; }
+    .duo-stage { padding: 56px 14px 16px; border-radius: 26px; }
+    .stage-topline { top: 14px; left: 14px; right: 14px; }
+    .stage-rail { display: none; }
+    .stage-canvas { height: calc(var(--dev-h) * var(--scale) + 76px); }
+    .stage-bottom { gap: 8px; }
+    .stage-note { display: none; }
+    .lab-foot { padding-top: 12px; font-size: 8.5px; }
+    .mobile-tip { display: inline; color: #9a8e7b; font-size: 9px; }
+  }
+  /* ---------- embed / video modes ----------
+     ?embed=1：iframe 发布变体——拆 lab 外壳，状态 chip 从顶排挪到底排与铰链提示同排，
+     去掉分辨率小字（DOM 全保留，仅 CSS 隐藏 + JS 挪节点，脚本零空引用风险）。 */
+  .lab-embed .lab { padding: 10px 10px 16px; }
+  .lab-embed .lab-bar,
+  .lab-embed .lab-foot,
+  .lab-embed .stage-topline,
+  .lab-embed .stage-note { display: none; }
+  .lab-embed .duo-stage { padding-top: 30px; }
+  .lab-embed .stage-bottom { gap: 10px; }
+  .lab-embed .stage-bottom .state-chip { height: 28px; }
+
+  /* ?video=1：离线渲染变体（scripts/render-duo-unfold.mjs 用）——在 embed 基础上
+     再拆交互控件，画布撑满视口，顶部居中出标题，底部一行商标注记。 */
+  .video-title,
+  .video-note { display: none; }
+  .lab-video .lab { padding: 0; width: 100%; }
+  .lab-video .duo-stage { border-radius: 0; border: 0; box-shadow: none; padding: 96px 0 24px; min-height: 100vh; }
+  .lab-video .stage-canvas { height: calc(100vh - 120px) !important; }
+  .lab-video .scrubber,
+  .lab-video .stage-bottom { display: none; }
+  .lab-video .video-title {
+    display: block;
+    position: absolute; top: 58px; left: 32px; right: 32px;
+    z-index: 8;
+    text-align: center;
+    font-size: 52px; font-weight: 750; letter-spacing: -.022em;
+    color: var(--ink);
+  }
+  .lab-video .video-note {
+    display: block;
+    position: absolute; bottom: 26px; left: 32px; right: 32px;
+    z-index: 8;
+    text-align: center;
+    font-size: 19px; letter-spacing: .01em;
+    color: var(--muted);
+  }
+
+  @media (max-width: 520px) {
+    .brand-sub, .brand-badge { display: none; }
+    .stage-hint { height: 30px; font-size: 9.5px; }
+    .stage-hint .hint-state { display: none; }
+    .lab-foot span:last-child { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .half, .screen-sheen { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="lab">
+  <header class="lab-bar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M8.4 9.3C6.7 7.5 6.6 4.1 8.3 3.2c1.6-.8 2.6 2.1 2.9 4.5M15.6 9.3c1.7-1.8 1.8-5.2.1-6.1-1.6-.8-2.6 2.1-2.9 4.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="4.4" y="8.1" width="15.2" height="12.2" rx="5.6" stroke="#fff" stroke-width="1.5"/>
+          <path d="M8.3 13.3h7.4" stroke="#8fd7ff" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M9.1 16.4h1.2M13.7 16.4h1.2" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>
+        </svg>
+      </span>
+      <div class="brand-copy">
+        <span class="brand-name">Tuvis</span>
+        <span class="brand-sub">Display Lab</span>
+        <span class="brand-badge">iPhone Duo</span>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="ctl primary" id="toggleBtn" type="button" aria-expanded="false" aria-controls="duoStage">展开设备</button>
+      <button class="ctl" id="replayBtn" type="button">重播动效</button>
+      <button class="ctl" id="slowBtn" type="button" aria-pressed="false">0.25× 慢放</button>
+      <button class="ctl" id="langBtn" type="button" aria-label="Switch language">EN</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="duo-stage" id="duoStage" data-state="closed" aria-label="iPhone Duo unfold prototype">
+      <span class="video-title" data-i18n="videoTitle" aria-hidden="true"></span>
+      <span class="video-note" data-i18n="videoNote" aria-hidden="true"></span>
+      <div class="stage-topline">
+        <span class="state-chip"><i aria-hidden="true"></i><span id="stateChip">5.4″ 外屏 · 文件预览</span></span>
+        <span class="stage-rail"><span>PROTOTYPE</span><span class="line"></span><span>UNFOLD 01</span></span>
+      </div>
+
+      <div class="stage-canvas" id="stageCanvas">
+        <div class="device-scale" id="deviceScale">
+          <div class="floor-shadow" aria-hidden="true"></div>
+          <div class="device" id="device">
+            <div class="hinge-core" aria-hidden="true"></div>
+            <div class="hinge-barrel" aria-hidden="true"></div>
+            <!-- left half: folded behind the cover when closed -->
+            <div class="half left-half" id="leftHalf">
+              <div class="slab" id="slab" aria-hidden="true"></div>
+
+              <!-- inner / front face -->
+              <div class="left-face front" id="leftFront">
+                <div class="screen left-screen">
+                  <div class="app chat-app" id="chatApp">
+                    <div class="chat-top-pad"></div>
+                    <div class="chat-header">
+                      <span class="chat-back" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                      </span>
+                      <div class="chat-title-wrap">
+                        <div class="chat-project">tuvis-website</div>
+                        <div class="chat-session" data-i18n="sessionSub">Claude Code · iPhone Duo 适配</div>
+                      </div>
+                      <span class="chat-status-wrap"><i class="chat-status-dot" aria-hidden="true"></i><span data-i18n="statusRunning">运行中</span></span>
+                      <span class="chat-icon file-panel" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+                      </span>
+                      <span class="chat-font" aria-hidden="true">100%</span>
+                      <span class="chat-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+                      </span>
+                    </div>
+                    <div class="summary-bar">
+                      <span class="summary-clip" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 9h6M9 13h6M9 17h4"/></svg>
+                      </span>
+                      <b data-i18n="summary">总结模式 · 已折叠 3 条过程消息</b>
+                      <span class="summary-expand" data-i18n="expand">展开</span>
+                    </div>
+                    <div class="chat-body" id="chatBody"></div>
+                    <div class="chat-bottom">
+                      <div class="chat-chips">
+                        <span class="chat-chip" data-i18n="trust">信任模式</span>
+                        <span class="chat-chip" data-i18n="switchMode">切换模式</span>
+                      </div>
+                      <div class="composer" aria-hidden="true">
+                        <span class="composer-plus">+</span>
+                        <span class="composer-text" data-i18n="placeholder">给这个会话发消息…</span>
+                        <span class="send-btn">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="screen-glare" aria-hidden="true"></div>
+                  <div class="screen-noise" aria-hidden="true"></div>
+                  <div class="front-shade" aria-hidden="true"></div>
+                  <div class="left-frost" id="leftFrost" aria-hidden="true"></div>
+                  <div class="left-veil" aria-hidden="true"></div>
+                </div>
+              </div>
+
+              <!-- outer / back face (the cover screen) -->
+              <div class="left-face back" id="leftBack">
+                <div class="screen back-screen">
+                  <div class="app file-app" id="fileAppOuter" data-view="render">
+                    <div class="app-top-pad"></div>
+                    <div class="sheet-bar">
+                      <span class="sheet-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+                        <span data-i18n="filesTab">文件</span>
+                      </span>
+                      <span class="sheet-tab" data-i18n="subagentsTab">子 Agent</span>
+                      <span class="sheet-spacer"></span>
+                      <span class="sheet-mode" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg>
+                      </span>
+                    </div>
+                    <div class="pv-head">
+                      <span class="pv-back" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                      </span>
+                      <span class="pv-file-icon" aria-hidden="true"></span>
+                      <span class="pv-name">iphone-duo.md</span>
+                      <span class="pv-seg" role="group" aria-label="源码 / 渲染">
+                        <button type="button" data-file-view="source" data-i18n="source" aria-pressed="false">源码</button>
+                        <button type="button" data-file-view="render" data-i18n="renderView" aria-pressed="true">渲染</button>
+                      </span>
+                      <span class="pv-locate" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                      </span>
+                    </div>
+                    <div class="pv-scroll" id="pvScrollOuter">
+                      <article class="doc" id="docContentOuter"></article>
+                      <pre class="source-view" id="docSourceOuter"></pre>
+                    </div>
+                  </div>
+                  <span class="outer-camera back-camera" aria-hidden="true"></span>
+                  <div class="outer-home back-home" aria-hidden="true"></div>
+                  <div class="screen-glare back-glare" aria-hidden="true"></div>
+                  <div class="screen-noise back-noise" aria-hidden="true"></div>
+                  <div class="back-shade" aria-hidden="true"></div>
+                  <div class="screen-sheen" aria-hidden="true"></div>
+                  <div class="outer-glass" id="outerGlass" aria-hidden="true"></div>
+                  <div class="outer-shade" aria-hidden="true"></div>
+                  <div class="outer-blackout" id="outerBlackout" aria-hidden="true"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- right half: always the file pane; it is the outer screen when closed -->
+            <div class="half right-half" id="rightHalf">
+              <div class="slab" id="baseSlab" aria-hidden="true"></div>
+              <div class="hardware hw-power" aria-hidden="true"></div>
+              <div class="hardware hw-btn-top hw-btn-t1" aria-hidden="true"></div>
+              <div class="hardware hw-btn-top hw-btn-t2" aria-hidden="true"></div>
+              <div class="hardware hw-port" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s1" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s2" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s3" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s4" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s5" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s6" aria-hidden="true"></div>
+              <div class="hardware hw-speaker s7" aria-hidden="true"></div>
+
+              <div class="screen right-screen">
+                <div class="app file-app" id="fileApp" data-view="render">
+                  <div class="app-top-pad"></div>
+                  <div class="sheet-bar">
+                    <span class="sheet-pill">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+                      <span data-i18n="filesTab">文件</span>
+                    </span>
+                    <span class="sheet-tab" data-i18n="subagentsTab">子 Agent</span>
+                    <span class="sheet-spacer"></span>
+                    <span class="sheet-mode" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="2"/><rect x="13" y="4" width="8" height="16" rx="2"/></svg>
+                    </span>
+                  </div>
+                  <div class="pv-head">
+                    <span class="pv-back" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    </span>
+                    <span class="pv-file-icon" aria-hidden="true"></span>
+                    <span class="pv-name">iphone-duo.md</span>
+                    <span class="pv-seg" role="group" aria-label="源码 / 渲染">
+                      <button type="button" data-file-view="source" data-i18n="source" aria-pressed="false">源码</button>
+                      <button type="button" data-file-view="render" data-i18n="renderView" aria-pressed="true">渲染</button>
+                    </span>
+                    <span class="pv-locate" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                    </span>
+                  </div>
+                  <div class="pv-scroll" id="pvScroll">
+                    <article class="doc" id="docContent"></article>
+                    <pre class="source-view" id="docSource"></pre>
+                  </div>
+                </div>
+
+                <div class="fold-cast" aria-hidden="true"></div>
+                <div class="right-dim" aria-hidden="true"></div>
+                <div class="screen-glare" aria-hidden="true"></div>
+                <div class="screen-noise" aria-hidden="true"></div>
+              </div>
+            </div>
+
+            <div class="inner-status" id="innerStatus" aria-hidden="true">
+              <span class="status-time">18:37</span>
+              <span class="status-icons">
+                <svg width="13" height="9" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2" height="4" rx=".5"/><rect x="4" y="4" width="2" height="6" rx=".5"/><rect x="8" y="2" width="2" height="8" rx=".5"/><rect x="12" y="0" width="2" height="10" rx=".5" opacity=".35"/></svg>
+                <svg width="13" height="10" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"><path d="M2.2 4.9a8.6 8.6 0 0 1 11.6 0"/><path d="M4.8 7.9a5 5 0 0 1 6.4 0"/><circle cx="8" cy="10.4" r="1.05" fill="currentColor" stroke="none"/></svg>
+                <svg width="18" height="9" viewBox="0 0 20 10"><rect x=".5" y=".5" width="16" height="9" rx="2.5" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="11" height="6" rx="1.2" fill="currentColor"/><rect x="17.5" y="3" width="1.8" height="4" rx=".9" fill="currentColor" opacity=".45"/></svg>
+              </span>
+            </div>
+            <span class="udc" aria-hidden="true"></span>
+            <div class="inner-home" aria-hidden="true"></div>
+            <div class="crease" id="crease" aria-hidden="true"></div>
+            <div class="crease-notch top" aria-hidden="true"></div>
+            <div class="crease-notch bot" aria-hidden="true"></div>
+            <button class="hinge-hit" id="hingeHit" type="button" aria-label="合上设备"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrubber">
+        <button class="scrub-play" id="scrubPlay" type="button" aria-label="从当前进度播放">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+        </button>
+        <span class="scrub-label" data-i18n="scrubLabel">开合进度</span>
+        <input class="scrub-range" id="scrubRange" type="range" min="0" max="1000" value="0" step="1" aria-label="开合进度">
+        <span class="scrub-readout" id="scrubReadout">0% · 0°</span>
+      </div>
+
+      <div class="stage-bottom">
+        <button class="stage-hint" id="stageHint" type="button">
+          <span class="hint-icon" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </span>
+          <b id="hintLabel">轻触机身展开</b>
+          <span class="hint-state" id="hintState">5.4″ → 7.6″</span>
+        </button>
+        <span class="stage-note"><b>iPhone Duo</b> · 1398×2034 outer → 2670×1878 inner</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lab-foot">
+    <span id="footLeft"><b>Tuvis × iPhone Duo</b> · unfold study · <span class="mobile-tip">桌面查看细节更佳</span></span>
+    <span id="footRight">Prototype · 非 Apple 官方页面 · iPhone Duo 为 Apple Inc. 商标</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const device = $("device");
+  const stage = $("duoStage");
+  const stageCanvas = $("stageCanvas");
+  const deviceScale = $("deviceScale");
+  const rightHalf = $("rightHalf");
+  const leftHalf = $("leftHalf");
+  const leftFront = $("leftFront");
+  const leftBack = $("leftBack");
+  const leftFrost = document.querySelector(".left-frost");
+  const leftVeil = document.querySelector(".left-veil");
+  const docContent = $("docContent");
+  const docSource = $("docSource");
+  const pvScroll = $("pvScroll");
+  const chatBody = $("chatBody");
+  const fileApp = $("fileApp");
+  const docContentOuter = $("docContentOuter");
+  const docSourceOuter = $("docSourceOuter");
+  const fileAppOuter = $("fileAppOuter");
+  const toggleBtn = $("toggleBtn");
+  const replayBtn = $("replayBtn");
+  const slowBtn = $("slowBtn");
+  const langBtn = $("langBtn");
+  const stageHint = $("stageHint");
+  const hintLabel = $("hintLabel");
+  const hintState = $("hintState");
+  const stateChip = $("stateChip");
+  const hingeHit = $("hingeHit");
+  const scrubRange = $("scrubRange");
+  const scrubReadout = $("scrubReadout");
+  const scrubPlay = $("scrubPlay");
+
+  const params = new URLSearchParams(location.search);
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const videoMode = params.get("video") === "1";
+  const embedMode = videoMode || params.get("embed") === "1";
+  if (embedMode) {
+    document.body.classList.add("lab-embed");
+    // Merge the state chip into the bottom row next to the hinge hint; the
+    // top rail and resolution note are hidden by CSS. Ids survive the move,
+    // so updateLabels() keeps driving both texts unchanged.
+    const chip = document.querySelector(".state-chip");
+    const bottom = document.querySelector(".stage-bottom");
+    if (chip && bottom) bottom.insertBefore(chip, bottom.firstElementChild);
+  }
+  if (videoMode) document.body.classList.add("lab-video");
+
+  const COPY = {
+    zh: {
+      unfold: "展开设备",
+      fold: "合上设备",
+      replay: "重播动效",
+      slow: "0.25× 慢放",
+      langLabel: "EN",
+      sessionSub: "Claude Code · iPhone Duo 适配",
+      statusRunning: "运行中",
+      summary: "总结模式 · 已折叠 3 条过程消息",
+      expand: "展开",
+      trust: "信任模式",
+      switchMode: "切换模式",
+      placeholder: "给这个会话发消息…",
+      source: "源码",
+      renderView: "渲染",
+      filesTab: "文件",
+      subagentsTab: "子 Agent",
+      hintClosed: "轻触机身展开",
+      hintOpen: "点击铰链合上",
+      chipClosed: "5.4″ 外屏 · 文件预览",
+      chipOpen: "7.6″ 内屏 · 左对话 / 右文件",
+      hintStateClosed: "5.4″ → 7.6″",
+      hintStateOpen: "7.6″",
+      scrubLabel: "开合进度",
+      scrubPlay: "从当前进度展开",
+      scrubFold: "从当前进度合上",
+      videoTitle: "现已适配 iPhone Duo.",
+      videoNote: "概念演示 · 非 Apple 官方页面 · iPhone Duo 为 Apple Inc. 商标",
+      footLeft: `<b>Tuvis × iPhone Duo</b> · unfold study · <span class="mobile-tip">桌面查看细节更佳</span>`,
+      footRight: "Prototype · 非 Apple 官方页面 · iPhone Duo 为 Apple Inc. 商标",
+      doc: `
+        <h1>把指挥台折进口袋</h1>
+        <p class="doc-sub">Tuvis × iPhone Duo</p>
+        <p>合上是 5.4″ 外屏，文件就是全部界面；展开成 7.6″，同一份文件留在右栏，左边长出对话。</p>
+        <figure class="doc-figure">
+          <div class="doc-diagram" aria-hidden="true">
+            <div class="mini-unit">
+              <div class="mini-device closed"><div class="mini-screen"><i class="mini-punch"></i></div></div>
+              <span class="mini-label">外屏 · 文件</span>
+            </div>
+            <span class="mini-arrow">→</span>
+            <div class="mini-unit">
+              <div class="mini-device open">
+                <div class="mini-screen chat"></div>
+                <div class="mini-screen file"></div>
+                <i class="mini-crease"></i>
+              </div>
+              <span class="mini-label">展开 · 对话 + 文件</span>
+            </div>
+          </div>
+          <figcaption>外屏预览 → 内屏协作</figcaption>
+        </figure>
+        <h2>同一份文件，不重排</h2>
+        <p>外屏和展开后的每一半同比例。文件预览从外屏原样留到右栏，阅读位置不跳。</p>
+        <ul>
+          <li>外屏直接读文件，不用先展开。</li>
+          <li>展开后左对话、右预览，审批和状态同步。</li>
+          <li>折痕两侧同比例，内容不重排。</li>
+        </ul>
+        <h2>分屏断点</h2>
+        <pre class="doc-code"><code><span class="k">@media</span> (min-width: <span class="n">768px</span>) {
+  <span class="k">layout</span>: chat | preview; <span class="c">/* split-h */</span>
+}</code></pre>
+        <blockquote>合上时，它是口袋里的文件预览；展开时，它才是完整的指挥台。</blockquote>
+        <h2>折痕与屏下前摄</h2>
+        <p>内屏的折痕被压得很轻；屏下前摄只在浅色背景上留下一个很淡的圆点。</p>
+      `,
+      docSource: `# 把指挥台折进口袋
+
+Tuvis × iPhone Duo
+
+合上是 5.4″ 外屏，文件就是全部界面；展开成 7.6″，同一份文件留在右栏，左边长出对话。
+
+## 同一份文件，不重排
+
+外屏和展开后的每一半同比例。文件预览从外屏原样留到右栏，阅读位置不跳。
+
+- 外屏直接读文件，不用先展开。
+- 展开后左对话、右预览，审批和状态同步。
+- 折痕两侧同比例，内容不重排。
+
+## 分屏断点
+
+    @media (min-width: 768px) {
+      layout: chat | preview; /* split-h */
+    }
+
+> 合上时，它是口袋里的文件预览；展开时，它才是完整的指挥台。
+
+## 折痕与屏下前摄
+
+内屏的折痕被压得很轻；屏下前摄只在浅色背景上留下一个很淡的圆点。`,
+      chat: `
+        <div class="chat-msg user">
+          <span class="msg-role">你</span>
+          <div class="user-bubble">把 iPhone Duo 的适配说明整理成文档。外屏能直接看，展开后左边对话、右边预览。</div>
+        </div>
+        <div class="chat-msg">
+          <span class="msg-role claude-role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7"/></svg>Claude</span>
+          <div class="claude-text">整理好了。<code>iphone-duo.md</code> 已经在右侧预览。外屏和展开后的每一半同比例，所以文件不会重排。</div>
+        </div>
+        <div class="tool-row">
+          <span class="run">▶</span><span class="label">调用 Bash</span><code>rg -n "iPhone Duo" docs/</code>
+        </div>
+        <div class="chat-msg">
+          <span class="msg-role claude-role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7"/></svg>Claude</span>
+          <div class="claude-text">折痕和屏下前摄的说明也写进去了。展开时可以看到那一点摄像头印记。</div>
+        </div>
+        <div class="file-card">
+          <div class="file-card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m21 12.5-8.5 8.5a6 6 0 0 1-8.5-8.5l8-8a4 4 0 0 1 5.7 5.7l-8 8a2 2 0 0 1-2.8-2.8l7.5-7.5"/></svg>
+            <b>本会话涉及文件</b><span class="file-count">3 个 · 按最近出现排序</span>
+          </div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name changed">docs/iphone-duo.md</span><span class="file-badge changed">改了</span></div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name">src/home/DuoHero.tsx</span><span class="file-badge read">读过</span></div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name">public/img/duo-frame.png</span><span class="file-badge added">新增</span></div>
+        </div>
+      `
+    },
+    en: {
+      unfold: "Unfold",
+      fold: "Fold",
+      replay: "Replay",
+      slow: "0.25× slow",
+      langLabel: "中",
+      sessionSub: "Claude Code · iPhone Duo note",
+      statusRunning: "Running",
+      summary: "Summary mode · 3 process messages folded",
+      expand: "Expand",
+      trust: "Trust mode",
+      switchMode: "Switch mode",
+      placeholder: "Message this session…",
+      source: "Source",
+      renderView: "Render",
+      filesTab: "Files",
+      subagentsTab: "Sub-agents",
+      hintClosed: "Tap the phone to unfold",
+      hintOpen: "Click the hinge to fold",
+      chipClosed: "5.4″ cover · file preview",
+      chipOpen: "7.6″ inner · chat / file",
+      hintStateClosed: "5.4″ → 7.6″",
+      hintStateOpen: "7.6″",
+      scrubLabel: "Open angle",
+      scrubPlay: "Unfold from here",
+      scrubFold: "Fold from here",
+      videoTitle: "Now adapted for iPhone Duo.",
+      videoNote: "Concept demo · Not an official Apple page · iPhone Duo is a trademark of Apple Inc.",
+      footLeft: `<b>Tuvis × iPhone Duo</b> · unfold study · <span class="mobile-tip">Best viewed on desktop</span>`,
+      footRight: "Prototype · Not an official Apple page · iPhone Duo is a trademark of Apple Inc.",
+      doc: `
+        <h1>Your deck, folded.</h1>
+        <p class="doc-sub">Tuvis × iPhone Duo</p>
+        <p>Closed, it is a 5.4″ cover screen with the document. Opened to 7.6″, the same file stays on the right and the conversation appears on the left.</p>
+        <figure class="doc-figure">
+          <div class="doc-diagram" aria-hidden="true">
+            <div class="mini-unit">
+              <div class="mini-device closed"><div class="mini-screen"><i class="mini-punch"></i></div></div>
+              <span class="mini-label">Cover · file</span>
+            </div>
+            <span class="mini-arrow">→</span>
+            <div class="mini-unit">
+              <div class="mini-device open">
+                <div class="mini-screen chat"></div>
+                <div class="mini-screen file"></div>
+                <i class="mini-crease"></i>
+              </div>
+              <span class="mini-label">Open · chat + file</span>
+            </div>
+          </div>
+          <figcaption>Cover preview → inner collaboration</figcaption>
+        </figure>
+        <h2>The same file, no reflow</h2>
+        <p>The cover and each inner half share the same ratio. The file stays in the right pane, and the reading position does not jump.</p>
+        <ul>
+          <li>Read the file on the cover before unfolding.</li>
+          <li>Open to chat left and preview right; state stays in sync.</li>
+          <li>One ratio across the crease; no reflow.</li>
+        </ul>
+        <h2>Split breakpoint</h2>
+        <pre class="doc-code"><code><span class="k">@media</span> (min-width: <span class="n">768px</span>) {
+  <span class="k">layout</span>: chat | preview; <span class="c">/* split-h */</span>
+}</code></pre>
+        <blockquote>Closed, it is a document in your pocket. Open, it is the full command deck.</blockquote>
+        <h2>Crease and under-display camera</h2>
+        <p>The inner crease is pressed very light; the under-display camera leaves only a faint dot on light content.</p>
+      `,
+      docSource: `# Your deck, folded.
+
+Tuvis × iPhone Duo
+
+Closed, it is a 5.4″ cover screen with the document. Opened to 7.6″, the same file stays on the right and the conversation appears on the left.
+
+## The same file, no reflow
+
+The cover and each inner half share the same ratio. The file stays in the right pane, and the reading position does not jump.
+
+- Read the file on the cover before unfolding.
+- Open to chat left and preview right; state stays in sync.
+- One ratio across the crease; no reflow.
+
+## Split breakpoint
+
+    @media (min-width: 768px) {
+      layout: chat | preview; /* split-h */
+    }
+
+> Closed, it is a document in your pocket. Open, it is the full command deck.
+
+## Crease and under-display camera
+
+The inner crease is pressed very light; the under-display camera leaves only a faint dot on light content.`,
+      chat: `
+        <div class="chat-msg user">
+          <span class="msg-role">You</span>
+          <div class="user-bubble">Turn the iPhone Duo adaptation notes into a document. Readable on the cover, then chat left and preview right when opened.</div>
+        </div>
+        <div class="chat-msg">
+          <span class="msg-role claude-role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7"/></svg>Claude</span>
+          <div class="claude-text">Done. <code>iphone-duo.md</code> is in the preview. The cover and each inner half share the same ratio, so nothing reflows when it opens.</div>
+        </div>
+        <div class="tool-row">
+          <span class="run">▶</span><span class="label">Bash command</span><code>rg -n "iPhone Duo" docs/</code>
+        </div>
+        <div class="chat-msg">
+          <span class="msg-role claude-role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7"/></svg>Claude</span>
+          <div class="claude-text">The crease and the under-display camera note are in there too. You can see the faint camera mark when it opens.</div>
+        </div>
+        <div class="file-card">
+          <div class="file-card-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m21 12.5-8.5 8.5a6 6 0 0 1-8.5-8.5l8-8a4 4 0 0 1 5.7 5.7l-8 8a2 2 0 0 1-2.8-2.8l7.5-7.5"/></svg>
+            <b>Files in this session</b><span class="file-count">3 files · recent first</span>
+          </div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name changed">docs/iphone-duo.md</span><span class="file-badge changed">modified</span></div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name">src/home/DuoHero.tsx</span><span class="file-badge read">read</span></div>
+          <div class="file-row"><span class="file-glyph"></span><span class="file-name">public/img/duo-frame.png</span><span class="file-badge added">added</span></div>
+        </div>
+      `
+    }
+  };
+
+
+  const state = {
+    open: false,
+    progress: 0,
+    anim: 0,
+    replayTimer: 0,
+    slow: params.get("slow") === "1",
+    lang: params.get("lang") === "en" ? "en" : "zh",
+    busy: false
+  };
+
+  const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
+  const smooth = (a, b, x) => {
+    const t = clamp((x - a) / (b - a));
+    return t * t * (3 - 2 * t);
+  };
+  const easeInOut = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+  // A broad clarity ramp moves from the crease (right) toward the free edge.
+  // Its blur strength also falls, rather than holding the unread area at 9px.
+  function directionalClarity(angle, startAngle, endAngle) {
+    const progress = smooth(startAngle, endAngle, angle);
+    const edge = 100 - 115 * progress;
+    return {
+      progress,
+      edge,
+      start: edge - 42,
+      end: edge + 42,
+      blur: 10 * (1 - .6 * progress) * (1 - smooth(.74, 1, progress)),
+      opacity: 1 - smooth(.84, 1, progress),
+      shade: .5 * (1 - progress)
+    };
+  }
+
+  // Angle-driven lighting: every surface reads its state from this one function.
+  // oa = 0° closed … 180° flat open.
+  function foldLight(openAngle) {
+    return {
+      outerDim: directionalClarity(openAngle, 6, 55).progress * 0.85,
+      outerOff: smooth(70, 88, openAngle),         // cover OLED-black near 90°
+      baseBright: 0.5 + 0.5 * smooth(90, 180, openAngle),  // right pane: 50% floor, 100% at full open
+      innerGlass: directionalClarity(openAngle, 90, 180)
+    };
+  }
+
+  function setVars(p) {
+    const shift = -175 * (1 - easeInOut(p));
+    const fold = 180 * (1 - clamp((p - 0.015) / 0.91));
+    const openAngle = 180 - fold;
+    const L = foldLight(openAngle);
+    const outerDim = L.outerDim;
+    const outerOff = L.outerOff;
+    const glass = L.innerGlass;
+    const crease = smooth(0.84, 0.99, p) * 0.58;
+    const inner = smooth(0.32, 0.50, p);
+    const innerFull = smooth(0.80, 0.985, p);
+    const rad = (fold * Math.PI) / 180;
+    const lift = Math.max(0, Math.sin(rad));
+    const backVis = Math.max(0, -Math.cos(rad));
+    const outer = 1 - smooth(0.04, 0.40, p);
+    const udc = smooth(0.84, 0.985, p);
+    const sweep = -45 + 190 * smooth(0.02, 0.96, p);
+    const sheen = smooth(0.004, 0.06, p) * (1 - smooth(0.34, 0.50, p)) * 0.26;
+    const shadow = 0.48 + 0.52 * easeOut(p);
+
+    device.style.setProperty("--shift", shift.toFixed(2) + "px");
+    device.style.setProperty("--fold", fold.toFixed(2) + "deg");
+    device.style.setProperty("--crease", crease.toFixed(3));
+    device.style.setProperty("--inner", inner.toFixed(3));
+    device.style.setProperty("--inner-full", innerFull.toFixed(3));
+    device.style.setProperty("--outer", outer.toFixed(3));
+    device.style.setProperty("--outer-dim", outerDim.toFixed(3));
+    device.style.setProperty("--outer-off", outerOff.toFixed(3));
+    device.style.setProperty("--base-bright", L.baseBright.toFixed(3));
+    device.style.setProperty("--lv-e", glass.edge.toFixed(2) + "%");
+    device.style.setProperty("--lv-start", glass.start.toFixed(2) + "%");
+    device.style.setProperty("--lv-end", glass.end.toFixed(2) + "%");
+    device.style.setProperty("--lv-blur", glass.blur.toFixed(3) + "px");
+    device.style.setProperty("--lv-a", (glass.shade * glass.opacity).toFixed(3));
+    device.style.setProperty("--lv-o", glass.opacity.toFixed(3));
+    device.style.setProperty("--udc", udc.toFixed(3));
+    device.style.setProperty("--sweep", sweep.toFixed(1) + "%");
+    device.style.setProperty("--sheen", sheen.toFixed(3));
+    device.style.setProperty("--shadow", shadow.toFixed(3));
+    device.style.setProperty("--cast-w", (10 + 68 * lift).toFixed(1) + "px");
+    device.style.setProperty("--cast-op", (0.07 + 0.30 * lift).toFixed(3));
+    device.style.setProperty("--front-shade", (0.02 + 0.16 * lift).toFixed(3));
+    device.style.setProperty("--back-shade", (0.015 + 0.14 * backVis).toFixed(3));
+    leftHalf.style.zIndex = fold > 80 ? "5" : "2";
+    leftFront.style.opacity = (1 - smooth(88, 91, fold)).toFixed(3);
+    leftBack.style.opacity = smooth(89, 92, fold).toFixed(3);
+    leftFrost.style.visibility = fold < 91 ? "visible" : "hidden";
+    leftVeil.style.visibility = fold < 91 ? "visible" : "hidden";
+    state.progress = p;
+    if (scrubRange) {
+      const pct = Math.round(clamp(p) * 1000);
+      scrubRange.value = String(pct);
+      scrubRange.style.setProperty("--scrub", (pct / 10).toFixed(1) + "%");
+      scrubReadout.textContent = Math.round(clamp(p) * 100) + "% · " + Math.round(180 - fold) + "°";
+      scrubPlay.setAttribute("aria-label", p > 0.999 ? COPY[state.lang].scrubFold : COPY[state.lang].scrubPlay);
+      scrubPlay.title = scrubPlay.getAttribute("aria-label");
+    }
+  }
+
+  function updateLabels() {
+    const copy = COPY[state.lang];
+    toggleBtn.textContent = state.open ? copy.fold : copy.unfold;
+    toggleBtn.setAttribute("aria-expanded", String(state.open));
+    hintLabel.textContent = state.open ? copy.hintOpen : copy.hintClosed;
+    hintState.textContent = state.open ? copy.hintStateOpen : copy.hintStateClosed;
+    stateChip.textContent = state.open ? copy.chipOpen : copy.chipClosed;
+    scrubRange.setAttribute("aria-label", copy.scrubLabel);
+    stage.dataset.state = state.open ? "open" : "closed";
+    langBtn.textContent = copy.langLabel;
+    replayBtn.textContent = copy.replay;
+    slowBtn.textContent = copy.slow;
+    hingeHit.setAttribute("aria-label", copy.fold);
+    hingeHit.tabIndex = state.open ? 0 : -1;
+    const footLeft = $("footLeft");
+    const footRight = $("footRight");
+    if (footLeft && copy.footLeft) footLeft.innerHTML = copy.footLeft;
+    if (footRight && copy.footRight) footRight.textContent = copy.footRight;
+    document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      if (copy[key]) el.textContent = copy[key];
+    });
+  }
+
+  function syncInnerFrost() {
+    const replica = $("chatApp").cloneNode(true);
+    replica.removeAttribute("id");
+    replica.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+    replica.inert = true;
+    leftFrost.replaceChildren(replica);
+    replica.querySelector(".chat-body").scrollTop = chatBody.scrollTop;
+  }
+  chatBody.addEventListener("scroll", () => {
+    const replicaBody = leftFrost.querySelector(".chat-body");
+    if (replicaBody) replicaBody.scrollTop = chatBody.scrollTop;
+  }, { passive: true });
+
+  function renderCopy() {
+    const copy = COPY[state.lang];
+    docContent.innerHTML = copy.doc;
+    docSource.textContent = copy.docSource;
+    if (docContentOuter) docContentOuter.innerHTML = copy.doc;
+    if (docSourceOuter) docSourceOuter.textContent = copy.docSource;
+    chatBody.innerHTML = copy.chat;
+    updateLabels();
+    syncInnerFrost();
+  }
+
+  function stopMotion() {
+    cancelAnimationFrame(state.anim);
+    state.anim = 0;
+    clearTimeout(state.replayTimer);
+    state.replayTimer = 0;
+    state.busy = false;
+  }
+
+  function animateTo(target) {
+    if (state.busy) return;
+    const from = state.progress;
+    const to = target ? 1 : 0;
+    if (Math.abs(from - to) < 0.001) {
+      setVars(to);
+      state.open = target;
+      updateLabels();
+      return;
+    }
+    state.open = target;
+    state.busy = true;
+    updateLabels();
+    const base = state.slow ? 8400 : 4000;
+    const duration = reduceMotion ? 1 : base * Math.max(0.35, Math.abs(to - from));
+    const start = performance.now();
+    cancelAnimationFrame(state.anim);
+    const tick = (now) => {
+      const raw = clamp((now - start) / duration);
+      const eased = easeInOut(raw);
+      const p = from + (to - from) * eased;
+      setVars(p);
+      if (raw < 1) {
+        state.anim = requestAnimationFrame(tick);
+      } else {
+        setVars(to);
+        state.busy = false;
+        state.anim = 0;
+        updateLabels();
+      }
+    };
+    state.anim = requestAnimationFrame(tick);
+  }
+
+  function toggle() {
+    if (state.busy) return;
+    animateTo(!state.open);
+  }
+
+  function replay() {
+    if (state.busy) return;
+    clearTimeout(state.replayTimer);
+    state.replayTimer = 0;
+    cancelAnimationFrame(state.anim);
+    setVars(0);
+    state.open = false;
+    state.busy = false;
+    updateLabels();
+    state.replayTimer = window.setTimeout(() => {
+      state.replayTimer = 0;
+      animateTo(true);
+    }, 350);
+  }
+
+  // Clicking the closed phone unfolds it. The open device is closed only via its hinge
+  // or the explicit controls, so the inner panes stay usable.
+  rightHalf.addEventListener("click", () => {
+    if (!state.open && !state.busy) animateTo(true);
+  });
+  leftHalf.addEventListener("click", () => {
+    if (!state.open && !state.busy) animateTo(true);
+  });
+  hingeHit.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (state.open && !state.busy) animateTo(false);
+  });
+  toggleBtn.addEventListener("click", toggle);
+  stageHint.addEventListener("click", toggle);
+  replayBtn.addEventListener("click", replay);
+  slowBtn.addEventListener("click", () => {
+    state.slow = !state.slow;
+    slowBtn.setAttribute("aria-pressed", String(state.slow));
+  });
+
+  scrubRange.addEventListener("input", () => {
+    stopMotion();
+    const p = Number(scrubRange.value) / 1000;
+    state.progress = p;
+    state.open = p >= 0.5;
+    setVars(p);
+    updateLabels();
+  });
+
+  scrubPlay.addEventListener("click", () => {
+    stopMotion();
+    animateTo(state.progress >= 0.999 ? false : true);
+  });
+  langBtn.addEventListener("click", () => {
+    state.lang = state.lang === "zh" ? "en" : "zh";
+    renderCopy();
+  });
+
+  document.querySelectorAll(".sheet-bar, .pv-head").forEach((el) => {
+    el.addEventListener("click", (e) => e.stopPropagation());
+  });
+
+  const fileViewButtons = Array.from(document.querySelectorAll("[data-file-view]"));
+  const fileApps = [fileApp, fileAppOuter].filter(Boolean);
+  const setFileView = (view) => {
+    fileApps.forEach((app) => app.setAttribute("data-view", view));
+    fileViewButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute("data-file-view") === view)));
+  };
+  fileViewButtons.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setFileView(btn.getAttribute("data-file-view"));
+    });
+  });
+
+  // A tiny pointer-tracked screen reflection. It sells the glass without moving the type.
+  document.querySelectorAll(".screen").forEach((screen) => {
+    screen.addEventListener("pointermove", (e) => {
+      const r = screen.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * 100;
+      const y = ((e.clientY - r.top) / r.height) * 100;
+      screen.style.setProperty("--sx", x.toFixed(1) + "%");
+      screen.style.setProperty("--sy", y.toFixed(1) + "%");
+    });
+    screen.addEventListener("pointerleave", () => {
+      screen.style.setProperty("--sx", "52%");
+      screen.style.setProperty("--sy", "16%");
+    });
+  });
+
+  // Build one watertight perimeter instead of a detached full-height edge strip.
+  // The metal lip shares the face rim's centre and expands its corner radius.
+  function buildFrameWall(container, freeOnLeft) {
+    const body = container.parentElement;
+    const style = getComputedStyle(body);
+    const lip = parseFloat(style.getPropertyValue("--metal-lip"));
+    const free = parseFloat(style.getPropertyValue("--corner-free")) + lip;
+    const hinge = parseFloat(style.getPropertyValue("--corner-hinge")) + lip;
+    const width = body.offsetWidth + 2 * lip;
+    const height = body.offsetHeight + 2 * lip;
+    const leftRadius = freeOnLeft ? free : hinge;
+    const rightRadius = freeOnLeft ? hinge : free;
+    const corners = [
+      { x: width - rightRadius, y: rightRadius, r: rightRadius, start: -90 },
+      { x: width - rightRadius, y: height - rightRadius, r: rightRadius, start: 0 },
+      { x: leftRadius, y: height - leftRadius, r: leftRadius, start: 90 },
+      { x: leftRadius, y: leftRadius, r: leftRadius, start: 180 }
+    ];
+    const points = [];
+    for (const corner of corners) {
+      for (let step = 0; step <= 32; step++) {
+        const angle = (corner.start + 90 * step / 32) * Math.PI / 180;
+        points.push({
+          x: corner.x + Math.cos(angle) * corner.r - lip,
+          y: corner.y + Math.sin(angle) * corner.r - lip
+        });
+      }
+    }
+    const walls = document.createDocumentFragment();
+    points.forEach((from, index) => {
+      const to = points[(index + 1) % points.length];
+      const dx = to.x - from.x, dy = to.y - from.y;
+      const length = Math.hypot(dx, dy);
+      const tx = dx / length, ty = dy / length;
+      const wall = document.createElement("div");
+      const isFreeRail = freeOnLeft
+        ? Math.abs(from.x + lip) < .001 && Math.abs(to.x + lip) < .001
+        : Math.abs(from.x - width + lip) < .001 && Math.abs(to.x - width + lip) < .001;
+      wall.className = "frame-wall" + (isFreeRail ? " free-rail" : "");
+      // A tiny extension closes rasterization cracks between adjacent facets.
+      wall.style.width = (length + .6).toFixed(4) + "px";
+      wall.style.transform = "matrix3d(" + [
+        tx, ty, 0, 0,
+        0, 0, -1, 0,
+        -ty, tx, 0, 0,
+        from.x, from.y, 0, 1
+      ].join(",") + ")";
+      walls.appendChild(wall);
+    });
+    container.replaceChildren(walls);
+  }
+  buildFrameWall($("slab"), true);
+  buildFrameWall($("baseSlab"), false);
+
+  function fit() {
+    const avail = Math.max(320, stageCanvas.clientWidth - 20);
+    // video mode renders at 1920×1080 where the lab cap of 1.22 leaves the
+    // device small in frame; let it grow to fill the canvas instead.
+    const scaleCap = videoMode ? 1.5 : 1.22;
+    const scale = Math.min(scaleCap, Math.max(0.46, avail / 760));
+    document.documentElement.style.setProperty("--scale", scale.toFixed(3));
+    const h = 500 * scale + (window.innerWidth < 900 ? 76 : 94);
+    stageCanvas.style.height = h.toFixed(1) + "px";
+  }
+  window.addEventListener("resize", fit, { passive: true });
+
+  renderCopy();
+  slowBtn.setAttribute("aria-pressed", String(state.slow));
+
+  if (params.has("freeze")) {
+    const f = clamp(parseFloat(params.get("freeze")) || 0);
+    setVars(f);
+    state.open = f > .5;
+    state.busy = false;
+    updateLabels();
+  } else if (params.get("state") === "open") {
+    setVars(1);
+    state.open = true;
+    updateLabels();
+  } else {
+    setVars(0);
+    state.open = false;
+    updateLabels();
+  }
+
+  fit();
+})();
+</script>
+</body>
+</html>
