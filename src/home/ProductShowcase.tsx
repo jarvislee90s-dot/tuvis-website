@@ -31,8 +31,13 @@ export function ProductShowcase() {
             <DesktopStage className="flex-1">
               <AppBoard interactive={false} columns={2} className="h-full" />
             </DesktopStage>
-            <p className="mt-3 text-center">
-              <Link to="demo" className="text-sm font-semibold text-hud hover:underline">{t("demo.open")} →</Link>
+            <p className="mt-6 text-center">
+              <Link
+                to="demo"
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-6 py-2.5 text-base font-semibold text-hud shadow-soft transition hover:-translate-y-0.5 hover:border-hud/50"
+              >
+                {t("demo.open")} →
+              </Link>
             </p>
           </div>
           <div className="flex items-start justify-center lg:justify-start">
