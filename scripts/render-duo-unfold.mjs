@@ -47,6 +47,9 @@ const option = (name, fallback) => {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
 
+const portrait = flag("--portrait");
+const suffix = portrait ? "-portrait" : "";
+const [VIEW_W, VIEW_H] = portrait ? [1080, 1920] : [1920, 1080];
 const outDir = path.resolve(repo, option("--out", "renders/duo-unfold"));
 const ALLOWED_LANGS = ["zh", "en"];
 const langs = (option("--langs", "zh,en") ?? "zh,en").split(",").map((s) => s.trim()).filter(Boolean);
@@ -89,7 +92,7 @@ async function startChrome() {
       "--headless=new",
       `--remote-debugging-port=${cdpPort}`,
       `--user-data-dir=${profile}`,
-      "--window-size=1920,1080",
+      `--window-size=${VIEW_W},${VIEW_H}`,
       "--hide-scrollbars",
       "--disable-gpu",
       "--no-first-run",
@@ -170,7 +173,7 @@ function encodeVideo({ framesDir, outDir, lang }) {
       ? ["-loop", "1", "-framerate", String(FRAME_RATE), "-i", inputPattern, "-t", String(HOLD_SECONDS)]
       : ["-framerate", String(FRAME_RATE), "-i", inputPattern];
     runFFmpeg(
-      [...args, "-c:v", "libx264", "-preset", "slow", "-crf", "15", "-pix_fmt", "yuv420p", path.join(outDir, name)],
+      [...args, "-c:v", "libx264", "-preset", "slow", "-crf", "15", "-pix_fmt", "yuv420p", path.join(outDir, name.replace("${lang}", lang))],
       { label: `encode ${name}` },
     );
   };
@@ -191,7 +194,7 @@ function encodeVideo({ framesDir, outDir, lang }) {
     ].join("\n"),
   );
   runFFmpeg(
-    ["-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", "-movflags", "+faststart", path.join(outDir, `duo-unfold-${lang}.mp4`)],
+    ["-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", "-movflags", "+faststart", path.join(outDir, `duo-unfold-${lang}${suffix}.mp4`)],
     { label: "concat master" },
   );
   for (const name of [`${lang}-seg-open.mp4`, `${lang}-seg-hold-open.mp4`, `${lang}-seg-close.mp4`, `${lang}-seg-hold-closed.mp4`, `${lang}-concat.txt`]) {
@@ -199,15 +202,18 @@ function encodeVideo({ framesDir, outDir, lang }) {
   }
 }
 
-/** Encode the 820px README GIF, stepping down the agreed ladder until ≤9MB. */
+/** Encode the README GIF, stepping down the ladder until ≤9MB.
+ *  Portrait frames carry ~2x the pixel area of landscape at equal width, so
+ *  the portrait ladder targets narrower widths to clear the same cap. */
 function encodeGif({ outDir, lang }) {
-  const master = path.join(outDir, `duo-unfold-${lang}.mp4`);
-  const palette = path.join(outDir, `${lang}-palette.png`);
+  const master = path.join(outDir, `duo-unfold-${lang}${suffix}.mp4`);
+  const palette = path.join(outDir, `${lang}${suffix}-palette.png`);
+  const widths = portrait ? [540, 540, 480, 420] : [GIF_WIDTH, GIF_WIDTH, GIF_WIDTH, 720];
   const rungs = [
-    { name: `${lang}-rung-base`, fps: 25, width: GIF_WIDTH, dither: "dither=sierra2_4a" },
-    { name: `${lang}-rung-bayer`, fps: 25, width: GIF_WIDTH, dither: "dither=bayer:bayer_scale=4" },
-    { name: `${lang}-rung-20fps`, fps: 20, width: GIF_WIDTH, dither: "dither=bayer:bayer_scale=4" },
-    { name: `${lang}-rung-720`, fps: 20, width: 720, dither: "dither=bayer:bayer_scale=4" },
+    { name: `${lang}${suffix}-rung-base`, fps: 25, width: widths[0], dither: "dither=sierra2_4a" },
+    { name: `${lang}${suffix}-rung-bayer`, fps: 25, width: widths[1], dither: "dither=bayer:bayer_scale=4" },
+    { name: `${lang}${suffix}-rung-20fps`, fps: 20, width: widths[2], dither: "dither=bayer:bayer_scale=4" },
+    { name: `${lang}${suffix}-rung-final`, fps: 20, width: widths[3], dither: "dither=bayer:bayer_scale=4" },
   ];
   for (const rung of rungs) {
     const scale = `scale=${rung.width}:-2:flags=lanczos`;
@@ -230,7 +236,7 @@ function encodeGif({ outDir, lang }) {
     if (size <= GIF_MAX_BYTES) {
       // Ship a stable name regardless of which rung won, and drop every rung
       // artifact (each can approach the 9MB cap).
-      const finalPath = path.join(outDir, `duo-unfold-${lang}.gif`);
+      const finalPath = path.join(outDir, `duo-unfold-${lang}${suffix}.gif`);
       writeFileSync(finalPath, readFileSync(gifPath));
       for (const rung of rungs) rmSync(path.join(outDir, `${rung.name}.gif`), { force: true });
       return { gifPath: finalPath, size, rung };
@@ -241,10 +247,10 @@ function encodeGif({ outDir, lang }) {
 
 async function renderLanguage(browser, lang, outDir) {
   console.log(`[${lang}] rendering ${Math.round(UNFOLD_SECONDS * FRAME_RATE) * 2 + 2} unique frames @ ${FRAME_RATE}fps …`);
-  const framesDir = path.join(outDir, `frames-${lang}`);
+  const framesDir = path.join(outDir, `frames-${lang}${suffix}`);
   rmSync(framesDir, { recursive: true, force: true });
   for (const sub of ["open", "close"]) mkdirSync(path.join(framesDir, sub), { recursive: true });
-  const page = await openPage(browser, { width: 1920, height: 1080, deviceScaleFactor: 1 });
+  const page = await openPage(browser, { width: VIEW_W, height: VIEW_H, deviceScaleFactor: 1 });
   try {
     // prefers-reduced-motion kills the page's cosmetic transitions, keeping
     // every screenshot a pure function of the driven progress.
@@ -278,6 +284,9 @@ async function main() {
   } finally {
     browser.close();
     chrome.kill();
+    // The profile dir is still being flushed right after kill(); wait for the
+    // process to actually exit before removing it.
+    await new Promise((resolve) => chrome.once("exit", resolve));
     if (!keepFrames) {
       for (const dir of readdirSync(outDir).filter((name) => name.startsWith("frames-"))) {
         rmSync(path.join(outDir, dir), { recursive: true, force: true });
@@ -287,7 +296,7 @@ async function main() {
   }
   console.log("\nDone. Deliverables:");
   for (const lang of langs) {
-    console.log(`  video : ${path.join(outDir, `duo-unfold-${lang}.mp4`)}`);
+    console.log(`  video : ${path.join(outDir, `duo-unfold-${lang}${suffix}.mp4`)}`);
     console.log(`  gif   : ${gifPaths[lang] ?? "(failed)"}`);
   }
 }

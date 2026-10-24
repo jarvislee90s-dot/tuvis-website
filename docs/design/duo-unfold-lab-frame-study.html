@@ -1419,6 +1419,13 @@
     font-size: 19px; letter-spacing: .01em;
     color: var(--muted);
   }
+  /* Portrait (9:16) renders: default center-framing sinks the device into the
+     lower half — lift the whole canvas so the device sits under the title.
+     (A plain translateY: the 3D-transformed device visual escapes its layout
+     box upward, so flex-start/padding cannot position it reliably.) */
+  @media (orientation: portrait) {
+    .lab-video .stage-canvas { transform: translateY(-170px); }
+  }
 
   @media (max-width: 520px) {
     .brand-sub, .brand-badge { display: none; }
