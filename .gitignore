@@ -22,3 +22,6 @@ d2-viewport.png
 
 # Git worktrees
 .worktrees/
+
+# offline render artifacts (scripts/render-duo-unfold.mjs)
+renders/
