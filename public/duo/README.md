@@ -1,7 +1,9 @@
 # /duo/ — iPhone Duo 开合演示（iframe 发布副本）
 
 `index.html` 是 `docs/design/duo-unfold-lab-frame-study.html` 的**逐字节副本**，
-由首页「产品形态」区以 iframe 嵌入（`src="/duo/?embed=1&lang=zh|en"`）。
+由首页「产品形态」区以 iframe 嵌入（`src="/duo/index.html?embed=1&lang=zh|en"`；
+**必须用显式文件路径**——Vite dev 不把目录式 `/duo/` 解析到本文件，会落进 SPA
+回退渲染成首页）。
 
 - 唯一编辑源是 `docs/design/` 里的原文件；改完原文件后必须重新复制到本目录，
   两个文件不允许各自演化。

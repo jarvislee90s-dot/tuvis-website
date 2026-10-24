@@ -34,7 +34,7 @@ describe("ProductShowcase：iPhone Duo 嵌入块", () => {
     expect(screen.getByRole("heading", { level: 3, name: "现已适配 iPhone Duo." })).toBeInTheDocument();
 
     const frame = screen.getByTitle("iPhone Duo 开合演示——可拖动进度条或点击播放");
-    expect(frame).toHaveAttribute("src", "/duo/?embed=1&lang=zh");
+    expect(frame).toHaveAttribute("src", "/duo/index.html?embed=1&lang=zh");
     expect(frame).toHaveAttribute("loading", "lazy");
     // 响应式高度与限宽（背景规格锚定，防样式回退）
     expect(frame).toHaveClass("max-w-5xl", "h-[620px]", "sm:h-[700px]", "md:h-[875px]", "lg:h-[880px]");
@@ -52,7 +52,7 @@ describe("ProductShowcase：iPhone Duo 嵌入块", () => {
     expect(screen.getByRole("heading", { level: 3, name: "Now adapted for iPhone Duo." })).toBeInTheDocument();
 
     const frame = screen.getByTitle("iPhone Duo unfold demo — drag the slider or press play");
-    expect(frame).toHaveAttribute("src", "/duo/?embed=1&lang=en");
+    expect(frame).toHaveAttribute("src", "/duo/index.html?embed=1&lang=en");
     expect(screen.getByText(/trademark of Apple Inc\./)).toBeInTheDocument();
   });
 });

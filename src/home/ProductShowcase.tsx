@@ -45,7 +45,7 @@ export function ProductShowcase() {
           <h3 className="text-center text-xl font-bold tracking-tight md:text-2xl">{t("product.duoHeading")}</h3>
           <iframe
             title={t("product.duoFrameTitle")}
-            src={`/duo/?embed=1&lang=${lang}`}
+            src={`/duo/index.html?embed=1&lang=${lang}`}
             loading="lazy"
             className="mx-auto mt-8 block h-[620px] w-full max-w-5xl rounded-[34px] border border-line bg-card sm:h-[700px] md:h-[875px] lg:h-[880px]"
           />
