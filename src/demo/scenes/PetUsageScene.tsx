@@ -8,7 +8,7 @@ import { CloseIcon } from "../../components/Icons";
 import { PlayerFrame } from "../PlayerFrame";
 import { DesktopStage } from "../DesktopStage";
 import { NotificationCard } from "../NotificationCard";
-import { frameStyle, PETS, ANIM, type PetAnim, type PetId } from "../petAnimations";
+import { animDef, frameStyle, PETS, TUVIS_VOICE, type PetAnim, type PetId } from "../petAnimations";
 import { SwitchPetDialog, ImportPetDialog, type SwitchPetEntry } from "../PetDialogs";
 import { d4Steps, d4Reset } from "../steps-d4";
 
@@ -136,7 +136,7 @@ export function PetUsageScene() {
   useEffect(() => { frame.current = 0; }, [anim]);
   useEffect(() => {
     // 拖动中不停表：跑动帧按 120ms×freq 节拍自然快放（Step 32.2；T37.1 频率即时生效）
-    const def = ANIM[anim].d;
+    const def = animDef(anim, pet).d;
     const t = setTimeout(() => { frame.current = (frame.current + 1) % def.length; tick((n) => n + 1); }, def[frame.current] * freq);
     return () => clearTimeout(t);
   }, [frame.current, anim, freq]);
@@ -167,8 +167,15 @@ export function PetUsageScene() {
   function fire(kind: "approval" | "done") {
     setPetRun({ card: kind, notify: true });
     setAnim(kind === "approval" ? "waiting" : "jumping");
-    // 语音门控（B10）：仅贝贝带语音 × T37 语音开关放行，Starry Dew 静音上场
-    if (PETS[pet].voice && voice) setVoiceSrc(kind === "approval" ? "approval-chicken.m4a" : "done-success.m4a");
+    // 语音门控（B10）：带语音的宠物 × T37 语音开关放行；兔维斯走 tuvis-3d 分组随机台词
+    if (PETS[pet].voice && voice) {
+      if (pet === "tuvis") {
+        const lines = TUVIS_VOICE[kind];
+        setVoiceSrc(lines[Math.floor(Math.random() * lines.length)]);
+      } else {
+        setVoiceSrc(kind === "approval" ? "pet/voice/approval-chicken.m4a" : "pet/voice/done-success.m4a");
+      }
+    }
     window.setTimeout(() => { if (kind === "done") setAnim("idle"); }, 2600);
   }
 
@@ -423,7 +430,7 @@ export function PetUsageScene() {
           )}
         </AnimatePresence>
         {voiceSrc && (
-          <audio key={voiceSrc} autoPlay src={`${import.meta.env.BASE_URL}pet/voice/${voiceSrc}`} onEnded={() => setVoiceSrc(null)} />
+          <audio key={voiceSrc} autoPlay src={`${import.meta.env.BASE_URL}${voiceSrc}`} onEnded={() => setVoiceSrc(null)} />
         )}
       </DesktopStage>
     </PlayerFrame>
