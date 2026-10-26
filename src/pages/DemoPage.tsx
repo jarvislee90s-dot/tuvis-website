@@ -16,6 +16,19 @@ export default function DemoPage() {
         <h1 className="text-3xl font-bold">{t("demo.title")}</h1>
         <p className="mt-2 text-inkdim">{t("demo.desc")}</p>
       </div>
+      {/* 产品影片：先看 90 秒概览，再往下动手玩交互模拟 */}
+      <section className="mx-auto mt-10 max-w-5xl">
+        <h2 className="mb-4 text-xl font-semibold">{t("demo.film.title")}</h2>
+        <video
+          className="w-full rounded-[22px] border border-line bg-paper shadow-soft"
+          src="/video/demo-reel-16x9.mp4"
+          poster="/video/demo-reel-poster.jpg"
+          controls
+          preload="none"
+          playsInline
+        />
+        <p className="mt-2 text-xs text-inkdim">{t("demo.film.note")}</p>
+      </section>
       <section id="d1" className="mx-auto mt-10 max-w-7xl scroll-mt-20">
         <h2 className="mb-4 text-xl font-semibold">{t("demo.d1")}</h2>
         <D1Scene />
