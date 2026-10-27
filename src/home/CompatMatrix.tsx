@@ -8,9 +8,13 @@ import cap from "@/content/capabilities.json";
 /** 兼容矩阵板块（T40）：数据 = 同步产物 content/capabilities.json 单一源（列序/行组随 JSON 自动跟随）。
  *  文字态单元格（决策 8）：✓/✓/🧪/✕ + 文案；行级 note 走单元格 title/aria-label 悬浮，取值规则同 nameEn；
  *  Codex 列头 † 脚注（CLI 支持完整远程 / APP 仅查看）。
- *  *En 命名数据（组名/行名 nameEn、备注 noteEn）同一模式：JSON 数据源自带英译时优先、单向回退原中文；
- *  选择与界面语言无关（zh 页遇英译同样显示英文），语言相关文案一律走 i18n 键（品牌词例外：走 Brand/brandName）。 */
+ *  *En 命名数据（组名/行名 nameEn、备注 noteEn）备注通道保持语言无关（悬浮补充，英文优先、
+ *  单向回退原中文）；组名/行名自 2026-10-26 起按界面语言取字段：zh → name（缺 nameEn 回退）、
+ *  en → nameEn（缺 name 回退）——中文页不再显示英文表头。语言相关文案一律走 i18n 键（品牌词例外）。 */
 const LEGEND = ["yes", "partial", "experimental", "no"] as const;
+
+type CapGroup = (typeof cap.groups)[number];
+type CapRow = CapGroup["rows"][number];
 
 const LEGEND_DOT: Record<string, string> = {
   yes: "bg-green-500",
@@ -27,7 +31,10 @@ const CELL: Record<string, { mark: string; key: string; cls: string }> = {
 };
 
 export function CompatMatrix() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const zh = (i18n.language ?? "zh").startsWith("zh");
+  const groupName = (g: CapGroup) => (zh ? g.name ?? g.nameEn : g.nameEn ?? g.name);
+  const rowName = (r: CapRow) => (zh ? r.name ?? r.nameEn : r.nameEn ?? r.name);
   return (
     <Reveal>
       <section className="py-16">
@@ -47,7 +54,7 @@ export function CompatMatrix() {
         <div className="mt-4 space-y-4">
           {cap.groups.map((group) => (
             <div key={group.key} className="rounded-[14px] border border-line bg-card p-5">
-              <h3 className="text-sm font-semibold">{group.nameEn ?? group.name}</h3>
+              <h3 className="text-sm font-semibold">{groupName(group)}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] table-fixed border-collapse text-xs">
                   <thead>
@@ -73,7 +80,7 @@ export function CompatMatrix() {
                       const note = row.noteEn || row.note;
                       return (
                         <tr key={row.key} className="border-t border-line">
-                          <td className="sticky left-0 z-10 bg-card py-2 pr-3 text-inkdim">{row.nameEn ?? row.name}</td>
+                          <td className="sticky left-0 z-10 bg-card py-2 pr-3 text-inkdim">{rowName(row)}</td>
                           {cap.tools.map((tool) => {
                             const state = CELL[row.support[tool]] ?? CELL.no;
                             const label = t(state.key);
