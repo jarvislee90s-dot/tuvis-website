@@ -17,10 +17,11 @@ const mockCap = vi.hoisted(() => ({
     {
       key: "g1",
       name: "组一",
+      nameEn: "Group one",
       rows: [
-        { name: "行甲", key: "a", support: { claude: "yes" }, note: "中文备注甲", noteEn: "English note A" },
+        { name: "行甲", nameEn: "Row A", key: "a", support: { claude: "yes" }, note: "中文备注甲", noteEn: "English note A" },
         { name: "行乙", key: "b", support: { claude: "yes" }, note: "中文备注乙" },
-        { name: "行丙", key: "c", support: { claude: "yes" }, note: "中文备注丙", noteEn: "" },
+        { name: "行丙", nameEn: "Row C", key: "c", support: { claude: "yes" }, note: "中文备注丙", noteEn: "" },
       ],
     },
   ],
@@ -63,6 +64,21 @@ describe("CompatMatrix：noteEn 通道与矩阵表头", () => {
     const cell = noteCellOf("行丙");
     expect(cell).toHaveAttribute("title", "中文备注丙");
     expect(cell).toHaveAttribute("aria-label", expect.stringContaining("中文备注丙"));
+  });
+
+  it("zh 语言下组名/行名取中文字段（不再显示英文表头）", () => {
+    render(<CompatMatrix />);
+    expect(screen.getByText("组一")).toBeInTheDocument();
+    expect(screen.getByText("行甲")).toBeInTheDocument();
+    expect(screen.queryByText("Group one")).not.toBeInTheDocument();
+  });
+
+  it("en 语言下组名/行名取 nameEn，缺失回退 name", async () => {
+    await i18n.changeLanguage("en");
+    render(<CompatMatrix />);
+    expect(screen.getByText("Group one")).toBeInTheDocument();
+    expect(screen.getByText("Row A")).toBeInTheDocument();
+    expect(screen.getByText("行乙")).toBeInTheDocument(); // 行乙无 nameEn → 回退 name
   });
 
   it("en 语言下表头渲染 matrix.colCap（Capability），不再硬编码中文", async () => {
