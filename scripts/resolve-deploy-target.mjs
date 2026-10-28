@@ -1,10 +1,18 @@
 import { appendFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { latestStableTag, resolveDeployTarget, verifyRecoveryMarker } from "./release-policy.mjs";
+import {
+  latestStableTag,
+  resolveDeployTarget,
+  tuvisContentTag,
+  verifyRecoveryMarker,
+} from "./release-policy.mjs";
 import { remoteTags } from "./release-website.mjs";
 
 function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return execFileSync("git", args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
 }
 
 export function resolveCurrentDeployTarget(env = process.env) {
@@ -23,7 +31,8 @@ export function resolveCurrentDeployTarget(env = process.env) {
 
   if (!target.recovery) {
     const eventTagCommit = git("rev-parse", `${env.GITHUB_REF_NAME}^{commit}`);
-    if (eventTagCommit !== eventSha) throw new Error("tag event SHA does not match the pushed stable tag");
+    if (eventTagCommit !== eventSha)
+      throw new Error("tag event SHA does not match the pushed stable tag");
   }
 
   if (target.recovery) {
@@ -32,7 +41,9 @@ export function resolveCurrentDeployTarget(env = process.env) {
     verifyRecoveryMarker({
       markerTree: git("rev-parse", `${eventSha}^{tree}`),
       releaseTree: git("rev-parse", `${recoveryTag}^{tree}`),
-      markerParents: git("rev-list", "--parents", "-n", "1", eventSha).split(" ").slice(1),
+      markerParents: git("rev-list", "--parents", "-n", "1", eventSha)
+        .split(" ")
+        .slice(1),
       releaseCommit,
     });
   }
@@ -40,6 +51,7 @@ export function resolveCurrentDeployTarget(env = process.env) {
   return {
     ...target,
     latestTag,
+    contentTag: tuvisContentTag(target.releaseTag),
     workflowSha: eventSha,
   };
 }
@@ -48,17 +60,21 @@ if (process.argv[1]?.endsWith("resolve-deploy-target.mjs")) {
   try {
     const target = resolveCurrentDeployTarget();
     if (target.reconcileTag) {
-      console.log(`::notice::${target.releaseTag} is stale; queueing a same-tree deployment for ${target.reconcileTag}`);
+      console.log(
+        `::notice::${target.releaseTag} is stale; queueing a same-tree deployment for ${target.reconcileTag}`,
+      );
     }
     const values = {
       release_tag: target.releaseTag,
       should_deploy: String(target.shouldDeploy),
       recovery: String(target.recovery),
       reconcile_tag: target.reconcileTag ?? "",
+      content_tag: target.contentTag,
     };
     for (const [key, value] of Object.entries(values)) {
       console.log(`${key}=${value}`);
-      if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+      if (process.env.GITHUB_OUTPUT)
+        appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
     }
   } catch (error) {
     console.error(`::error::${error.message}`);

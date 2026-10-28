@@ -110,7 +110,7 @@ jobs:
           fi
         working-directory: site
         env:
-          TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.release_tag }}
+          TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.content_tag }}
       - uses: pnpm/action-setup@v4
         if: steps.locked_target.outputs.should_deploy == 'true'
         with:
@@ -137,7 +137,7 @@ jobs:
         working-directory: site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.release_tag }}
+          TUVIS_RELEASE_REF: ${{ steps.locked_target.outputs.content_tag }}
           TUVIS_RELEASE_SOURCE_DIR: ../tuvis-source
       # A tag arriving during the build invalidates this deployment; its run will take the lock next.
       - name: Recheck latest release before deployment

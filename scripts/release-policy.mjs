@@ -1,24 +1,39 @@
-const STABLE_TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const STABLE_TAG =
+  /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/;
 
 export function parseStableTag(tag) {
   const match = typeof tag === "string" ? STABLE_TAG.exec(tag) : null;
-  return match ? match.slice(1).map(Number) : null;
+  return match ? match.slice(1).filter((part) => part !== undefined).map(Number) : null;
 }
 
 export function compareStableTags(left, right) {
   const a = parseStableTag(left);
   const b = parseStableTag(right);
-  if (!a || !b) throw new Error("both values must be stable release tags (vMAJOR.MINOR.PATCH)");
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return a[i] - b[i];
+  if (!a || !b)
+    throw new Error(
+      "both values must be stable release tags (vMAJOR.MINOR.PATCH[.N])",
+    );
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const delta = (a[i] ?? 0) - (b[i] ?? 0);
+    if (delta !== 0) return delta;
   }
   return 0;
+}
+
+/** Website fix tags (vX.Y.Z.N) reuse the matching Tuvis content tag vX.Y.Z. */
+export function tuvisContentTag(tag) {
+  const parsed = parseStableTag(tag);
+  return parsed ? `v${parsed[0]}.${parsed[1]}.${parsed[2]}` : null;
 }
 
 export function latestStableTag(tags) {
   return tags
     .filter((tag) => parseStableTag(tag))
-    .reduce((latest, tag) => (!latest || compareStableTags(tag, latest) > 0 ? tag : latest), null);
+    .reduce(
+      (latest, tag) =>
+        !latest || compareStableTags(tag, latest) > 0 ? tag : latest,
+      null,
+    );
 }
 
 export function isLatestStableTag(tag, tags) {
@@ -26,24 +41,46 @@ export function isLatestStableTag(tag, tags) {
 }
 
 export function assertLatestRecoverableTag(tag, tags) {
-  if (!parseStableTag(tag)) throw new Error("recovery requires an exact stable release tag (vMAJOR.MINOR.PATCH)");
-  if (!isLatestStableTag(tag, tags)) throw new Error("only the latest stable release tag can be manually redeployed");
+  if (!parseStableTag(tag))
+    throw new Error(
+      "recovery requires an exact stable release tag (vMAJOR.MINOR.PATCH[.N])",
+    );
+  if (!isLatestStableTag(tag, tags))
+    throw new Error(
+      "only the latest stable release tag can be manually redeployed",
+    );
   return tag;
 }
 
 export function assertRecoveryTagSupportsMarker(tag, tags, deployWorkflow) {
   assertLatestRecoverableTag(tag, tags);
-  if (typeof deployWorkflow !== "string" || !deployWorkflow.includes("# recovery-marker-protocol: v1")) {
-    throw new Error(`${tag} predates the same-tree recovery protocol; publish a release with the current deploy workflow first`);
+  if (
+    typeof deployWorkflow !== "string" ||
+    !deployWorkflow.includes("# recovery-marker-protocol: v1")
+  ) {
+    throw new Error(
+      `${tag} predates the same-tree recovery protocol; publish a release with the current deploy workflow first`,
+    );
   }
   return tag;
 }
 
-export function resolveDeployTarget({ eventName, refType, refName, inputTag = "", latestTag = null }) {
+export function resolveDeployTarget({
+  eventName,
+  refType,
+  refName,
+  inputTag = "",
+  latestTag = null,
+}) {
   if (eventName === "push") {
-    if (refType !== "tag") throw new Error("deployment push must be a tag push");
-    if (!parseStableTag(refName)) throw new Error("deployment requires a stable release tag (vMAJOR.MINOR.PATCH)");
-    const reconcileTag = latestTag && compareStableTags(latestTag, refName) > 0 ? latestTag : null;
+    if (refType !== "tag")
+      throw new Error("deployment push must be a tag push");
+    if (!parseStableTag(refName))
+      throw new Error(
+        "deployment requires a stable release tag (vMAJOR.MINOR.PATCH[.N])",
+      );
+    const reconcileTag =
+      latestTag && compareStableTags(latestTag, refName) > 0 ? latestTag : null;
     return {
       releaseTag: refName,
       shouldDeploy: reconcileTag === null,
@@ -54,15 +91,24 @@ export function resolveDeployTarget({ eventName, refType, refName, inputTag = ""
 
   if (eventName === "workflow_dispatch") {
     if (refType !== "branch" || !parseStableTag(inputTag)) {
-      throw new Error("manual redeploy requires a marker branch and a stable release tag");
+      throw new Error(
+        "manual redeploy requires a marker branch and a stable release tag",
+      );
     }
     const markerPattern = new RegExp(`^${inputTag}-redeploy-\\d+-\\d+$`);
     if (!markerPattern.test(refName ?? "")) {
-      throw new Error("manual redeploy requires a marker branch for the selected release tag");
+      throw new Error(
+        "manual redeploy requires a marker branch for the selected release tag",
+      );
     }
-    if (!parseStableTag(inputTag)) throw new Error("recovery requires an exact stable release tag (vMAJOR.MINOR.PATCH)");
-    if (!latestTag) throw new Error("there is no stable release available for recovery");
-    const reconcileTag = compareStableTags(latestTag, inputTag) > 0 ? latestTag : null;
+    if (!parseStableTag(inputTag))
+      throw new Error(
+        "recovery requires an exact stable release tag (vMAJOR.MINOR.PATCH[.N])",
+      );
+    if (!latestTag)
+      throw new Error("there is no stable release available for recovery");
+    const reconcileTag =
+      compareStableTags(latestTag, inputTag) > 0 ? latestTag : null;
     return {
       releaseTag: inputTag,
       shouldDeploy: reconcileTag === null,
@@ -80,6 +126,10 @@ export function verifyRecoveryMarker({
   markerParents,
   releaseCommit,
 }) {
-  if (!markerParents.includes(releaseCommit)) throw new Error("recovery marker must parent the release commit");
-  if (markerTree !== releaseTree) throw new Error("recovery marker must have the same tree as the official release");
+  if (!markerParents.includes(releaseCommit))
+    throw new Error("recovery marker must parent the release commit");
+  if (markerTree !== releaseTree)
+    throw new Error(
+      "recovery marker must have the same tree as the official release",
+    );
 }
