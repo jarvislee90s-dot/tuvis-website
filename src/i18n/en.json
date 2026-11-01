@@ -36,7 +36,6 @@
   "matrix.legend.experimental": "Experimental",
   "matrix.legend.no": "Not supported",
   "matrix.updated": "Updated {{date}}",
-  "matrix.codexNote": "† Codex ships as CLI and APP: the CLI supports full remote control (L4); the APP is view-only.",
   "matrix.source": "The matrix updates with each release; sourced from docs/capabilities.json in the tuvis repo.",
   "matrix.colCap": "Capability",
   "states.title": "Its lamp is your agent's state",

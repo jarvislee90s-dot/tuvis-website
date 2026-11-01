@@ -48,13 +48,15 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 
 站点内容（更新日志 / 兼容矩阵 / 用户手册）的唯一真值在 **tuvis 主仓**（`jarvislee90s-dot/tuvis`）。本地预览可以回退仓内副本；正式发布构建固定读取与网站 tag 同名的 Tuvis tag，来源缺失或校验失败就阻断部署。
 
+能力矩阵只在 Tuvis 主仓 `docs/capabilities.json` 维护。主仓中英 README 自动生成；本站 `src/content/capabilities.json` 是同步缓存，不手改。工具名称、单元格说明与 Codex CLI/APP 脚注也来自该文件。
+
 ```mermaid
 flowchart LR
     subgraph SRC["tuvis 主仓（唯一真值）"]
         A["CHANGELOG.md（中文）"]
         A2["CHANGELOG.en.md（英文）"]
         B["docs/capabilities.json"]
-        C["docs/user-manual/（zh/en/img）"]
+        C["docs/product/manual/（zh/en/img）"]
     end
     subgraph TRIG["部署触发（deploy.yml）"]
         T1["push 稳定 vX.Y.Z tag<br>——正式发布"]

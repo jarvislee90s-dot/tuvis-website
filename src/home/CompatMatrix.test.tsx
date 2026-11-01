@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import "@/i18n"; // 侧效应导入：初始化全局 i18next 资源（组件树外的 useTranslation 依赖它）
@@ -12,6 +12,8 @@ import { CompatMatrix } from "./CompatMatrix";
 const mockCap = vi.hoisted(() => ({
   updated: "2026-01-01",
   legend: {},
+  notes: { codex: { zh: "桌面 APP 按操作证据开放", en: "Desktop APP control follows operation evidence" } },
+  cellDetails: { a: { claude: { zh: "中文单元说明", en: "English cell detail" } } },
   tools: ["claude"],
   groups: [
     {
@@ -36,6 +38,17 @@ function noteCellOf(rowName: string): HTMLElement {
 }
 
 describe("CompatMatrix：noteEn 通道与矩阵表头", () => {
+  it("脚注与单元格说明读取矩阵数据源并跟随界面语言", async () => {
+    stubIntersectionObserver();
+    await i18n.changeLanguage("zh");
+    const view = render(<CompatMatrix />);
+    expect(screen.getByText("桌面 APP 按操作证据开放")).toBeTruthy();
+    expect(noteCellOf("行甲").textContent).toContain("中文单元说明");
+    await act(async () => { await i18n.changeLanguage("en"); });
+    view.rerender(<CompatMatrix />);
+    expect(screen.getByText("Desktop APP control follows operation evidence")).toBeTruthy();
+    expect(noteCellOf("Row A").textContent).toContain("English cell detail");
+  });
   beforeEach(async () => {
     stubIntersectionObserver(); // Reveal（whileInView）需要（jsdom 无 IO）
     await i18n.changeLanguage("zh");

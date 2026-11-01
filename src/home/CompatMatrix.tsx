@@ -7,7 +7,7 @@ import cap from "@/content/capabilities.json";
 
 /** 兼容矩阵板块（T40）：数据 = 同步产物 content/capabilities.json 单一源（列序/行组随 JSON 自动跟随）。
  *  文字态单元格（决策 8）：✓/✓/🧪/✕ + 文案；行级 note 走单元格 title/aria-label 悬浮，取值规则同 nameEn；
- *  Codex 列头 † 脚注（CLI 支持完整远程 / APP 仅查看）。
+ *  Codex 列头、脚注与单元格补充均读取同源 JSON。
  *  *En 命名数据（组名/行名 nameEn、备注 noteEn）备注通道保持语言无关（悬浮补充，英文优先、
  *  单向回退原中文）；组名/行名自 2026-10-26 起按界面语言取字段：zh → name（缺 nameEn 回退）、
  *  en → nameEn（缺 name 回退）——中文页不再显示英文表头。语言相关文案一律走 i18n 键（品牌词例外）。 */
@@ -15,6 +15,15 @@ const LEGEND = ["yes", "partial", "experimental", "no"] as const;
 
 type CapGroup = (typeof cap.groups)[number];
 type CapRow = CapGroup["rows"][number];
+type MatrixMetadata = {
+  cellDetails?: Record<string, Record<string, { zh: string; en: string }>>;
+  toolNames?: Record<string, string>;
+  notes?: { codex?: { zh: string; en: string } };
+};
+// 旧的离线快照可缺少新展示元数据；支持状态始终来自同一 JSON。
+const metadata = cap as typeof cap & MatrixMetadata;
+const cellDetails = metadata.cellDetails ?? {};
+const toolNames = metadata.toolNames ?? {};
 
 const LEGEND_DOT: Record<string, string> = {
   yes: "bg-green-500",
@@ -35,6 +44,7 @@ export function CompatMatrix() {
   const zh = (i18n.language ?? "zh").startsWith("zh");
   const groupName = (g: CapGroup) => (zh ? g.name ?? g.nameEn : g.nameEn ?? g.name);
   const rowName = (r: CapRow) => (zh ? r.name ?? r.nameEn : r.nameEn ?? r.name);
+  const codexNote = metadata.notes?.codex?.[zh ? "zh" : "en"];
   return (
     <Reveal>
       <section className="py-16">
@@ -62,11 +72,11 @@ export function CompatMatrix() {
                       <th className="sticky left-0 z-10 w-[22%] bg-card py-2 text-left font-medium text-inkdim">{t("matrix.colCap")}</th>
                       {cap.tools.map((tool) => (
                         <th key={tool} className="py-2 text-center font-medium"
-                          title={tool === "codex" ? t("matrix.codexNote") : undefined}>
+                          title={tool === "codex" ? codexNote : undefined}>
                           <span className="flex flex-col items-center gap-1">
                             <ToolIcon tool={tool} size={14} />
                             <span className="text-[10px]">
-                              {toolOf(tool).label}
+                              {toolNames[tool] ?? toolOf(tool).label}
                               {tool === "codex" && <sup className="text-[9px] text-hud">†</sup>}
                             </span>
                           </span>
@@ -84,10 +94,11 @@ export function CompatMatrix() {
                           {cap.tools.map((tool) => {
                             const state = CELL[row.support[tool]] ?? CELL.no;
                             const label = t(state.key);
+                            const detail = cellDetails[row.key]?.[tool]?.[zh ? "zh" : "en"];
                             return (
                               <td key={tool} className="py-2 text-center" title={note}
                                 aria-label={note ? `${label} · ${note}` : undefined}>
-                                <span className={state.cls}>{state.mark} {label}</span>
+                                <span className={state.cls}>{state.mark} {label}{detail ? ` · ${detail}` : ""}</span>
                               </td>
                             );
                           })}
@@ -102,7 +113,7 @@ export function CompatMatrix() {
         </div>
         {/* 尾注区：† 脚注 + 数据源声明 */}
         <div className="mt-4 space-y-1 text-[11px] text-inkdim">
-          <p>{t("matrix.codexNote")}</p>
+          {codexNote && <p>{codexNote}</p>}
           <p>{t("matrix.source")}</p>
         </div>
       </section>
