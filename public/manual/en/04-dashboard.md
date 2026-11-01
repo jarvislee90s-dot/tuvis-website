@@ -7,10 +7,10 @@ The dashboard is Tuvis's main screen: sessions from eight AI coding tools on one
 ## Board layout
 
 - **Top-bar status summary**: "N sessions" on the left is the total card count; when items need your attention, a red "N pending" counter appears on the right.
-- **"Board / Resources" dual tabs**: the Board tab holds session cards, the Resources tab manages skills, MCP, and other resource entries; switching to Resources hides the whole filter chip row.
+- **Four top-level tabs**: Messages (this page) / Resources / Usage / Output Speed — switched within the same main window, and each page keeps its own state; session summaries, filter chips and clear-finished belong to the Messages page, while resource entries live in Resources.
 - **Right of the tab bar**: a "clear finished cards" button lights up when finished cards exist — one click sweeps all green cards away; next to it sits the notification bell (Chapter 6).
 
-1. Open the main window — it lands on the Board tab by default;
+1. Open the main window — it lands on the Messages tab by default;
 2. Check the "pending" counter first; if it is not 0, handle the red cards first;
 3. Cards are read-and-cleared: hit "clear finished cards" to wipe the board.
 
@@ -33,8 +33,23 @@ A row of chips above the cards: "All" on the far left, then seven tools (Claude 
 
 > 💡 Chip icons and labels share one source with the card badges — recognize a face once and find it everywhere.
 
+> 💡 Usage and Output Speed have their own tabs — see Chapter 11 (Usage statistics) and the "Output speed" section.
+
 ## Click a card: jump to the terminal
 
 1. Click a session card and Tuvis brings the matching terminal window to the foreground;
 2. When one project has multiple windows and several candidates match, a picker lets you choose the target;
 3. Forms that do not support jumping say so in place — Tuvis never fakes a successful jump.
+
+Terminal support:
+
+| Terminal     | Support                            |
+| ------------ | ---------------------------------- |
+| iTerm2       | ✅ AppleScript                     |
+| Terminal.app | ✅ AppleScript                     |
+| tmux         | ✅ pane selection + terminal focus |
+| Wayland      | ❌ Graceful fallback message       |
+
+Terminal tools (Claude Code / Codex CLI / OpenCode / Kimi Code) resolve through process-tree and window-content disambiguation; **same-project dual-open jumps land directly**: for Kimi / OpenCode, the window title is matched against the session title (kimi `state.json` title / OpenCode DB title) after normalization — a unique hit locks onto the window, so dual terminals no longer raise a picker. On Windows, resolution also stamps a one-shot identity marker onto the target terminal title (` — Tuvis:xxxxxxxxxxxx`, cleared automatically after focus) for positive locking; markers never stack, and when the card↔terminal pairing is uncertain (same-project multi-open) the app **raises a picker rather than risking the wrong window**, and focus refusals surface an explicit error instead of failing silently.
+
+Desktop APP tools (Codex APP, WorkBuddy) support deep-link jumps: `codex://threads/<id>`, `workbuddy://chat/<id>` (session-level). The handler is verified before dispatch and foregrounding is verified after; on failure it falls back to APP-level focus (macOS AppleScript / Windows nearest-ancestor) without marking the session read. ZCode is a single-window multi-tab app — its jump simply focuses the unique window (cards carry the host pid, zero ambiguity). dsh's jump focuses (or opens) the dsh web tab in your browser.
