@@ -1,6 +1,6 @@
 {
   "$comment": "能力矩阵唯一维护源。中英 README 由 pnpm sync:capabilities 生成；官网按同名应用 tag 同步此文件。支持状态、名称、备注和单元格说明只在此修改。",
-  "updated": "2026-11-01",
+  "updated": "2026-11-02",
   "legend": {
     "yes": "✅ 支持",
     "partial": "◐ 部分",
