@@ -4,7 +4,7 @@
 
 **线上**：<https://tuvis.app/zh>
 
-技术栈：Vite 6 · React 19 · TypeScript strict · Tailwind CSS v4 · GitHub Pages（子路径部署）· 中英双语 · 全站零追踪。
+技术栈：Vite 6 · React 19 · TypeScript strict · Tailwind CSS v4 · Cloudflare Pages（tuvis.app，根路径部署）· 中英双语 · 全站零追踪。
 
 ## 兔维斯世界专区
 
@@ -28,7 +28,7 @@ pnpm dev          # 零网络、秒开（内容用仓内副本）——macOS 可
 | `pnpm dev:sync` | 先同步（15s 预算）再起 | 带主仓最新内容起服务 |
 | `pnpm sync` | 手动同步 | 立刻拉主仓最新文档/日志/矩阵，失败自动用副本 |
 | `pnpm build` | 同步 + 构建 | 与 CI 同一条命令，本地仅预览验证 |
-| `pnpm test` | — | vitest（i18n parity / 零 Han 门禁 / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界） |
+| `pnpm test` | — | vitest（i18n parity / 零 Han 门禁 / tokens / player / ledger / 下载 / 同步闸门 / 兔维斯世界 / 文档一致性） |
 | `pnpm sync:changelog` / `pnpm sync:manual` | 手动 | 单独同步某一类内容 |
 
 ### macOS 一键启动 / 关闭
@@ -77,27 +77,26 @@ flowchart LR
 | `CHANGELOG.md`（纯中文） | `src/content/changelog.json` | ① 首页 Hero 徽章 `vX.Y.Z · 开源` ② /zh/changelog 页 ③ 演示手机看板品牌行 ④ 首页「关于」窗版本号 |
 | `CHANGELOG.en.md`（纯英文） | `src/content/changelog.en.json` | /en/changelog 页（只列已完成英文翻译的版本，不回落中文；两版彻底分家） |
 | `docs/capabilities.json` | `src/content/capabilities.json` | 首页八工具兼容矩阵（经键名/覆盖/取值域三重闸门校验） |
-| `docs/user-manual/`（45 文件） | `public/manual/` | /docs 全部 13 篇手册（中英）与配图 |
+| `docs/product/manual/` | `public/manual/` | /docs 全部 13 篇手册（中英）与配图 |
 
 另有**运行时动态**一处：免费下载按钮点击时实时查 Releases API，安装包永远指向最新 release（不经构建）。
 
 ## 发版
 
+发布 = 从干净且与 `origin/main` 同步的 `main` 打一个稳定 tag：
+
 ```bash
-pnpm release:website vX.Y.Z                       # 仅从干净且同步的 main 创建正式 tag 并发布
+pnpm release:website vX.Y.Z
 ```
 
-- Tuvis 主仓必须先有同名正式 tag；命令会检查两仓 tag、版本递增、工作树干净和 `main` 同步，然后把网站 tag 推到当前 `origin/main` SHA。
-- 普通 `main` push、checkpoint 和定时任务不部署；相同版本重新发布通过 Actions 的 **Redeploy latest website release**，且只允许最新稳定 tag。
-- 首次上线或排障：见 [docs/deploy/README.md](docs/deploy/README.md)
-- 项目目录里说「**发版**」即可触发 `tuvis-release` 技能代跑全流程（提交收尾 → 推 main → 问版本号 → 打 tag → 盯构建 → 验证线上）
+机制、tag 规则与一次性配置见 [docs/deploy/README.md](docs/deploy/README.md)；完整操作走查（收尾 → 推 main → 选版本 → 打 tag → 盯构建 → 验证 → 报告）见 [`.agents/skills/tuvis-release/SKILL.md`](.agents/skills/tuvis-release/SKILL.md)——在 ZCode 里说「**发版**」即可触发。
 
 ## 结构速览
 
 ```
 tuvis-website/
 ├── SPEC.md                  # 建站规格（v1.5，需求与决策记录）
-├── docs/deploy/             # 正式发布与 Cloudflare Pages 部署说明
+├── docs/deploy/             # 发布机制、命令契约与一次性配置
 ├── docs/design/             # 演示/文档参考稿（remote-ui 定稿、p9~p13 参考图）
 ├── docs/qa/                 # 兔维斯世界验收记录与真实浏览器截图
 ├── docs/superpowers/plans/  # P0~P13 与兔维斯世界计划、progress.md 全程记录
@@ -117,11 +116,9 @@ tuvis-website/
 ## 琐碎备忘
 
 - **生成物勿手改**：`src/content/*.json` 与 `public/manual/` 是构建同步产物，改动只会发生在 tuvis 主仓对应文件。
-- **部署仅由 `v*` tag 触发**：push main 永不上线（发版模型是刻意的）。
-- **托管在 Cloudflare Pages（2026-10 起）**：secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` 驱动 wrangler 直传；旧 GitHub Pages 站点已停更，验证新站后在仓库 Settings → Pages 关停。
+- **托管在 Cloudflare Pages（2026-10 起）**：secrets 与域名配置、旧站关停见 [docs/deploy/README.md](docs/deploy/README.md)。
 - **仓库改名只影响 git remote**：线上地址已是自有域名 tuvis.app，与仓库名彻底解耦。
 - **首访语言分流（W1/W2）**：`/`、未知路径与非法 lang 段按「手动偏好 → 浏览器语言」归流（zh* → 中文，其余 → 英文）；偏好存 localStorage `tuvis-lang-pref`，**仅站内手动切换写入**，自动检测结果不落盘；合法 /zh /en 深链与 tuvis-redirect 回放永不改跳（W3）。
-- **`SITE_DISPATCH_PAT` 已不再需要**：网站不接受 Tuvis 仓的 `repository_dispatch` 部署通知；旧 notify workflow 与 secret 可从 Tuvis 仓清理。
 - **同步脚本带 `--use-system-ca`**：本机代理会自签 TLS 证书，Node 需系统 CA 才能连 GitHub；新脚本涉及网络时记得同样处理。
 - **质量基线**：vitest（含兔维斯世界、中英 i18n parity 与零 Han 门禁）；构建含 tsc 严格检查；Lighthouse a11y ≥ 95 不回退。
 - **红线**：`brand/`、`legacy/` 不可改；`SPEC.md`原则上不改，部署决策经用户批准后可同步；全站零追踪脚本；下载 API 失败回退 Releases 列表页。

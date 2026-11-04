@@ -1,10 +1,16 @@
 import { afterAll, describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { copyWorldPack } from "./import-world-pack.mjs";
 
+// Exercise the real command-line entry point. Importing the module directly
+// would route it through Vite's SSR transform, which relocates the shebang
+// when the checkout uses CRLF line endings (Windows + core.autocrlf) and fails
+// to parse the module at all. Spawning the script keeps the test black-box and
+// platform-independent while still covering every validation and copy path.
+const SCRIPT = resolve("scripts/import-world-pack.mjs");
 const PACK = resolve("tuvis-world/05_handoff/v1");
 const tempDirs = [];
 
@@ -12,6 +18,10 @@ async function makeTemp() {
   const dir = await mkdtemp(join(tmpdir(), "tuvis-world-import-"));
   tempDirs.push(dir);
   return dir;
+}
+
+function runImport(source, target) {
+  return spawnSync(process.execPath, [SCRIPT, source, target], { encoding: "utf8" });
 }
 
 afterAll(async () => {
@@ -50,11 +60,12 @@ async function writeFixturePack(dir, { assetBytes, assetPath = "assets/scene/wor
   return manifest;
 }
 
-describe("copyWorldPack", () => {
+describe("import-world-pack command", () => {
   it("copies the approved pack with matching SHA-256 digests", async () => {
     const target = await makeTemp();
-    const result = await copyWorldPack(PACK, target);
-    expect(result.written).toHaveLength(28);
+    const result = runImport(PACK, target);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain("import-world-pack: copied 28 files");
 
     const manifest = JSON.parse(await readFile(join(target, "manifest.json"), "utf8"));
     for (const asset of Object.values(manifest.assets)) {
@@ -80,7 +91,9 @@ describe("copyWorldPack", () => {
       sha: sha256(Buffer.from("original-pixels")),
     });
     const target = await makeTemp();
-    await expect(copyWorldPack(source, target)).rejects.toThrow(/checksum/i);
+    const result = runImport(source, target);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/checksum/i);
     await expect(stat(join(target, "manifest.json"))).rejects.toThrow();
   });
 
@@ -90,7 +103,9 @@ describe("copyWorldPack", () => {
     await writeFile(outside, "outside");
     await writeFixturePack(source, { assetPath: "../outside.png" });
     const target = await makeTemp();
-    await expect(copyWorldPack(source, target)).rejects.toThrow(/inside the pack|relative/i);
+    const result = runImport(source, target);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toMatch(/inside the pack|relative/i);
     await expect(stat(join(target, "manifest.json"))).rejects.toThrow();
     await expect(stat(join(target, "outside.png"))).rejects.toThrow();
     expect(await readFile(outside, "utf8")).toBe("approved-pixels");
