@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,8 +38,11 @@ function commitFile(cwd, name, contents) {
 // repo in FAKE_GITHUB_REPO_DIR. Responses echo real git plumbing results (never
 // the request body), and any drifted invocation exits non-zero instead of
 // silently bypassing this fake.
+//
+// It is reached through the preload below rather than a PATH shim: Windows
+// cannot exec an extensionless script, so a PATH shim silently fell through to
+// the real, unauthenticated `gh` and every API call 404'd.
 const GH_SHIM_SOURCE = [
-  "#!/usr/bin/env node",
   'const { execFileSync } = require("node:child_process");',
   'const { readFileSync } = require("node:fs");',
   "const args = process.argv.slice(2);",
@@ -88,13 +91,31 @@ const GH_SHIM_SOURCE = [
   "process.exit(0);",
 ].join("\n");
 
+// Preload injected into every marker subprocess. It replaces the `gh` binary
+// resolution only; `git` and every other command still run for real. The fake
+// gh is executed as a Node script with the real stdin/stdout/stderr pipes, so
+// the marker script keeps exercising its genuine subprocess contract. Claims,
+// drift detection and response bodies all live in GH_SHIM_SOURCE above.
+const GH_PRELOAD_SOURCE = [
+  'const cp = require("node:child_process");',
+  "const realExecFileSync = cp.execFileSync;",
+  "cp.execFileSync = function (command, args, options) {",
+  "  if (command !== 'gh') return realExecFileSync.call(cp, command, args, options);",
+  "  const shim = process.env.FAKE_GH_SHIM;",
+  "  if (!shim) throw new Error('fake-gh: FAKE_GH_SHIM is not set');",
+  "  return realExecFileSync.call(cp, process.execPath, [shim, ...args], options);",
+  "};",
+  'require("node:module").syncBuiltinESMExports();',
+].join("\n");
+
 function setup() {
   const root = mkdtempSync(path.join(tmpdir(), "tuvis-website-release-"));
   roots.push(root);
   const ghShimDir = path.join(root, "bin");
   mkdirSync(ghShimDir, { recursive: true });
-  writeFileSync(path.join(ghShimDir, "gh"), GH_SHIM_SOURCE);
-  chmodSync(path.join(ghShimDir, "gh"), 0o755);
+  const ghShim = path.join(ghShimDir, "fake-gh.cjs");
+  writeFileSync(ghShim, GH_SHIM_SOURCE);
+  writeFileSync(path.join(ghShimDir, "gh-preload.cjs"), GH_PRELOAD_SOURCE);
   const websiteRemote = path.join(root, "website.git");
   const website = path.join(root, "website");
   const tuvisRemote = path.join(root, "tuvis.git");
@@ -128,6 +149,7 @@ function runRelease(website, tuvisRemote, tag) {
 }
 
 function runMarker({ root, website, websiteRemote }, tag, runId = "42", attempt = "1") {
+  const ghShimDir = path.join(root, "bin");
   return spawnSync(process.execPath, [markerScript], {
     cwd: website,
     encoding: "utf8",
@@ -138,7 +160,13 @@ function runMarker({ root, website, websiteRemote }, tag, runId = "42", attempt 
       GITHUB_RUN_ATTEMPT: attempt,
       GITHUB_REPOSITORY: "owner/site",
       FAKE_GITHUB_REPO_DIR: websiteRemote,
-      PATH: `${path.join(root, "bin")}:${process.env.PATH ?? ""}`,
+      FAKE_GH_SHIM: path.join(ghShimDir, "fake-gh.cjs"),
+      // NODE_OPTIONS parses backslashes as escapes and splits on whitespace, so
+      // the preload path must be forward-slashed and quoted to survive a temp
+      // directory with spaces (e.g. C:\Users\Jane Doe\AppData\Local\Temp).
+      NODE_OPTIONS: [process.env.NODE_OPTIONS, `--require="${path.join(ghShimDir, "gh-preload.cjs").replaceAll("\\", "/")}"`]
+        .filter(Boolean)
+        .join(" "),
     },
   });
 }
@@ -181,7 +209,11 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-describe("release-website command", () => {
+// Every case in this file drives real `git` subprocesses (clone, commit, push,
+// tag, fetch). On Windows a single case routinely takes 3-10s, so the whole
+// suite gets an explicit budget instead of relying on the 5s default. This is
+// a runtime budget only — no assertion or behaviour is relaxed.
+describe("release-website command", { timeout: 20_000 }, () => {
   it("tags and pushes the exact clean main SHA after finding the matching Tuvis tag", () => {
     const { websiteRemote, website, tuvisRemote } = setup();
     const expected = git(website, "rev-parse", "HEAD");
@@ -408,7 +440,7 @@ describe("release-website command", () => {
 
   it("keeps the fake GitHub API shim strict about its wire contract and honest in its responses", () => {
     const { root, websiteRemote } = setup();
-    const gh = path.join(root, "bin", "gh");
+    const gh = path.join(root, "bin", "fake-gh.cjs");
     const runShim = (args, body) =>
       spawnSync(process.execPath, [gh, ...args], {
         encoding: "utf8",

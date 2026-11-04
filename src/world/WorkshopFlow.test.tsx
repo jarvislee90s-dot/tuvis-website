@@ -108,7 +108,12 @@ afterEach(() => {
 });
 
 describe("workshop flow", () => {
-  it("collects four modules, assembles, displays, restores and replays", async () => {
+  // The full quest run below drives every stage of the flow (four pickups, the
+  // assembly close-up, a real 2s fire window, persistence, then restore and
+  // replay). It takes ~4s alone and exceeds the 5s default under full parallel
+  // load, so it gets an explicit budget. Every assertion keeps its own tighter
+  // waitFor timeout — nothing is relaxed.
+  it("collects four modules, assembles, displays, restores and replays", { timeout: 20_000 }, async () => {
     const storage = memoryStorage();
     const storeRef: StoreRef = { current: null };
     const { unmount } = renderRuntime(storage, storeRef);
