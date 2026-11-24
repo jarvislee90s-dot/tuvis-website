@@ -1,5 +1,52 @@
 [
   {
+    "version": "0.6.8",
+    "date": "2026-11-24",
+    "sections": {
+      "Added": [
+        {
+          "en": "**DeepSeek Harness (DSH) remote control.** Select a Desktop or Web instance in the desktop remote settings. One switch guides plugin installation, host restart, and authorization. Turning it off revokes access before waiting for the host to exit and uninstalling the plugin. A failed close can be retried."
+        },
+        {
+          "en": "**Native DSH sessions on mobile.** Send text and file or image attachments, check delivery receipts, stop the current turn, and submit answers to an ordinary question group. Navigate with Previous and Next, preview files and deliverables, and browse read-only subagent details on macOS."
+        },
+        {
+          "en": "**Official DSH session settings and console.** View and change permission, model, and reasoning settings while the session is idle. Open the selected instance's official console in a new tab through the existing remote entry while keeping the original draft and scroll position."
+        },
+        {
+          "en": "**Native OpenCode controls on macOS.** The official native route handles sending, stopping, interaction, and uploads with the bound workspace and native queue state. Native writes are unavailable on Windows."
+        }
+      ],
+      "Fixed": [
+        {
+          "en": "The Windows update dialog now scrolls its notes in short windows and keeps the title, close button, and update actions visible."
+        },
+        {
+          "en": "Codex Desktop remote stops and queue state reconcile more reliably. Priority sends, resuming an empty paused queue, and switching message sources give clearer results."
+        },
+        {
+          "en": "OpenCode attachments use the exact verified workspace. Process termination is rejected when process ownership cannot be established."
+        }
+      ],
+      "Upgrade notes": [
+        {
+          "en": "To start using DSH on mobile, select and enable a host in the desktop remote settings, then follow the installation and authorization status. Changing the model or reasoning effort also changes the host profile default. Handle execution and plan approvals in the official console."
+        },
+        {
+          "en": "Isolated macOS Desktop verification covered sending and settings readback. Windows Web instance attribution is unavailable. Native Windows behavior, macOS Web writes, and real console round trips across the four remote channels await validation."
+        },
+        {
+          "en": "Remote OpenCode writes on macOS use the native route. See the product manual for setup."
+        }
+      ],
+      "Engineering": [
+        {
+          "en": "Consolidated DSH sending and revocation fixtures, removed the retired console listener and business filters, and updated the bilingual manuals, capability matrix, and release notes."
+        }
+      ]
+    }
+  },
+  {
     "version": "0.6.7",
     "date": "2026-11-22",
     "sections": {
